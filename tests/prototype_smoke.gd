@@ -1,5 +1,5 @@
 extends SceneTree
-## godot --headless --fixed-fps 60 --script res://tests/prototype_smoke.gd
+## tests/run-tests.ps1 supplies a fresh player profile.
 
 const Game := preload("res://scripts/game.gd")
 const Clearing := preload("res://scripts/clearing.gd")
@@ -7,7 +7,12 @@ var game: Game
 
 
 func _initialize() -> void:
-	create_timer(360.0, true).timeout.connect(func(): _expect(false, "Timed out during the prototype route"))
+	var qa := OS.get_environment("ARCHER_QA_DIR").replace("\\", "/")
+	if qa.is_empty() or not OS.get_user_data_dir().begins_with(qa + "/"):
+		printerr("Use tests/run-tests.ps1 to isolate the campaign under test.")
+		quit(1)
+		return
+	create_timer(1100.0, true).timeout.connect(func(): _expect(false, "Timed out during the first act"))
 	_run.call_deferred()
 
 
@@ -18,6 +23,17 @@ func _run() -> void:
 	await _frames(3)
 	if not _expect(game.view == "start", "Start menu is visible"):
 		return
+	await _click(_button_named("Ajustes"))
+	var fov := game.hud.find_child("Fov", true, false) as HSlider
+	if not _expect(is_instance_valid(fov), "Settings expose the camera field of view"):
+		return
+	fov.grab_focus()
+	await _tap(KEY_RIGHT)
+	var chosen_fov: float = fov.value
+	if not _expect(chosen_fov > 70.0 and is_equal_approx(game.archer.camera.fov, chosen_fov),
+			"The field of view changes through the settings slider"):
+		return
+	await _click(_button_named("Volver"))
 	await _click(root.gui_get_focus_owner() as Button)
 	if not _expect(game.view == "play", "The start button enters the clearing"):
 		return
@@ -30,6 +46,12 @@ func _run() -> void:
 	await _frames(30)
 	if not _expect(game.run.hp == 160 and game.run.arrows == 23 and game.run.hits == 0,
 			"An arrow in flight consumes ammunition and waits for unpause before impact"):
+		return
+	await _click(_button_named("Guardar partida"))
+	await _reopen()
+	if not _expect(game.view == "pause" and game.run.hp == 160 and game.run.arrows == 23
+			and game.hud.options.fov == chosen_fov,
+			"A saved arrow in flight waits for the player to resume"):
 		return
 	await _tap(KEY_ESCAPE)
 	_mouse_left(true)
@@ -108,36 +130,87 @@ func _run() -> void:
 			"A partial workshop pickup fills the quiver and conserves the remaining pile"):
 		return
 
-	# The headless display never captures a pointer. Keep the spawn bearing and
-	# physically carry each new quiver back to the firing line.
-	for trip in range(8):
-		if not await _walk_to(Vector2(0, 1)):
-			return
-		_mouse_left(true)
-		if not await _until(func(): return game.run.arrows == 0 or game.view == "end", 1600, "A quiver reaches its target"):
-			return
-		_mouse_left(false)
-		await _frames(45)
-		if game.view == "end":
-			break
-		if not await _walk_to(Vector2(Clearing.WORKSHOP_PICKUP.x, Clearing.WORKSHOP_PICKUP.z)):
-			return
-		if not await _until(func(): return game.run.arrows == game.run.capacity(), 1200, "Refill before the next volley"):
-			return
-	if not _expect(game.view == "end" and game.run.stage == 3 and game.run.hp == 0
-			and game.run.hits == game.run.shots and game.hud.end_stats.is_visible_in_tree(),
-			"The three knots end a single run with recorded hits"):
+	# Headless has no captured mouse. Orient the camera at real geometry; all
+	# damage, pickups, shop purchases and phase changes use normal game input.
+	_aim_at("body")
+	_mouse_left(true)
+	if not await _until(func(): return game.run.stage == 3 and game.run.offers().spark.available,
+			7000, "The third target unlocks the spark"):
 		return
-
+	_mouse_left(false)
+	await _tap(KEY_TAB)
+	await _click(game.hud.offer_controls.spark.button)
+	await _tap(KEY_TAB)
+	_mouse_left(true)
+	if not await _until(func(): return game.run.stage == 4 and game.run.offers().recurve.available,
+			10000, "The fast bow is affordable in the fourth encounter"):
+		return
+	_mouse_left(false)
+	await _tap(KEY_TAB)
+	await _click(game.hud.offer_controls.recurve.button)
+	await _tap(KEY_TAB)
+	if not _expect(game.run.bow == "recurve" and game.run.rank_of("spark") == 1,
+			"The purchased bow is equipped and the spark is owned"):
+		return
+	_mouse_left(true)
+	if not await _until(func(): return game.run.split, 22000, "At half health the fifth target splits"):
+		return
+	_mouse_left(false)
+	await _frames(40)
+	_aim_at("left")
+	_mouse_left(true)
+	if not await _until(func(): return game.run.left_hp == 0, 11000, "Shots can destroy the left half"):
+		return
+	_mouse_left(false)
+	var remaining := game.run.right_hp
+	await _reopen()
+	if not _expect(game.view == "pause" and game.run.split and game.run.left_hp == 0 and game.run.right_hp == remaining,
+			"The automatic checkpoint preserves the surviving half"):
+		return
+	await _tap(KEY_ESCAPE)
+	_aim_at("right")
+	_mouse_left(true)
+	if not await _until(func(): return game.view == "gift", 11000, "Destroying the right half opens the three choices"):
+		return
+	_mouse_left(false)
+	var offer := game.run.gift_offer.duplicate()
+	await _reopen()
+	if not _expect(game.view == "gift" and offer.size() == 3 and game.run.gift_offer == offer,
+			"Relaunching preserves the exact three cards in order"):
+		return
+	await _tap(KEY_ESCAPE)
+	if not _expect(game.view == "pause" and _button_named("Mejoras") == null,
+			"Pausing the pending reward cannot open purchases after the boss"):
+		return
+	await _tap(KEY_ESCAPE)
+	if not _expect(game.view == "gift" and game.run.gift_offer == offer,
+			"Resuming the pending reward returns to the same three cards"):
+		return
+	await _click(_button_named("English"))
+	if not _expect(game.hud.language == "en" and game.run.gift_offer == offer and game.hud.confirm_gift.text.contains("Confirm"),
+			"Switching the card screen to English preserves its choices"):
+		return
+	await _click(_button_named("Español"))
+	await _click(game.hud.gift_buttons[offer[0]])
+	await _click(game.hud.confirm_gift)
+	await _reopen()
+	if not _expect(game.view == "end" and game.run.chosen_gift == offer[0] and game.run.bow == "recurve"
+			and game.hud.end_stats.is_visible_in_tree(), "The result, purchases and chosen reward survive a relaunch"):
+		return
+	await _click(_button_named("Ver tiempos de la prueba"))
+	if not _expect(game.hud.is_submenu_open() and game.run.observations.has("first_production_pickup"),
+			"Playtest timings are available from the final result"):
+		return
+	await _click(_button_named("Volver al resumen"))
 	await _click(root.gui_get_focus_owner() as Button)
-	if not await _until(func(): return is_instance_valid(current_scene) and current_scene != game, 20, "Replay replaces the old scene"):
-		return
+	await _click(_button_named("Empezar de nuevo"))
+	await _frames(6)
 	game = current_scene
 	if not _expect(game.view == "play" and game.run.stage == 1 and game.run.hp == 160
 			and game.run.sap == 0 and game.run.arrows == 24 and not game.run.workshop and game.run.shots == 0,
 			"Replay resets position in the campaign, currency, arrows and purchases"):
 		return
-	print("PASS: N1–3, real input, damage purchase, workshop, pause, recovery, partial collection, ending and replay.")
+	print("PASS: N1–5, purchases, paused shot on disk, workshop stock, both boss halves, offer, final result and replay.")
 	unload_current_scene()
 	# The audio mixer runs on a wall clock even when simulation uses fixed FPS.
 	# Let it retire queued voices from the replay transition before engine shutdown.
@@ -150,6 +223,29 @@ func _run() -> void:
 func _frames(count: int) -> void:
 	for i in count:
 		await physics_frame
+
+
+func _button_named(caption: String) -> Button:
+	for button in game.hud.find_children("*", "Button", true, false):
+		if button.is_visible_in_tree() and button.text == caption:
+			return button
+	return null
+
+
+func _reopen() -> void:
+	change_scene_to_file("res://main.tscn")
+	await scene_changed
+	game = current_scene
+	await _frames(4)
+	await _click(_button_named("Continuar"))
+
+
+func _aim_at(target_id: String) -> void:
+	var pose := game.archer.save_pose()
+	var direction := game.archer.camera.global_position.direction_to(game.clearing.target_center(target_id))
+	pose.yaw = atan2(-direction.x, -direction.z)
+	pose.pitch = asin(direction.y)
+	game.archer.restore_pose(pose)
 
 
 func _expect(condition: bool, message: String) -> bool:
@@ -202,6 +298,12 @@ func _click(button: Button) -> void:
 	if not _expect(is_instance_valid(button) and button.is_visible_in_tree() and not button.disabled,
 			"The requested button is visible and enabled"):
 		return
+	var parent := button.get_parent()
+	while parent != null:
+		if parent is ScrollContainer:
+			parent.ensure_control_visible(button)
+			await _frames(3)
+		parent = parent.get_parent()
 	var center := button.get_global_rect().get_center()
 	for down: bool in [true, false]:
 		var event := InputEventMouseButton.new()

@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://assets/haz.tscn" id="1"]
+[ext_resource type="Resource" path="res://assets/flecha_pluma_ancha.tres" id="2"]
+
+[node name="HazGrande" instance=ExtResource("1")]
+flechas = 8
+apertura = 1.15
+longitud = 0.90
+receta = ExtResource("2")

@@ -5,8 +5,10 @@ const MIX_RATE := 22050
 const LENGTHS := {
 	"shot": 0.21, "hit": 0.15, "miss": 0.08, "empty": 0.09,
 	"pickup": 0.24, "buy": 0.43, "break": 0.43, "win": 0.95, "branch": 0.14,
+	"target": 0.35, "event": 0.55, "spark": 0.24,
 }
 var _voices: Dictionary = {}
+var _options := {}
 
 
 func _ready() -> void:
@@ -15,14 +17,23 @@ func _ready() -> void:
 		voice.stream = _make_clip(cue, LENGTHS[cue])
 		if cue == "buy" or cue == "win":
 			voice.process_mode = Node.PROCESS_MODE_ALWAYS
-		# The short, pitched workshop and purchase cues read above the wood impacts.
-		match cue:
-			"pickup": voice.volume_db = -7.0
-			"buy": voice.volume_db = -8.0
-			_: voice.volume_db = -10.0
 		voice.max_polyphony = 2
 		add_child(voice)
 		_voices[cue] = voice
+	apply_settings(_options)
+
+func apply_settings(options: Dictionary) -> void:
+	_options = options
+	for cue: String in _voices:
+		var group := "volume_world"
+		if cue in ["shot", "empty", "branch"]:
+			group = "volume_bow"
+		elif cue in ["buy", "win"]:
+			group = "volume_ui"
+		var mix := clampf(options.get(group, 1.0), 0, 1)
+		var voice := _voices[cue] as AudioStreamPlayer
+		var base_db := -7.0 if cue == "pickup" else -10.0
+		voice.volume_db = base_db + linear_to_db(maxf(mix, 0.00001))
 
 
 func play(cue: String) -> void:
@@ -61,6 +72,12 @@ func _make_clip(cue: String, duration: float) -> AudioStreamWAV:
 				sample = low_noise * sin(PI * t / duration) * (0.9 if cue == "branch" else 0.36)
 			"empty":
 				sample = 0.5 * sin(TAU * 245.0 * t) * exp(-78.0 * t) + noise * 0.24 * exp(-95.0 * t)
+			"target":
+				sample = 0.36 * _note(t, 0, 784, 20) + 0.30 * _note(t, 0.08, 1047, 19)
+			"event":
+				sample = 0.38 * _note(t, 0, 659, 15) + 0.35 * _note(t, 0.12, 523, 13) + 0.29 * _note(t, 0.24, 392, 12)
+			"spark":
+				sample = 0.47 * noise * exp(-24 * t) + 0.28 * _note(t, 0.04, 1140, 25)
 			"pickup":
 				sample = 0.34 * _note(t, 0.0, 590.0, 29.0) + 0.29 * _note(t, 0.055, 815.0, 22.0)
 			"buy":

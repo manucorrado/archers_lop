@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://assets/pino.tscn" id="1"]
+
+[node name="PinoInclinado" instance=ExtResource("1")]
+semilla = 64
+altura = 4.0
+anchura = 1.4
+pisos = 3
+inclinacion = 0.35

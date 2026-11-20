@@ -2,6 +2,9 @@
 extends Node3D
 ## Visual recipe. Edit the root of pino.tscn in the Inspector to preview a variant.
 
+const ForestPalette = preload("res://scripts/forest_palette.gd")
+const DEFAULT_PALETTE = preload("res://assets/paleta_claro.tres")
+
 @export_group("Silueta")
 @export_range(0, 9999) var semilla := 31:
 	set(value):
@@ -15,18 +18,22 @@ extends Node3D
 	set(value):
 		anchura = value
 		_request_rebuild()
+@export_range(3, 6) var pisos := 4:
+	set(value):
+		pisos = value
+		_request_rebuild()
+@export_range(-0.4, 0.4, 0.05) var inclinacion := 0.0:
+	set(value):
+		inclinacion = value
+		_request_rebuild()
 @export_group("Paleta")
-@export var corteza := Color("#604737"):
+@export var paleta: ForestPalette = DEFAULT_PALETTE:
 	set(value):
-		corteza = value
-		_request_rebuild()
-@export var follaje := Color("#42664b"):
-	set(value):
-		follaje = value
-		_request_rebuild()
-@export var brotes := Color("#719362"):
-	set(value):
-		brotes = value
+		if paleta and paleta.changed.is_connected(_request_rebuild):
+			paleta.changed.disconnect(_request_rebuild)
+		paleta = value
+		if paleta:
+			paleta.changed.connect(_request_rebuild)
 		_request_rebuild()
 
 var pending := false
@@ -56,16 +63,20 @@ func _rebuild() -> void:
 	var cube := BoxMesh.new()
 	var box := cube.surface_get_arrays(0)
 	var unit := altura / 32.0
-	_box(surface, box, Vector3(0, 12, 0) * unit, Vector3(3, 24, 3) * unit, corteza)
-	for tier in 4:
-		var width := (17.0 - 4.0 * tier) * anchura
-		var center := Vector3(rng.randi_range(-1, 1), 10 + 5 * tier, rng.randi_range(-1, 1))
-		var shade := follaje.lerp(brotes, tier * 0.12)
+	var colors := paleta if paleta else DEFAULT_PALETTE as ForestPalette
+	if not colors.changed.is_connected(_request_rebuild):
+		colors.changed.connect(_request_rebuild)
+	_box(surface, box, Vector3(0, 12, 0) * unit, Vector3(3, 24, 3) * unit, colors.corteza)
+	for tier in pisos:
+		var fraction := float(tier) / float(pisos - 1)
+		var width := lerpf(17.0, 5.0, fraction) * anchura
+		var center := Vector3(rng.randi_range(-1, 1) + inclinacion * fraction * 11, 10 + 15 * fraction, rng.randi_range(-1, 1))
+		var shade := colors.follaje.lerp(colors.brotes, fraction * 0.36)
 		_box(surface, box, center * unit, Vector3(width, 5, width * 0.73) * unit, shade)
 		_box(surface, box, center * unit, Vector3(width * 0.70, 5, width) * unit, shade)
 		_box(surface, box, (center + Vector3.UP * 3.0) * unit,
-			Vector3(width * 0.60, 2, width * 0.68) * unit, shade.lerp(brotes, 0.28))
-	_box(surface, box, Vector3(0, 29.5, 0) * unit, Vector3(2, 5, 2) * unit, brotes)
+			Vector3(width * 0.60, 2, width * 0.68) * unit, shade.lerp(colors.brotes, 0.28))
+	_box(surface, box, Vector3(inclinacion * 11, 29.5, 0) * unit, Vector3(2, 5, 2) * unit, colors.brotes)
 	var palette := StandardMaterial3D.new()
 	palette.vertex_color_use_as_albedo = true
 	palette.vertex_color_is_srgb = true

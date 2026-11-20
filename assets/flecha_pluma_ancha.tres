@@ -1,0 +1,11 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/arrow_recipe.gd" id="1"]
+[ext_resource type="Resource" path="res://assets/paleta_claro.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+largo_pluma = 0.26
+ancho_pluma = 0.095
+ancho_punta = 0.075
+paleta = ExtResource("2")

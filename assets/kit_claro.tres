@@ -1,0 +1,18 @@
+[gd_resource type="Resource" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/clearing_kit.gd" id="1"]
+[ext_resource type="PackedScene" path="res://assets/pino.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://assets/pino_alto.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://assets/pino_inclinado.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://assets/haz.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://assets/haz_mediano.tscn" id="6"]
+[ext_resource type="PackedScene" path="res://assets/haz_grande.tscn" id="7"]
+
+[resource]
+script = ExtResource("1")
+pino_normal = ExtResource("2")
+pino_alto = ExtResource("3")
+pino_inclinado = ExtResource("4")
+haz_pequeno = ExtResource("5")
+haz_mediano = ExtResource("6")
+haz_grande = ExtResource("7")

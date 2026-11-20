@@ -4,15 +4,21 @@ signal shot_requested
 signal branch_requested
 
 const BowAudio := preload("res://scripts/bow_audio.gd")
+const BRANCH_ARROW = preload("res://assets/flecha.tres")
+const RECURVE_ARROW = preload("res://assets/flecha_pluma_ancha.tres")
 const WALK_SPEED := 4.6
 const LOOK_SENSITIVITY := 0.00215
 const EYE_HEIGHT := 1.65
-const TOP_TIP := Vector3(-0.022, 0.51, 0.15)
-const BOTTOM_TIP := Vector3(-0.016, -0.49, 0.15)
+const TOP_TIP := Vector3(0.06, 0.51, 0.15)
+const BOTTOM_TIP := Vector3(0.05, -0.49, 0.15)
+const RECURVE_TOP := Vector3(0.035, 0.54, 0.09)
+const RECURVE_BOTTOM := Vector3(0.028, -0.52, 0.09)
 
 var camera := Camera3D.new()
 var _view := Node3D.new()
 var _bow := Node3D.new()
+var _branch_limbs := Node3D.new()
+var _recurve_limbs := Node3D.new()
 var _nocked := Node3D.new()
 var _drawing_hand := Node3D.new()
 var _string_top: MeshInstance3D
@@ -31,6 +37,14 @@ var _step := 0.0
 var _pace := 0.0
 var _since_shot := 2.0
 var _since_branch := 2.0
+var _recurve := false
+var _repeat_on := false
+var _toggle_fire := false
+var _motion_amount := 1.0
+var _zoom_amount := 1.0
+var _sensitivity := 1.0
+var _base_fov := 70.0
+var _speed_multiplier := 1.0
 
 
 func _ready() -> void:
@@ -62,10 +76,43 @@ func set_active(enabled: bool) -> void:
 	_active = enabled
 	_press_pending = false
 	_branch_pending = false
-	_await_release = enabled and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	_repeat_on = false
+	_await_release = enabled and Input.is_action_pressed("shoot")
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if enabled else Input.MOUSE_MODE_VISIBLE
 	if not enabled:
 		velocity = Vector3.ZERO
+
+func apply_settings(options: Dictionary) -> void:
+	_sensitivity = clampf(options.get("sensitivity", 1.0), 0.05, 5.0)
+	_base_fov = clampf(options.get("fov", 70.0), 45.0, 115.0)
+	_zoom_amount = clampf(options.get("zoom", 1.0), 0.0, 1.0)
+	_motion_amount = clampf(options.get("shake", 1.0), 0.0, 1.0)
+	_toggle_fire = options.get("toggle_fire", false)
+	_sound.apply_settings(options)
+	camera.fov = _base_fov - _aim * 12.0 * _zoom_amount
+
+func set_speed_multiplier(value: float) -> void:
+	_speed_multiplier = value
+
+func set_bow(id: String) -> void:
+	var use_recurve := id == "recurve"
+	if use_recurve == _recurve:
+		return
+	_recurve = use_recurve
+	_branch_limbs.visible = not use_recurve
+	_recurve_limbs.visible = use_recurve
+	(_nocked.get_child(0) as MeshInstance3D).mesh = RECURVE_ARROW.mesh() if use_recurve else BRANCH_ARROW.mesh()
+	_pose(0.0)
+
+func save_pose() -> Dictionary:
+	return {"x": position.x, "y": position.y, "z": position.z, "yaw": rotation.y, "pitch": _pitch}
+
+func restore_pose(pose: Dictionary) -> void:
+	position = Vector3(pose.get("x", 0.0), pose.get("y", 0.0), pose.get("z", 5.0))
+	rotation.y = pose.get("yaw", 0.0)
+	_pitch = clampf(pose.get("pitch", 0.0), deg_to_rad(-82), deg_to_rad(82))
+	camera.rotation.x = _pitch
+	velocity = Vector3.ZERO
 
 
 func set_has_arrows(has_arrows: bool) -> void:
@@ -78,30 +125,27 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		var motion: Vector2 = event.screen_relative
-		var sensitivity := LOOK_SENSITIVITY * lerpf(1.0, 0.65, _aim)
+		var sensitivity := LOOK_SENSITIVITY * _sensitivity * lerpf(1.0, 0.65, _aim * _zoom_amount)
 		rotate_y(-motion.x * sensitivity)
 		_pitch = clampf(_pitch - motion.y * sensitivity, deg_to_rad(-82.0), deg_to_rad(82.0))
 		camera.rotation.x = _pitch
 		_sway = (_sway + motion * 0.00075).limit_length(0.035)
-	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed:
-			_press_pending = not _await_release
-		else:
-			_await_release = false
-	elif event is InputEventKey and event.pressed and not event.echo:
-		if event.physical_keycode == KEY_F or event.keycode == KEY_F:
-			_branch_pending = true
+	elif event.is_action_pressed("shoot") and not _await_release:
+		if _toggle_fire:
+			_repeat_on = not _repeat_on
+		_press_pending = (not _toggle_fire or _repeat_on)
+	elif event.is_action_released("shoot"):
+		_await_release = false
+	elif event.is_action_pressed("strike"):
+		_branch_pending = true
 
 
 func _physics_process(delta: float) -> void:
 	if not _active:
 		return
-	var move_input := Vector2(
-		float(Input.is_physical_key_pressed(KEY_D)) - float(Input.is_physical_key_pressed(KEY_A)),
-		float(Input.is_physical_key_pressed(KEY_S)) - float(Input.is_physical_key_pressed(KEY_W))
-	).normalized()
+	var move_input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var direction := basis * Vector3(move_input.x, 0.0, move_input.y)
-	var speed := WALK_SPEED * lerpf(1.0, 0.70, _aim)
+	var speed := WALK_SPEED * _speed_multiplier * lerpf(1.0, 0.70, _aim)
 	velocity.x = move_toward(velocity.x, direction.x * speed, 27.0 * delta)
 	velocity.z = move_toward(velocity.z, direction.z * speed, 27.0 * delta)
 	if not is_on_floor():
@@ -113,8 +157,8 @@ func _physics_process(delta: float) -> void:
 	position.z = clampf(position.z, -13.0, 13.0)
 	_pace = minf(Vector2(velocity.x, velocity.z).length() / WALK_SPEED, 1.0)
 
-	var held := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-	if _press_pending or (held and not _await_release):
+	var held := Input.is_action_pressed("shoot")
+	if _press_pending or _repeat_on or (held and not _toggle_fire and not _await_release):
 		shot_requested.emit()
 	_press_pending = false
 	if not held:
@@ -137,14 +181,27 @@ func aim_hit(max_distance: float = 50.0) -> Dictionary:
 	return get_world_3d().direct_space_state.intersect_ray(query)
 
 
+func arrow_origin() -> Vector3:
+	return _nocked.to_global(Vector3(0, 0, -0.57))
+
+func flight_duration(endpoint: Vector3) -> float:
+	return clampf(arrow_origin().distance_to(endpoint) / 59.0, 0.045, 0.55)
+
 func play_shot(end_point: Vector3, on_landing := Callable()) -> void:
 	_since_shot = 0.0
 	_sound.play("shot")
+	_flight(arrow_origin(), end_point, flight_duration(end_point), on_landing)
+
+func restore_flight(start: Vector3, end: Vector3, total: float, remaining: float) -> void:
+	var progress := clampf(1.0 - remaining / maxf(total, 0.001), 0, 1)
+	_flight(start.lerp(end, progress), end, remaining, Callable())
+
+func _flight(start: Vector3, end_point: Vector3, duration: float, on_landing: Callable) -> void:
 	# The independent projectile survives drawing the last arrow from the quiver.
 	var projectile := Node3D.new()
 	add_child(projectile)
 	projectile.top_level = true
-	projectile.global_position = _bow.to_global(Vector3(0.025, 0.04, -0.20))
+	projectile.global_position = start
 	var distance := projectile.global_position.distance_to(end_point)
 	if distance < 0.025:
 		if on_landing.is_valid():
@@ -156,7 +213,7 @@ func play_shot(end_point: Vector3, on_landing := Callable()) -> void:
 	projectile.look_at(end_point, up)
 	_arrow_geometry(projectile, 0.48, true)
 	var flight := projectile.create_tween()
-	flight.tween_property(projectile, "global_position", end_point, clampf(distance / 59.0, 0.045, 0.55))
+	flight.tween_property(projectile, "global_position", end_point, duration)
 	if on_landing.is_valid():
 		flight.tween_callback(on_landing)
 	flight.tween_interval(0.32)
@@ -207,26 +264,36 @@ func _set_rod(beam: MeshInstance3D, start: Vector3, finish: Vector3) -> void:
 
 
 func _build_bow() -> void:
+	_bow.add_child(_branch_limbs)
+	_bow.add_child(_recurve_limbs)
+	_recurve_limbs.hide()
 	# Angular yew limbs, pale end nocks, linen serving and hand-cut leather grip.
 	for side in [-1.0, 1.0]:
 		var sign_y := float(side)
 		var tip := TOP_TIP if sign_y > 0.0 else BOTTOM_TIP
 		var inner := Vector3(0, 0.09 * sign_y, 0.0)
-		var elbow := Vector3(-0.009, 0.24 * sign_y, -0.012)
-		var corner := Vector3(-0.02, 0.41 * sign_y, 0.073)
-		_rod(_bow, inner, elbow, 0.057, 0.054, "694027")
-		_rod(_bow, elbow, corner, 0.047, 0.044, "ad7544")
-		_rod(_bow, corner, tip, 0.035, 0.032, "cc9457")
-		_rod(_bow, inner + Vector3(0.027, 0, -0.011), elbow + Vector3(0.025, 0, -0.011), 0.010, 0.018, "deab63")
-		_rod(_bow, elbow + Vector3(0.023, 0, -0.01), corner + Vector3(0.021, 0, -0.01), 0.008, 0.014, "e9bf71")
-		_rod(_bow, tip.lerp(corner, 0.26), tip, 0.038, 0.038, "e4d8a6")
-		_rod(_bow, elbow.lerp(inner, 0.19), elbow.lerp(inner, 0.05), 0.061, 0.061, "bd9156")
+		var elbow := Vector3(-0.027, 0.24 * sign_y, -0.012)
+		var corner := Vector3(0.008, 0.41 * sign_y, 0.073)
+		_rod(_branch_limbs, inner, elbow, 0.050, 0.041, "714729")
+		_rod(_branch_limbs, elbow, corner, 0.041, 0.035, "a37142")
+		_rod(_branch_limbs, corner, tip, 0.030, 0.028, "bc9360")
+		_rod(_branch_limbs, tip.lerp(corner, 0.22), tip, 0.033, 0.033, "e4d8a6")
+		_rod(_branch_limbs, elbow + Vector3(-0.011,0,0.021), corner + Vector3(-0.010,0,0.018), 0.008,0.008,"bc8f55")
+		var recurve_tip := RECURVE_TOP if sign_y > 0.0 else RECURVE_BOTTOM
+		var shoulder := Vector3(-0.035, 0.24 * sign_y, -0.025)
+		var camber := Vector3(0.076, 0.43 * sign_y, 0.168)
+		_rod(_recurve_limbs, inner, shoulder, 0.074, 0.050, "664631")
+		_rod(_recurve_limbs, shoulder, camber, 0.064, 0.038, "bb8f5d")
+		_rod(_recurve_limbs, shoulder + Vector3(-0.014,0,0.019), camber + Vector3(-0.014,0,0.019), 0.012,0.009,"e1c18c")
+		_rod(_recurve_limbs, camber, recurve_tip, 0.046, 0.034, "d6be85")
+		_rod(_recurve_limbs, camber.lerp(shoulder, 0.18), camber, 0.067, 0.042, "456859")
+		_rod(_recurve_limbs, recurve_tip.lerp(camber, 0.30), recurve_tip, 0.05, 0.039, "e7e0bf")
 	_block(_bow, Vector3.ZERO, Vector3(0.072, 0.20, 0.08), "503929")
 	for wrap in range(5):
 		var strap := _block(_bow, Vector3(0, -0.078 + 0.038 * wrap, 0), Vector3(0.077, 0.023, 0.084), "885f3a")
 		strap.rotation.z = -0.07
-	_string_top = _block(_bow, Vector3.ZERO, Vector3(0.006, 1, 0.006), "f4dfae")
-	_string_bottom = _block(_bow, Vector3.ZERO, Vector3(0.006, 1, 0.006), "f4dfae")
+	_string_top = _block(_bow, Vector3.ZERO, Vector3(0.0045, 1, 0.0045), "bcae8a")
+	_string_bottom = _block(_bow, Vector3.ZERO, Vector3(0.0045, 1, 0.0045), "bcae8a")
 
 	# Grip hand, fingerless glove and the contrasting cuff of the forest archer.
 	_rod(_bow, Vector3(0.018, -0.075, 0.028), Vector3(0.17, -0.33, 0.16), 0.107, 0.106, "385747")
@@ -236,8 +303,9 @@ func _build_bow() -> void:
 		_block(_bow, Vector3(-0.002, -0.079 + 0.026 * finger, 0.048), Vector3(0.078, 0.020, 0.034), "dbab7a")
 
 	_bow.add_child(_drawing_hand)
-	_block(_drawing_hand, Vector3(0.062, -0.032, 0.029), Vector3(0.093, 0.093, 0.078), "854f37")
-	_rod(_drawing_hand, Vector3(0.074, -0.048, 0.05), Vector3(0.20, -0.21, 0.19), 0.096, 0.104, "395b4d")
+	_rod(_drawing_hand, Vector3(0.033, -0.009, 0.012), Vector3(0.082, -0.049, 0.056), 0.061, 0.063, "774d37")
+	_rod(_drawing_hand, Vector3(0.085, -0.047, 0.056), Vector3(0.18, -0.18, 0.15), 0.066, 0.072, "395b4d")
+	_rod(_drawing_hand, Vector3(0.077,-0.044,0.048),Vector3(0.098,-0.072,0.072),0.074,0.078,"9b764b")
 	for finger in range(2):
 		_block(_drawing_hand, Vector3(0.018, 0.003 - 0.025 * finger, -0.005), Vector3(0.066, 0.018, 0.036), "daac7e")
 	_bow.add_child(_nocked)
@@ -247,12 +315,12 @@ func _build_bow() -> void:
 func _arrow_geometry(holder: Node3D, length: float, in_flight: bool) -> void:
 	# In flight the origin is the tip. On the string the origin is the nock.
 	var offset := length if in_flight else 0.0
-	var width := 0.018 if in_flight else 0.013
-	_block(holder, Vector3(0, 0, offset - length * 0.5), Vector3(width, width, length), "e3be7e")
-	_block(holder, Vector3(0, 0, offset - length), Vector3(width * 1.65, width * 1.65, 0.05), "676f65")
-	_block(holder, Vector3(0, 0.011, offset - 0.051), Vector3(0.011, 0.045, 0.084), "eae5c5")
-	var fletch := _block(holder, Vector3(0, -0.006, offset - 0.051), Vector3(0.045, 0.011, 0.084), "b56e40")
-	fletch.rotation.z = -0.22
+	var model := MeshInstance3D.new()
+	model.mesh = RECURVE_ARROW.mesh() if _recurve else BRANCH_ARROW.mesh()
+	model.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	model.scale = Vector3.ONE * length
+	model.position.z = offset
+	holder.add_child(model)
 	if in_flight:
 		_block(holder, Vector3(0, 0, offset + 0.067), Vector3(0.008, 0.008, 0.13), "ffe9a2")
 
@@ -260,20 +328,21 @@ func _arrow_geometry(holder: Node3D, length: float, in_flight: bool) -> void:
 func _pose(delta: float) -> void:
 	_since_shot = minf(3.0, _since_shot + delta)
 	_since_branch = minf(3.0, _since_branch + delta)
-	_aim = move_toward(_aim, float(_active and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)), delta * 6.5)
+	_aim = move_toward(_aim, float(_active and Input.is_action_pressed("aim")), delta * 6.5)
 	_sway = _sway.lerp(Vector2.ZERO, 1.0 - exp(-delta * 12.0))
 	_step += delta * _pace * 8.5
 	var step_sway := Vector2(sin(_step) * 0.012, cos(2.0 * _step) * 0.009) * _pace
 	var recoil := sin(_since_shot * 34.0) * exp(-_since_shot * 13.0)
 	var swing := sin(minf(_since_branch / 0.28, 1.0) * PI)
-	_bow.position = Vector3(0.36 - _aim * 0.10, -0.245 + _aim * 0.055, -0.83)
-	_bow.position += Vector3(step_sway.x - _sway.x, step_sway.y + _sway.y, recoil * 0.055 - swing * 0.15)
-	_bow.rotation = Vector3(-0.04 + recoil * 0.11, -0.19 - swing * 0.37, 0.22 - _aim * 0.08 + swing * 0.65)
-	camera.fov = lerpf(70.0, 58.0, _aim)
-	var draw := smoothstep(0.16, 0.68, _since_shot)
-	var nock := Vector3(0.032, 0.046, lerpf(0.15, 0.34, draw) + recoil * 0.018)
-	_set_rod(_string_top, TOP_TIP, nock)
-	_set_rod(_string_bottom, BOTTOM_TIP, nock)
+	_bow.position = Vector3(0.34 - _aim * 0.13, -0.235 + _aim * 0.06, -0.88)
+	_bow.position += Vector3(step_sway.x - _sway.x, step_sway.y + _sway.y, recoil * 0.05) * _motion_amount
+	_bow.position.z -= swing * 0.15
+	_bow.rotation = Vector3(0.11 + recoil * 0.085 * _motion_amount, 0.24 - swing * 0.37, 0.17 - _aim * 0.06 + swing * 0.65)
+	camera.fov = _base_fov - 12.0 * _zoom_amount * _aim
+	var draw := smoothstep(0.09, 0.35 if _recurve else 0.62, _since_shot)
+	var nock := Vector3(0.026, 0.04, lerpf(0.15, 0.355, draw) + recoil * 0.018)
+	_set_rod(_string_top, RECURVE_TOP if _recurve else TOP_TIP, nock)
+	_set_rod(_string_bottom, RECURVE_BOTTOM if _recurve else BOTTOM_TIP, nock)
 	_drawing_hand.position = nock + Vector3(0.042 * (1.0 - draw), -0.045 * (1.0 - draw), recoil * 0.08)
 	_nocked.position = nock
 	_nocked.visible = _has_arrows and _since_shot > 0.19 and swing < 0.3

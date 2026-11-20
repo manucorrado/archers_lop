@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://assets/pino.tscn" id="1"]
+
+[node name="PinoAlto" instance=ExtResource("1")]
+semilla = 8
+altura = 6.4
+anchura = 0.7
+pisos = 6
