@@ -15,10 +15,13 @@ func _initialize() -> void:
 	_test_empty_return()
 	_test_workshop_scatter()
 	_test_tree_costs()
+	_test_refunds()
+	_test_volley_and_cadence()
+	_test_precise_and_steady()
 	_test_second_act()
 	_test_required_core()
 	if failures == 0:
-		print("PASS: two acts, tree prices, scattered arrows, save migration, boss phases and rewards.")
+		print("PASS: two acts, rank purchases and refunds, volley and precision, scattered arrows, save migration, bosses and rewards.")
 	quit(1 if failures > 0 else 0)
 
 
@@ -38,11 +41,11 @@ func _test_build_and_combo() -> void:
 	run.damage_part(100, "body")
 	run.next_knot()
 	run.sap = 150
-	_expect(not run.buy("recurve") and not run.buy("spark"), "Act gates cannot be bypassed with sap")
-	_expect(run.buy("workshop"), "The workshop is available from N2")
+	_expect(not run.buy("recurve") and not run.buy("spark"), "Sap alone cannot skip a parent purchase")
+	_expect(run.buy("workshop"), "Damage opens the workshop")
 	run.damage_part(run.hp, "body")
 	run.next_knot()
-	_expect(run.buy("spark"), "The first phenomenon opens in N3")
+	_expect(run.buy("weak") and run.buy("spark"), "Precision opens the spark")
 	var post_purchase_hits := run.hits
 	for i in 7:
 		var impact := run.manual_impact("body", run.damage(), run.damage(true), 0)
@@ -57,11 +60,12 @@ func _test_build_and_combo() -> void:
 	_expect(is_equal_approx(run.combo, before - 0.2), "Combo decays by half a unit per second")
 	run.damage_part(run.hp, "body")
 	run.next_knot()
+	_expect(run.buy("rate"), "Rate opens the next bow")
 	var balance := run.sap
 	var arrows := run.arrows
 	_expect(run.buy("recurve") and run.sap == balance - 37, "N4 recurve costs 37")
-	_expect(run.bow == "recurve" and is_equal_approx(run.shot_interval(), 0.4), "Recurve fires 2.5 times per second")
-	_expect(run.equip("branch") and run.arrows == arrows and run.shot_interval() == 1.0,
+	_expect(run.bow == "recurve" and is_equal_approx(1.0 / run.shot_interval(), 3.5), "Recurve has 2.5 base shots/s plus one for rate")
+	_expect(run.equip("branch") and run.arrows == arrows and run.shot_interval() == 0.5,
 		"Changing bows preserves the quiver and changes cadence")
 
 
@@ -75,7 +79,9 @@ func _test_encounters() -> void:
 	run.tick(2.0)
 	_expect(run.target_active and run.target_serial == 1, "The first diana is shown during N2")
 	var impact := run.manual_impact("target", run.damage(), run.damage(true), run.target_serial)
-	_expect(impact.direct == run.damage(true) and is_equal_approx(run.combo, 1.25), "Diana applies weak damage and a single combo bonus")
+	_expect(impact.weak_spot and impact.direct == run.damage(true) and is_equal_approx(run.combo, 1.25), "Diana reports a precise hit and a single combo bonus")
+	_expect(not run.manual_impact("body", run.damage(), run.damage(true), 0).weak_spot,
+		"A regular body hit does not emit weak-point feedback")
 	run.tick(8)
 	_expect(run.seeds.size() == 3, "The first seed rain displays its targets")
 	impact = run.manual_impact("seed_0", run.damage(), run.damage(true), run.event_serial)
@@ -131,6 +137,7 @@ func _test_spark_at_boss_threshold() -> void:
 		run.damage_part(run.hp, "body")
 		run.next_knot()
 	run.buy("damage")
+	run.buy("weak")
 	run.buy("spark")
 	for i in 7:
 		run.manual_impact("body", run.damage(), run.damage(true), 0)
@@ -252,10 +259,15 @@ func _test_tree_costs() -> void:
 	_expect(run.buy("damage") and run.sap == 3000, "The root is free even with a positive wallet")
 	_expect(run.observations.has("first_purchase") and not run.observations.has("first_paid_purchase"),
 		"Claiming the free root is recorded separately from spending sap")
-	run.stage = 10
 	var first_costs := {"damage": 9, "rate": 14, "weak": 14, "recurve": 37, "workshop": 17,
 		"capacity": 7, "wheel": 21, "pickup": 11, "pace": 21, "spark": 18}
 	var offers := run.offers()
+	var open_children := []
+	for id in offers:
+		if id != "damage" and offers[id].available:
+			open_children.append(id)
+	_expect(open_children.size() == 4 and open_children.has("rate") and open_children.has("weak")
+		and open_children.has("workshop") and open_children.has("refund"), "The root opens exactly four branches")
 	for id in first_costs:
 		_expect(offers[id].cost == first_costs[id], "A previously available paid rank keeps its price: " + id)
 	for i in range(9):
@@ -265,6 +277,119 @@ func _test_tree_costs() -> void:
 		_expect(run.buy("rate"), "Attack speed has ten purchasable ranks")
 	_expect(not run.buy("damage") and not run.buy("rate") and run.damage_rank == 10 and run.rank_of("rate") == 10,
 		"Buying a completed branch cannot charge an eleventh rank")
+	var full_price := 0
+	for node: Dictionary in Run.TREE.values():
+		for price: int in node.costs:
+			full_price += price
+	var earned := 0
+	for index in 9:
+		earned += Run.SAP_BUDGET[index]
+	_expect(earned >= full_price * 0.9 and earned + floori(Run.SAP_BUDGET[9] * 0.6) >= full_price,
+		"Base sap affords at least 90% of ranks by value before N10 and all ranks during its fight")
+
+
+func _test_refunds() -> void:
+	var run := Run.new()
+	run.sap = 6000
+	for id in ["damage", "damage", "workshop", "capacity", "pickup", "leap", "rate", "recurve", "longbow"]:
+		_expect(run.buy(id), "Purchases alone open " + id)
+	_expect(not run.refund("damage") and run.buy("refund") and not run.refund("refund"), "Refunding needs the permanent license")
+	var balance := run.sap
+	_expect(run.refund("damage") and run.damage_rank == 1 and run.sap == balance + 9, "One right click restores exactly one paid level")
+	_expect(run.refund("damage") and run.sap == balance + 9 and not run.refund("damage"), "A free root pays zero and cannot be sold twice")
+	_expect(run.workshop and run.rank_of("leap") == 1 and not run.buy("rate"), "Owned descendants still work; missing parents gate new ranks")
+	_expect(run.bow == "longbow" and run.refund("longbow") and run.bow == "recurve", "Selling the equipped bow selects the remaining purchased bow")
+	run.arrows = run.capacity()
+	run.workshop_stock = 3
+	run.seed_drops = {"seed_0": 4}
+	_expect(run.refund("capacity") and run.arrows == 40 and run.collect(true) == 0 and run.collect_seeds("seed_0") == 0,
+		"Shrinking the quiver preserves surplus arrows without draining or duplicating the ground stock")
+	run.tick(2.5)
+	var held := run.workshop_fraction
+	_expect(run.refund("workshop") and run.workshop_flights.size() == 1, "An already launched batch outlives the workshop")
+	var reload := Run.new()
+	_expect(reload.restore_state(run.save_state()) and reload.save_state() == run.save_state(), "Refund balances and loose ammo survive reload")
+	reload.tick(20.0)
+	_expect(reload.workshop_stock == 6 and reload.workshop_flights.is_empty() and is_equal_approx(reload.workshop_fraction, held),
+		"A sold workshop stops crafting and its last batch still lands exactly once")
+	var legacy := Run.new()
+	legacy.ranks = {"damage": 2}
+	var data := legacy.save_state()
+	data.erase("paid_prices")
+	data.erase("workshop_piles")
+	_expect(reload.restore_state(data), "A five-target save can migrate its original damage purchase price")
+	reload.sap = 6
+	reload.buy("refund")
+	reload.refund("damage")
+	reload.refund("damage")
+	_expect(reload.sap == 13, "Legacy damage ranks return their actual four and nine sap")
+	reload.buy("damage")
+	reload.refund("damage")
+	_expect(reload.sap == 13, "Rebuying the free rank never creates extra sap")
+	var migrated := legacy.save_state()
+	migrated.erase("paid_prices")
+	migrated.observations = {"buy_damage": 3.0, "buy_workshop": 40.0}
+	_expect(reload.restore_state(migrated) and reload.paid_prices.damage[0] == 4,
+		"A legacy root can be recognized after the previous build already migrated the workshop")
+	migrated.observations.first_paid_purchase = 40.0
+	_expect(reload.restore_state(migrated) and reload.paid_prices.is_empty(),
+		"A free root followed by a recorded first purchase keeps its zero refund")
+
+
+func _test_volley_and_cadence() -> void:
+	var run := Run.new()
+	run.sap = 6000
+	for i in 9:
+		run.buy("damage")
+	_expect(run.damage() == 52 and run.volley_size() == 1, "The first nine damage levels compound by twenty percent")
+	_expect(run.buy("refund") and not run.buy("pet"), "Petting opens after maxing damage")
+	run.buy("damage")
+	_expect(run.buy("pet") and run.damage() == 62 and run.volley_size() == 3, "Damage ten unlocks three full-strength arrows and the late pet node")
+	run.refund("damage")
+	_expect(run.volley_size() == 1 and run.rank_of("pet") == 1, "Selling the capstone removes multishot and preserves the dog interaction")
+	for i in 10:
+		run.buy("rate")
+		_expect(is_equal_approx(1.0 / run.shot_interval(), 2 + i), "Each rate level adds exactly one shot per second")
+	run.buy("recurve")
+	run.buy("longbow")
+	_expect(run.bow == "longbow" and is_equal_approx(1.0 / run.shot_interval(), 12) and run.damage() == 114,
+		"The third bow can be bought by prerequisites alone and has its own damage and cadence")
+
+
+func _test_precise_and_steady() -> void:
+	var run := Run.new()
+	run.sap = 400
+	for id in ["damage", "weak", "spark", "crit", "combo", "steady"]:
+		run.buy(id)
+	run.run_seed = 22
+	run.stage = 2
+	run.hp = run.max_hp()
+	run.tick(2.0)
+	_expect(run.damage(true) == roundi(10 * 1.2 * Run.POWER[1] * 2.0), "Precision doubles a weak-point hit")
+	run.manual_impact("target", run.damage(), run.damage(true), run.target_serial)
+	_expect(is_equal_approx(run.combo, 1.5) and is_equal_approx(run.combo_grace, 3.5), "An aimed hit with the combo node earns twice the streak gain and longer grace")
+	var saw_critical := false
+	var saw_normal := false
+	for i in 80:
+		run.tick(1.0)
+		run.begin_volley()
+		var expected := 10.0 * 1.2 * Run.POWER[1]
+		expected *= 1.2 if i >= 3 else 1.0
+		expected *= 2.0 if run.volley_critical else 1.0
+		saw_critical = saw_critical or run.volley_critical
+		saw_normal = saw_normal or not run.volley_critical
+		_expect(run.volley_damage() == roundi(expected), "Only rolled criticals and uninterrupted volleys earn their modifiers")
+	_expect(saw_critical and saw_normal, "The seeded volley series contains both critical and regular shots")
+	var restored := Run.new()
+	restored.restore_state(run.save_state())
+	run.tick(1.0)
+	restored.tick(1.0)
+	run.begin_volley()
+	restored.begin_volley()
+	_expect(restored.volley_damage() == run.volley_damage() and restored.steady_count == 4, "Resuming preserves the next critical roll and firing streak")
+	restored.tick(2.0)
+	restored.begin_volley()
+	_expect(restored.steady_count == 1, "A long break resets the uninterrupted-shot bonus")
 
 
 func _test_second_act() -> void:
@@ -288,7 +413,9 @@ func _test_second_act() -> void:
 	for phase in 3:
 		var active := "core_%d" % phase
 		var inactive := "core_%d" % ((phase + 1) % 3)
-		_expect(run.manual_impact(active, 10, 15, 0).direct == 15 and run.manual_impact(inactive, 10, 15, 0).direct == 10,
+		var current_hit := run.manual_impact(active, 10, 15, 0)
+		var inactive_hit := run.manual_impact(inactive, 10, 15, 0)
+		_expect(current_hit.weak_spot and current_hit.direct == 15 and not inactive_hit.weak_spot and inactive_hit.direct == 10,
 			"Only the current hollow rewards a precise manual hit")
 		var hp_before := run.hp
 		var effective := run.damage_part(total, "body")

@@ -1,11 +1,13 @@
 extends Node3D
 
 const TARGET_POSITION := Vector3(0.0, 1.65, -5.0)
-const WORKSHOP_PICKUP := Vector3(-3.6, 0.0, 0.15)
+const WORKSHOP_PICKUP := Vector3(-6.6, 0.0, 0.15)
+const DOG_POSITION := Vector3(-2.55, 0, 1.45)
+const DOG_REACH := 1.9
 const KNOT_PICKUP := Vector3(0.9, 0.0, -2.85)
-const WORKSHOP_BASE := Vector3(-4.3, 0.0, -1.15)
+const WORKSHOP_BASE := Vector3(-7.2, 0.0, -1.40)
 const WORKSHOP_LANDINGS: Array[Vector3] = [
-	Vector3(-4.6, 0, 4.8), Vector3(0.7, 0, 2.0), Vector3(4.5, 0, -0.5), Vector3(-8.4, 0, -3.6)
+	Vector3(-5.0, 0, 4.8), Vector3(0.7, 0, 2.0), Vector3(4.5, 0, -0.5), Vector3(-7.9, 0, -5.2)
 ]
 const LAUNCH_ORIGIN := WORKSHOP_BASE + Vector3(0.23, 1.12, 1.52)
 const CORE_SOCKETS: Array[Vector3] = [
@@ -26,41 +28,11 @@ const FEATHER := Color("#fff0bb")
 const MOSS := Color("#75845a")
 const STONE := Color("#788176")
 
-# Bake boxes with per-instance colors. A complete tree line or landmark takes
-# one draw batch and all share one palette material, including the pickup LODs.
-class Blocks:
-	var poses: Array[Transform3D] = []
-	var tones: Array[Color] = []
-
-	func box(center: Vector3, size: Vector3, tone: Color, angles := Vector3.ZERO) -> void:
-		var orientation := Basis.from_euler(angles)
-		poses.append(Transform3D(orientation.scaled_local(size), center))
-		tones.append(tone)
-
-	func beam(a: Vector3, b: Vector3, width: float, depth: float, tone: Color) -> void:
-		var direction := b - a
-		var orientation := Basis(Quaternion(Vector3.UP, direction.normalized()))
-		poses.append(Transform3D(orientation.scaled_local(Vector3(width, direction.length(), depth)), (a + b) * 0.5))
-		tones.append(tone)
-
-	func bake(parent: Node3D, unit_cube: BoxMesh, label: String, shadows := true) -> MultiMeshInstance3D:
-		var multi := MultiMesh.new()
-		multi.transform_format = MultiMesh.TRANSFORM_3D
-		multi.use_colors = true
-		multi.mesh = unit_cube
-		multi.instance_count = poses.size()
-		for index in poses.size():
-			multi.set_instance_transform(index, poses[index])
-			multi.set_instance_color(index, tones[index])
-		var result := MultiMeshInstance3D.new()
-		result.name = label
-		result.multimesh = multi
-		if not shadows:
-			result.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		parent.add_child(result)
-		return result
+const Blocks = preload("res://scripts/voxel_blocks.gd")
+const DOG = preload("res://assets/ovejero.tscn")
 
 var _cube := BoxMesh.new()
+var _dog = DOG.instantiate()
 var _rng := RandomNumberGenerator.new()
 var _knot := StaticBody3D.new()
 var _knot_geometry: Node3D
@@ -103,6 +75,9 @@ func _ready() -> void:
 	_setup_light()
 	_make_landscape()
 	_make_collisions()
+	_dog.position = DOG_POSITION
+	_dog.rotation.y = 0.05
+	add_child(_dog)
 	_make_workshop()
 	_prepare_pickup_glow()
 	for landing in WORKSHOP_LANDINGS:
@@ -193,7 +168,7 @@ func _make_landscape() -> void:
 		var point := Vector3(_rng.randf_range(-13, 13), 0, _rng.randf_range(-13, 12))
 		if absf(point.x) < 2.1 and point.z > -7.0:
 			continue
-		if point.distance_to(WORKSHOP_BASE) < 2.2 or point.distance_to(WORKSHOP_PICKUP) < 1.45:
+		if point.distance_to(WORKSHOP_BASE) < 2.2 or point.distance_to(WORKSHOP_PICKUP) < 1.45 or point.distance_to(DOG_POSITION) < 0.85:
 			continue
 		var tone := MOSS.lerp(Color("#9ba46c"), _rng.randf())
 		for blade in range(3):
@@ -299,8 +274,15 @@ func _make_collisions() -> void:
 		_collider(limits, Vector3(side * 10.4, 1.7, 0), Vector3(0.55, 3.4, 24.0))
 		_collider(limits, Vector3(0, 1.7, side * 11.55), Vector3(21.5, 3.4, 0.65))
 	_collider(limits, Vector3(2.48, 0.5, -4.1), Vector3(0.68, 1.0, 0.64))
+	_collider(limits, DOG_POSITION + Vector3(0, 0.41, 0), Vector3(0.42, 0.82, 0.52))
 	for side in [-1, 1]:
 		_collider(limits, Vector3(8.0 * side, 1.6, -8.2), Vector3(0.5, 3.2, 0.5))
+
+func is_near_dog(feet: Vector3) -> bool:
+	return feet.distance_squared_to(DOG_POSITION) <= DOG_REACH * DOG_REACH
+
+func pet_dog() -> void:
+	_dog.pet()
 
 func _collider(parent: StaticBody3D, center: Vector3, size: Vector3) -> CollisionShape3D:
 	var node := CollisionShape3D.new()
@@ -702,7 +684,7 @@ func workshop_landing_position(slot: int) -> Vector3:
 func _update_workshop_delivery(state: Dictionary) -> void:
 	var piles: Array = state.get("workshop_piles", [])
 	for slot in _workshop_piles.size():
-		var amount := int(piles[slot]) if slot < piles.size() and _built else 0
+		var amount := int(piles[slot]) if slot < piles.size() else 0
 		_show_pile(_workshop_piles[slot], amount)
 	_show_pile(_knot_piles, int(state.get("knot_stock", 0)))
 	var visible_serials := {}

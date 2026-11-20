@@ -9,17 +9,19 @@ Abrí [ElArqueroDelClaro.exe](build/windows/ElArqueroDelClaro.exe) y elegí **En
 | Control | Acción |
 |---|---|
 | WASD y ratón | Caminar y mirar |
-| Espacio | Dar un salto corto |
+| Espacio | Saltar. Con la mejora de salto, mirar hacia un atado cercano al saltar te lleva hasta él |
 | Clic izquierdo / mantener | Soltar una flecha / repetir el disparo |
 | Botón derecho mantenido | Acercar la mira |
-| 1, 2 o la rueda del mouse | Cambiar entre los arcos comprados |
-| Tab | Abrir o cerrar las mejoras |
+| 1, 2, 3 o la rueda del mouse | Equipar el arco de rama, el rápido o el largo, entre los comprados |
+| E cerca del perro | Abrir las mejoras. E o Esc para volver al claro |
+| Clic izquierdo / derecho en un nodo | Comprar un nivel / devolver un nivel después de desbloquear los reembolsos |
+| R cerca del perro | Acariciarlo después de desbloquear la mejora |
 | F cerca del nudo | Golpear con la rama. Con el carcaj vacío, el golpe puede desprender cuatro flechas |
 | Esc | Pausar y acceder al guardado, los ajustes y la opción de empezar de nuevo |
 
-**Primera vuelta.** Empezás con 24 flechas. Abrí el árbol con Tab, seleccioná **Daño por flecha** y elegí **Obtener gratis**. Tu arco pasa de 10 a 12 de daño base y se abren las primeras ramas. Daño y velocidad de ataque tienen diez niveles cada uno. En el segundo blanco podés construir el taller por 17 de savia. Produce 1,25 flechas por segundo y lanza tandas de tres a distintos puntos del claro. Seguí el vuelo y acercate al atado para recogerlo. Si el carcaj está lleno, el resto queda en el suelo.
+**Primera vuelta.** Empezás con 24 flechas. Acercate al ovejero sentado a la izquierda del camino y apretá **E**. Pasá el mouse por el centro del árbol y comprá el primer nivel de daño gratis. Tu arco pasa de 10 a 12 de daño y se abren cuatro ramas. El taller cuesta 17 de savia. Produce 1,25 flechas por segundo y lanza tandas de tres a distintos puntos del claro. Seguí el vuelo y acercate al atado para recogerlo. Si el carcaj está lleno, el resto queda en el suelo.
 
-En el tercer blanco podés comprar una descarga que se activa cada ocho aciertos. En el cuarto se habilita un arco que dispara más rápido y consume más flechas por segundo. Ambos requieren la primera mejora de daño.
+Cada compra abre las mejoras conectadas. Daño y cadencia tienen diez niveles cada uno. En daño 10 salen tres flechas por disparo si tenés munición. El arco largo viene después del arco rápido. En la rama de precisión podés mejorar el daño al punto débil, provocar descargas y críticos o premiar los disparos seguidos.
 
 **Guardar y continuar.** Podés guardar desde pausa. También se guardan las compras, los cambios de blanco y de fase y las recompensas. En el menú de inicio, **Continuar** recupera la partida. Si cerraste mientras elegías la recompensa, vuelven las mismas tres cartas. Si terminaste la versión anterior, en su resumen aparece **Continuar al blanco 6**. Durante la pausa y con el juego cerrado se detienen el reloj y el taller.
 

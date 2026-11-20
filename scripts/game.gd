@@ -5,6 +5,9 @@ const Clearing = preload("res://scripts/clearing.gd")
 const Archer = preload("res://scripts/archer.gd")
 const Interface = preload("res://scripts/interface.gd")
 const SaveData = preload("res://scripts/save_data.gd")
+const BOWS := ["branch", "recurve", "longbow"]
+const VOLLEY_ANGLES := [0.0, -0.035, 0.035]
+const SUPPLY_JUMP_REACH := 8.0
 
 var run := Run.new()
 var clearing := Clearing.new()
@@ -40,10 +43,10 @@ func _ready() -> void:
 	hud.next_act_requested.connect(_continue_act)
 	hud.save_requested.connect(_manual_save)
 	hud.resume_requested.connect(_resume_play)
-	hud.shop_requested.connect(_set_view.bind("shop"))
 	hud.restart_requested.connect(_restart)
 	hud.quit_requested.connect(_quit)
-	hud.buy_requested.connect(_buy)
+	hud.buy_requested.connect(_change_upgrade.bind(false))
+	hud.refund_requested.connect(_change_upgrade.bind(true))
 	hud.gift_requested.connect(_choose_gift)
 	hud.equip_requested.connect(_equip)
 	hud.settings_changed.connect(_apply_settings)
@@ -114,15 +117,31 @@ func _input(event: InputEvent) -> void:
 			_resume_play()
 	elif event.is_action_pressed("shop") and view in ["play", "shop"]:
 		get_viewport().set_input_as_handled()
-		_set_view("shop" if view == "play" else "play")
+		if view == "shop":
+			_set_view("play")
+		elif clearing.is_near_dog(archer.position):
+			_set_view("shop")
+		else:
+			hud.notify("Acercate al perro para abrir las mejoras.", "Move closer to the dog to open upgrades.")
 	elif view == "play":
+		if event.is_action_pressed("pet_dog") and run.rank_of("pet") > 0 and clearing.is_near_dog(archer.position):
+			get_viewport().set_input_as_handled()
+			clearing.pet_dog()
+			return
 		var selected := ""
 		if event.is_action_pressed("bow_1"):
 			selected = "branch"
 		elif event.is_action_pressed("bow_2"):
 			selected = "recurve"
+		elif event.is_action_pressed("bow_3"):
+			selected = "longbow"
 		elif event.is_action_pressed("bow_previous") or event.is_action_pressed("bow_next"):
-			selected = "recurve" if run.bow == "branch" else "branch"
+			var step := 1 if event.is_action_pressed("bow_next") else -1
+			for distance in range(1, BOWS.size() + 1):
+				var candidate: String = BOWS[posmod(BOWS.find(run.bow) + step * distance, BOWS.size())]
+				if candidate == "branch" or run.rank_of(candidate) > 0:
+					selected = candidate
+					break
 		if not selected.is_empty():
 			get_viewport().set_input_as_handled()
 			_equip(selected)
@@ -137,6 +156,7 @@ func _equip(id: String) -> void:
 func _physics_process(delta: float) -> void:
 	if view != "play":
 		return
+	archer.set_supply_jump_destination(_supply_jump_target() if run.rank_of("leap") > 0 else null)
 	run.sample_session(Time.get_ticks_usec())
 	var old_target := run.target_serial
 	var old_rain := run.event_serial
@@ -188,15 +208,23 @@ func _shoot() -> void:
 				"Out of arrows · Pick up a bundle or strike the trunk with your branch.")
 		return
 	shot_wait = run.shot_interval()
-	run.note_shot()
-	var ray: Dictionary = archer.aim_hit()
-	var endpoint: Vector3 = ray.get("position", archer.camera.global_position - archer.camera.global_basis.z * 50.0)
-	var id := clearing.target_id(ray.get("collider"), endpoint)
-	var duration := archer.flight_duration(endpoint)
-	in_flight.append({"stage": run.stage, "id": id, "origin": archer.arrow_origin(),
-		"end": endpoint, "duration": duration, "remaining": duration, "damage": run.damage(),
-		"weak_damage": run.damage(true), "serial": run.event_serial if id.begins_with("seed_") else run.target_serial})
-	archer.play_shot(endpoint)
+	run.begin_volley()
+	var count := mini(run.arrows, run.volley_size())
+	for index in count:
+		run.note_shot()
+		var angle: float = VOLLEY_ANGLES[index]
+		var ray := archer.aim_hit(50.0, angle)
+		var endpoint: Vector3 = ray.get("position", archer.camera.global_position + archer.shot_direction(angle) * 50.0)
+		var id := clearing.target_id(ray.get("collider"), endpoint)
+		var duration := archer.flight_duration(endpoint)
+		in_flight.append({"stage": run.stage, "id": id, "origin": archer.arrow_origin(),
+			"end": endpoint, "duration": duration, "remaining": duration, "damage": run.volley_damage(),
+			"weak_damage": run.volley_damage(true), "critical": run.volley_critical,
+			"serial": run.event_serial if id.begins_with("seed_") else run.target_serial})
+		if index == 0:
+			archer.play_shot(endpoint)
+		else:
+			archer.play_extra_arrow(endpoint)
 	_sync()
 
 
@@ -220,7 +248,8 @@ func _land_shot(flight: Dictionary) -> void:
 	hud.hit_marker()
 	clearing.hit_feedback(flight.end)
 	if outcome.direct > 0:
-		hud.show_damage(outcome.direct, "manual")
+		var source := "critical" if flight.get("critical", false) else ("weak" if outcome.weak_spot else "manual")
+		hud.show_damage(outcome.direct, source)
 	if outcome.spark > 0:
 		clearing.play_spark(clearing.target_center(outcome.spark_target))
 		hud.show_damage(outcome.spark, "spark")
@@ -294,9 +323,8 @@ func _next_knot() -> void:
 		return
 	clearing.set_stage(run.stage)
 	match run.stage:
-		2: hud.notify("Ya podés comprar el taller de flechas.", "You can now buy the arrow workshop.")
-		3: hud.notify("Chispa de copa · Una descarga cada ocho aciertos.", "Canopy spark · A discharge every eight hits.")
-		4: hud.notify("Ya podés comprar el arco rápido (recurvo).", "You can now buy the recurve bow.")
+		2: hud.notify("Si aparece un punto débil, acertarle da más daño y mejora la racha.",
+			"When a weak spot appears, hit it for extra damage and a bigger combo.")
 		5: hud.notify("Quinto blanco · Tronco partido", "Fifth target · Twin Fork")
 		10: hud.notify("Último blanco · Apuntá al hueco encendido. El punto débil cambia de lugar.",
 			"Final target · Aim at the glowing hollow. The weak spot moves.")
@@ -345,12 +373,49 @@ func _collect_nearby() -> bool:
 	return true
 
 
-func _buy(id: String) -> void:
+func _supply_jump_target() -> Variant:
+	var piles: Array[Vector3] = []
+	for index in run.workshop_piles.size():
+		if run.workshop_piles[index] > 0:
+			piles.append(Clearing.WORKSHOP_LANDINGS[index])
+	if run.knot_stock > 0:
+		piles.append(Clearing.KNOT_PICKUP)
+	for id: String in run.seed_drops:
+		if run.seed_drops[id] > 0:
+			piles.append(clearing.seed_drop_position(id))
+	var eye := archer.camera.global_position
+	var forward := -archer.camera.global_basis.z
+	var bearing := Vector2(forward.x, forward.z).angle()
+	var pitch := asin(clampf(forward.y, -1, 1))
+	var best_score := INF
+	var destination: Variant = null
+	for point in piles:
+		var offset := point + Vector3.UP * 0.3 - eye
+		var horizontal := Vector2(offset.x, offset.z)
+		var distance := horizontal.length()
+		if distance <= 0.6 or distance > SUPPLY_JUMP_REACH:
+			continue
+		var turn := absf(angle_difference(bearing, horizontal.angle()))
+		var elevation := atan2(offset.y, distance)
+		if turn > deg_to_rad(18.0) or pitch > deg_to_rad(15.0) or pitch < elevation - deg_to_rad(18.0):
+			continue
+		var score := turn + 0.25 * absf(pitch - elevation)
+		if score < best_score:
+			var sight := PhysicsRayQueryParameters3D.create(eye, eye + offset)
+			sight.exclude = [archer.get_rid()]
+			if archer.get_world_3d().direct_space_state.intersect_ray(sight).is_empty():
+				best_score = score
+				destination = point
+	return destination
+
+
+func _change_upgrade(id: String, refund: bool) -> void:
 	if view != "shop":
 		return
 	run.sample_session(Time.get_ticks_usec())
 	var previous := run.save_state()
-	if not run.buy(id):
+	var changed := run.refund(id) if refund else run.buy(id)
+	if not changed:
 		return
 	if not _save_campaign():
 		run.restore_state(previous)
@@ -358,7 +423,7 @@ func _buy(id: String) -> void:
 		_sync()
 		return
 	if id == "workshop":
-		clearing.set_workshop(true)
+		clearing.set_workshop(run.workshop)
 	archer.set_bow(run.bow)
 	archer.play_cue("buy")
 	_sync()
@@ -397,6 +462,7 @@ func _sync() -> void:
 	archer.set_has_arrows(run.arrows > 0)
 	archer.set_speed_multiplier(run.speed_multiplier())
 	var state := run.snapshot()
+	state.near_dog = clearing.is_near_dog(archer.position)
 	state.has_save = has_save
 	clearing.sync_encounter(state)
 	hud.refresh(state)

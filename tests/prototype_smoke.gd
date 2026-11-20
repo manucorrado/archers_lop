@@ -68,17 +68,26 @@ func _run() -> void:
 	if not _expect(game.run.shots == 6 and game.run.hp == 100 and game.run.sap == 4 and game.run.arrows == 18,
 			"Six 10-damage arrows yield four sap"):
 		return
-	await _tap(KEY_TAB)
-	if not _expect(game.view == "shop", "Tab opens upgrades"):
+	await _tap(KEY_E)
+	if not _expect(game.view == "play", "Interacting away from the dog keeps the player in the clearing"):
 		return
-	await _click(game.hud.offer_controls["workshop"])
-	if not _expect(game.hud.purchase_upgrade.disabled, "The workshop initially requires the damage root"):
+	if not await _open_shop():
+		return
+	var first_nodes: Array = []
+	for id: String in game.hud.offer_controls:
+		if game.hud.offer_controls[id].is_visible_in_tree():
+			first_nodes.append(id)
+	first_nodes.sort()
+	if not _expect(first_nodes == ["damage", "rate", "refund", "weak", "workshop"],
+			"The new tree starts with the center and four neighboring nodes"):
+		return
+	if not _expect(not game.run.offers().workshop.requirement_met, "The workshop initially requires the damage root"):
 		return
 	await _click(game.hud.offer_controls["damage"])
-	await _click(game.hud.purchase_upgrade)
 	if not _expect(game.run.damage() == 12 and game.run.sap == 4, "The first damage purchase is free"):
 		return
-	await _tap(KEY_TAB)
+	await _tap(KEY_E)
+	_aim_at("body")
 	_mouse_left(true)
 	if not await _until(func(): return game.run.hits == 7, 65, "Shooting resumes after the shop"):
 		return
@@ -87,17 +96,19 @@ func _run() -> void:
 	if not await _until(func(): return game.run.stage == 2 and game.run.sap >= 17, 1100, "N2 workshop affordable through real hits"):
 		return
 	_mouse_left(false)
-	await _tap(KEY_TAB)
+	if not await _open_shop():
+		return
 	var sap_before := game.run.sap
 	await _click(game.hud.offer_controls["workshop"])
-	await _click(game.hud.purchase_upgrade)
-	if not _expect(game.run.workshop and game.run.sap == sap_before - 17, "Workshop costs seventeen sap"):
+	if not _expect(game.run.workshop and game.run.sap == sap_before - 17
+			and game.hud.offer_controls["wheel"].is_visible_in_tree(), "Workshop costs seventeen and reveals its production branch"):
 		return
 	var time_before := game.run.elapsed
 	await _frames(100)
 	if not _expect(game.run.workshop_stock == 0 and game.run.elapsed == time_before, "An open shop freezes production and time"):
 		return
-	await _tap(KEY_TAB)
+	await _tap(KEY_E)
+	_aim_at("body")
 	_mouse_left(true)
 	if not await _until(func(): return game.run.arrows == 0, 650, "Empty the quiver through ordinary shots"):
 		return
@@ -143,12 +154,23 @@ func _run() -> void:
 	if not _expect(game.run.collected > 0 and absf(_workshop_inventory() - stock_and_carried - produced) < 0.0001,
 			"Buffer, airborne bundles, landed stock and collected arrows reconcile"):
 		return
-	if not await _fight_until(func(): return game.run.stage == 3 and game.run.offers().spark.available):
+	if not await _fight_until(func(): return game.run.stage >= 3 and game.run.sap >= 45):
 		return
+	await _buy("weak")
 	await _buy("spark")
-	if not await _fight_until(func(): return game.run.stage == 4 and game.run.offers().recurve.available):
+	if not await _fight_until(func(): return game.run.stage >= 4 and game.run.sap >= 65):
 		return
+	await _buy("rate")
 	await _buy("recurve")
+	await _buy("refund")
+	if not await _open_shop():
+		return
+	var sap_before_refund := game.run.sap
+	await _click(game.hud.offer_controls["rate"], MOUSE_BUTTON_RIGHT)
+	if not _expect(game.run.rank_of("rate") == 0 and game.run.sap == sap_before_refund + 14 and game.run.bow == "recurve",
+			"A right click returns exactly one paid level and preserves its purchased child"):
+		return
+	await _tap(KEY_E)
 	if not _expect(game.run.bow == "recurve" and game.run.rank_of("spark") == 1, "New purchases work in combat"):
 		return
 	if not await _fight_until(func(): return game.run.split):
@@ -198,12 +220,38 @@ func _run() -> void:
 			"Continuing enters the second act with the saved reward"):
 		return
 	for stage in range(6, 11):
-		for upgrade in ["damage", "rate", "capacity", "wheel"]:
+		for upgrade in ["rate", "longbow", "capacity", "pickup", "leap", "wheel", "damage"]:
+			if upgrade == "rate" and game.run.rank_of("rate") > 0:
+				continue
 			while game.run.offers()[upgrade].available:
 				await _buy(upgrade)
+				if upgrade == "rate":
+					break
+		if game.run.rank_of("longbow") > 0 and game.run.bow != "longbow":
+			await _tap(KEY_3)
 		if stage < 10:
 			if not await _fight_until(func(): return game.run.stage > stage):
 				return
+	if not _expect(game.run.bow == "longbow" and game.run.rank_of("leap") == 1 and game.run.volley_size() == 3,
+			"Purchases during the route unlock the third bow, directed jump and three-arrow volleys"):
+		return
+	if not await _check_supply_jump():
+		return
+	await _buy("pet")
+	await _tap(KEY_R)
+	if not _expect(game.run.rank_of("pet") > 0 and game.view == "play", "Petting is available alongside the dog interaction"):
+		return
+	if game.run.arrows < 3:
+		await _refill()
+	_aim_at("core_0")
+	var arrows_before := game.run.arrows
+	_mouse_left(true)
+	if not await _until(func(): return game.in_flight.size() == 3, 90, "One release launches three independent arrows"):
+		return
+	_mouse_left(false)
+	if not _expect(game.run.arrows == arrows_before - 3 and game.in_flight[0].end != game.in_flight[1].end
+			and game.in_flight[0].damage == game.in_flight[2].damage, "The fan spends three arrows with three trajectories and equal base damage"):
+		return
 	for phase in 3:
 		if not await _fight_until(func(): return game.run.core_phase > phase or game.view == "gift", "core_%d" % phase):
 			return
@@ -222,6 +270,8 @@ func _run() -> void:
 	if not _expect(game.view == "end" and game.run.stage == 10 and _button_named("Continuar al blanco 6") == null,
 			"The tenth target ends the demo on the saved result"):
 		return
+	print("Route timing, active seconds: target 10 entered at ", game.run.observations.broke_9,
+			", finished at ", game.run.observations.broke_10)
 	await _click(_button_named("Volver a jugar"))
 	await _click(_button_named("Empezar de nuevo"))
 	await _frames(6)
@@ -230,7 +280,7 @@ func _run() -> void:
 			and game.run.sap == 0 and game.run.arrows == 24 and not game.run.workshop and game.run.shots == 0,
 			"Replay resets position in the campaign, currency, arrows and purchases"):
 		return
-	print("PASS: ten targets, jump, tree purchases, airborne supply, both bosses, rewards, save/resume and replay.")
+	print("PASS: ten targets, dog shop and refunds, directed jump, longbow, triple shots, supply, both bosses, rewards, save/resume and replay.")
 	unload_current_scene()
 	# The audio mixer runs on a wall clock even when simulation uses fixed FPS.
 	# Let it retire queued voices from the replay transition before engine shutdown.
@@ -245,11 +295,34 @@ func _frames(count: int) -> void:
 		await physics_frame
 
 
+func _open_shop() -> bool:
+	var dog := Clearing.DOG_POSITION
+	if not game.clearing.is_near_dog(game.archer.position):
+		if not await _walk_to(Vector2(dog.x + 0.95, dog.z + 0.65)):
+			return false
+	await _tap(KEY_E)
+	return _expect(game.view == "shop", "E near the dog opens upgrades")
+
+
 func _buy(id: String) -> void:
-	await _tap(KEY_TAB)
+	if not await _open_shop():
+		return
 	await _click(game.hud.offer_controls[id])
-	await _click(game.hud.purchase_upgrade)
-	await _tap(KEY_TAB)
+	await _tap(KEY_E)
+
+
+func _check_supply_jump() -> bool:
+	var point := Clearing.WORKSHOP_LANDINGS[1]
+	if not await _walk_to(Vector2(point.x + 3.4, point.z + 1.5)):
+		return false
+	if not await _until(func(): return game.run.workshop_piles[1] > 0, 1000, "A bundle lands at the jump destination"):
+		return false
+	_look_at(point + Vector3.UP * 0.2)
+	await _tap(KEY_SPACE)
+	await _frames(50)
+	var position := game.archer.position
+	return _expect(Vector2(position.x, position.z).distance_to(Vector2(point.x, point.z)) < 0.8,
+			"Looking at a landed bundle and jumping reaches it without walking")
 
 
 func _workshop_inventory() -> float:
@@ -277,6 +350,12 @@ func _fight_until(done: Callable, target_id := "body") -> bool:
 		if done.call():
 			return true
 		if game.run.arrows == 0:
+			# The final release can empty the quiver while the killing shot is still in flight.
+			await _until(func(): return game.in_flight.is_empty() or done.call(), 50, "Last arrows land")
+			if game.run.hp == 0 and game.view == "play":
+				await _until(func(): return game.run.hp > 0 or game.view != "play", 50, "Target break finishes")
+			if done.call():
+				return true
 			await _refill()
 		_aim_at(target_id)
 		_mouse_left(true)
@@ -303,8 +382,12 @@ func _reopen() -> void:
 
 
 func _aim_at(target_id: String) -> void:
+	_look_at(game.clearing.target_center(target_id))
+
+
+func _look_at(point: Vector3) -> void:
 	var pose := game.archer.save_pose()
-	var direction := game.archer.camera.global_position.direction_to(game.clearing.target_center(target_id))
+	var direction := game.archer.camera.global_position.direction_to(point)
 	pose.yaw = atan2(-direction.x, -direction.z)
 	pose.pitch = asin(direction.y)
 	game.archer.restore_pose(pose)
@@ -356,7 +439,7 @@ func _mouse_left(pressed: bool, at: Vector2 = Vector2(640, 360)) -> void:
 	_send(event)
 
 
-func _click(button: Button) -> void:
+func _click(button: Button, mouse_button := MOUSE_BUTTON_LEFT) -> void:
 	if not _expect(is_instance_valid(button) and button.is_visible_in_tree() and not button.disabled,
 			"The requested button is visible and enabled"):
 		return
@@ -369,7 +452,7 @@ func _click(button: Button) -> void:
 	var center := button.get_global_rect().get_center()
 	for down: bool in [true, false]:
 		var event := InputEventMouseButton.new()
-		event.button_index = MOUSE_BUTTON_LEFT
+		event.button_index = mouse_button
 		event.pressed = down
 		event.position = center
 		event.global_position = center

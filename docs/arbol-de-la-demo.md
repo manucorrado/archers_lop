@@ -1,29 +1,39 @@
 # Árbol de mejoras de la demo
 
-La versión de prueba abarca diez blancos. Abajo están las compras que se pueden hacer hoy. La selección definitiva y el ritmo de compra se deciden con la prueba de juego. Las cartas que ganás al vencer a un jefe se eligen por separado y no cuestan savia.
+La demo recorre diez blancos y dos jefes. Apunta a una primera vuelta de **15–20 minutos** y representa aproximadamente el **5–15 %** del contenido previsto. La duración se afina con jugadores. La cantidad de actos del juego completo sigue abierta.
 
-| Mejora jugable | Compra previa | Niveles | Precio de cada nivel, en savia | Qué cambia |
-| --- | --- | ---: | --- | --- |
-| Daño por flecha | Inicial | 10 | 0, 9, 9, 14, 21, 31, 46, 69, 103, 154 | Cada nivel suma un 20 % del daño base por flecha. Con el arco inicial pasás de 10 a 30 antes de aplicar la potencia del blanco. |
-| Velocidad de ataque | Daño por flecha | 10 | 14, 21, 31, 46, 68, 103, 154, 231, 346, 346 | Cada nivel suma un 12 % de la cadencia base. El arco rápido pasa de 2,5 a 5,5 disparos por segundo al máximo. |
-| Ojo de veta | Daño por flecha | 1 | 14 | El multiplicador por acertar al punto débil pasa de ×1,5 a ×1,75. |
-| Arco rápido | Daño por flecha | 1 | 37 | Habilita un segundo arco. Cada disparo gasta una flecha del mismo carcaj. |
-| Chispa de copa | Daño por flecha | 1 | 18 | Cada ocho aciertos sale una descarga de 20 de daño base. |
-| Taller de flechas | Daño por flecha | 1 | 17 | Produce 1,25 flechas por segundo. Lanza atados de tres a cuatro lugares del claro. |
-| Rueda de savia | Taller | 1 | 21 | Sube la producción del taller a 1,5 flechas por segundo. |
-| Carcaj de viaje | Daño por flecha | 2 | 7, 24 | La capacidad pasa de 24 a 40 y después a 56 flechas. |
-| Recogida de hojas | Carcaj | 1 | 11 | El alcance para juntar flechas pasa de 1,5 a 2,25 metros. |
-| Paso del porteador | Carcaj | 1 | 21 | Caminás un 6 % más rápido mientras llevás al menos cuatro flechas. |
+## Qué podés comprar
 
-### Qué está en prueba
+Acercate al ovejero y apretá **E**. La raíz es el primer nivel de daño y sale gratis. Sus cuatro ramas iniciales son velocidad de ataque, precisión, taller y reembolsos. El icono de cada mejora se puede inspeccionar con el mouse o con el teclado. El clic compra un nivel. Las compras previas y la savia determinan qué podés comprar, en cualquier blanco de la demo.
 
-Los requisitos dibujados coinciden con los que comprueba el juego al comprar. Por ahora se conservan también los momentos de apertura por blanco. El primer nivel de daño está disponible al entrar. Los siguientes se habilitan en los blancos 3, 3, 4, 5, 6, 7, 8, 9 y 10. Los diez de velocidad se habilitan en 2, 3, 4, 5, 6, 7, 8, 9, 10 y 10. Los precios de los niveles nuevos son un primer ajuste.
+| Mejora | Necesitás tener | Precio por nivel en savia | Qué cambia |
+|---|---|---|---|
+| Daño por flecha | Desde el inicio | 0, 9, 9, 14, 21, 31, 46, 69, 103, 154 | Cada nivel multiplica por 1,2 el daño anterior. El décimo dispara tres flechas en abanico, cada una con el daño completo. Si quedan una o dos, salen las que queden. |
+| Velocidad de ataque | Daño | 14, 21, 31, 46, 68, 103, 154, 231, 346, 346 | Cada nivel suma un disparo por segundo a cualquiera de tus arcos. |
+| Arco rápido | Velocidad | 37 | Base de 11 de daño y 2,5 disparos por segundo. Con diez niveles de velocidad llega a 12,5. |
+| Arco largo | Arco rápido | 226 | Tercer arco. Base de 22 de daño y 2 disparos por segundo. Favorece el daño por flecha y comparte el mismo carcaj. |
+| Ojo de veta | Daño | 14 | Acertar al punto débil pasa de ×1,5 a ×2 de daño. |
+| Chispa de copa | Ojo de veta | 18 | Cada ocho aciertos, una descarga de 20 de daño base. |
+| Golpe crítico | Chispa de copa | 24 | Cada disparo tiene un 10 % de probabilidad de duplicar el daño de las flechas de esa suelta. |
+| Buena racha | Ojo de veta | 19 | Un acierto preciso suma 0,5 a la racha. Da un segundo extra para mantenerla. |
+| Tiro sostenido | Buena racha | 26 | A partir de la cuarta suelta seguida, cada flecha hace un 20 % más de daño mientras mantengas el ritmo. |
+| Taller de flechas | Daño | 17 | El taller de la izquierda produce 1,25 flechas por segundo y lanza atados de tres a cuatro lugares del claro. |
+| Rueda de savia | Taller | 21 | El taller pasa a producir 1,5 flechas por segundo. |
+| Carcaj de viaje | Taller | 7, 24 | Capacidad de 24 → 40 → 56 flechas antes de aplicar la recompensa de carcaj. |
+| Recogida de hojas | Carcaj | 11 | El radio de recolección pasa de 1,5 a 2,25 metros. |
+| Paso del porteador | Carcaj | 21 | Caminás un 6 % más rápido mientras llevás cuatro flechas o más. |
+| Salto al atado | Recogida de hojas | 32 | Mirá hacia un atado en el suelo y saltá para llegar hasta él. Al saltar en otra dirección conservás el salto libre. |
+| Recuperar savia | Daño | 6 | El clic derecho devuelve un nivel de un nodo y te reintegra lo que pagaste. |
+| Una caricia | Recuperar savia y daño 10 | 28 | Acercate al perro y apretá **R**. Inclina la cabeza y mueve la cola. |
 
-En la versión de cinco blancos, las doce compras costaban 197 y los blancos pagaban 263 de base. En la de diez, los 29 niveles cuestan 1.986. Las roturas y el daño pagan 2.262 en total, sin sumar la prima por aciertos consecutivos. De ese ingreso, 308 llegan con la última rotura, cuando ya termina el combate. Para evaluar la sensación de quedarse sin compras interesa anotar en qué blanco pasó, cuánta savia sobraba y si había algo visible para lo que valiera la pena ahorrar.
+Al devolver un nivel conservás las otras compras. Para comprar otro nivel vuelven a contar los requisitos que tengas en ese momento. Los arcos comparten munición. Devolver capacidad con el carcaj lleno te deja gastar las flechas que ya cargaste. Los atados en el aire y en el suelo se conservan si devolvés el taller.
 
-### Dos candidatas para debatir
+## Ritmo y prueba de juego
 
-- **Flecha de eco.** Después de comprar precisión, acertar a un punto débil podría mandar parte del daño hacia otro blanco visible. Permitiría jugar de otra manera cuando el tronco se parte en dos.
-- **Racha de recogida.** Después de invertir en el taller, levantar un atado recién lanzado podría conceder un margen breve para retomar el tiro antes de que caiga el combo. Habría un intervalo entre bonificaciones para que esperar junto a un punto de caída no sostenga la racha por sí solo.
+Hay **17 nodos, 36 niveles y 2.347 de savia** en compras. Los primeros nueve blancos pagan **2.153 de base**, el 91,7 % del costo de todo el árbol. Las rachas pueden cubrir parte o toda la diferencia. Durante el combate del décimo blanco entran otras 540 de base antes de la recompensa final. El arco largo cuesta lo suficiente como para aparecer naturalmente en el segundo acto en una vuelta con varias compras. Podés ahorrar y adelantarlo.
 
-El [catálogo de mejoras potenciales](catalogo-de-mejoras-potenciales.docx) reúne alternativas para cerrar la lista con las respuestas de diseño.
+En una prueba nueva, anotá el minuto en que encontraste al perro, el momento en que cambiaste de arco y cuántos niveles tenías al llegar al décimo blanco. Anotá también si compraste algo que te hizo cambiar de decisión en combate, por ejemplo salir del puesto de tiro para saltar hacia un atado. El resumen permite cotejar los tiempos de esa partida.
+
+## Qué queda para después
+
+El [catálogo editable](catalogo-de-mejoras-potenciales.docx) conserva las 65 fichas de ideas y el orden de trabajo propuesto para las nuevas familias. Quedan para diseñar la frecuencia de blancos opcionales, los ecos de disparos, la quemadura con sus tres especializaciones, los tiros en el aire y los giros de 360°, la ballesta fija que abastecés con flechas y el arco láser de fin de juego.

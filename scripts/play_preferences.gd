@@ -5,19 +5,20 @@ const FILE := "user://interface.cfg"
 const DEFAULT_BINDINGS := {
 	"move_forward": KEY_W, "move_back": KEY_S, "move_left": KEY_A, "move_right": KEY_D,
 	"shoot": -MOUSE_BUTTON_LEFT, "aim": -MOUSE_BUTTON_RIGHT, "strike": KEY_F,
-	"shop": KEY_TAB, "pause": KEY_ESCAPE, "bow_1": KEY_1, "bow_2": KEY_2,
+	"shop": KEY_E, "pause": KEY_ESCAPE, "bow_1": KEY_1, "bow_2": KEY_2, "bow_3": KEY_3,
 	"bow_previous": -MOUSE_BUTTON_WHEEL_UP, "bow_next": -MOUSE_BUTTON_WHEEL_DOWN,
-	"jump": KEY_SPACE,
+	"jump": KEY_SPACE, "pet_dog": KEY_R,
 }
 const ACTION_NAMES := {
 	"move_forward": ["Avanzar", "Move forward"], "move_back": ["Retroceder", "Move backward"],
 	"move_left": ["Ir a la izquierda", "Move left"], "move_right": ["Ir a la derecha", "Move right"],
 	"shoot": ["Disparar", "Shoot"], "aim": ["Acercar la mira", "Aim down sights"],
-	"strike": ["Golpe de rama", "Branch strike"], "shop": ["Abrir mejoras", "Open upgrades"],
+	"strike": ["Golpe de rama", "Branch strike"], "shop": ["Interactuar", "Interact"],
 	"pause": ["Pausar", "Pause"], "bow_1": ["Arco de rama", "Branch bow"],
-	"bow_2": ["Arco recurvo", "Recurve bow"], "bow_next": ["Arco siguiente", "Next bow"],
+	"bow_2": ["Arco recurvo", "Recurve bow"], "bow_3": ["Arco largo", "Longbow"],
+	"bow_next": ["Arco siguiente", "Next bow"],
 	"bow_previous": ["Arco anterior", "Previous bow"],
-	"jump": ["Saltar", "Jump"],
+	"jump": ["Saltar", "Jump"], "pet_dog": ["Acariciar al perro", "Pet the dog"],
 }
 const MOUSE_NAMES := {
 	1: ["Clic izquierdo", "Left click"], 2: ["Clic derecho", "Right click"],
@@ -57,24 +58,29 @@ func load_settings() -> void:
 			options[id] = clampf(saved, 55.0, 105.0) if id == "fov" else clampf(saved, 0.0, 3.0)
 	var saved_bindings := {}
 	for id in DEFAULT_BINDINGS:
-		var code = config.get_value("bindings", id, DEFAULT_BINDINGS[id])
-		# Older profiles may already use Space for another action.
-		if id == "jump" and not config.has_section_key("bindings", id):
-			for candidate in [KEY_SPACE, KEY_J, KEY_V, KEY_B, KEY_N, KEY_M, KEY_H, KEY_G, KEY_K, KEY_L, KEY_P, KEY_U, KEY_I, KEY_O]:
-				if candidate not in saved_bindings.values():
-					code = candidate
-					break
+		if not config.has_section_key("bindings", id):
+			continue
+		var code = config.get_value("bindings", id)
 		if typeof(code) != TYPE_INT or code == 0 or code < -9 or code in saved_bindings.values():
 			saved_bindings.clear()
 			break
 		saved_bindings[id] = code
-	if saved_bindings.size() == DEFAULT_BINDINGS.size():
-		bindings = saved_bindings
+	if config.get_value("interface", "version", 1) < 2 and saved_bindings.get("shop") == KEY_TAB and KEY_E not in saved_bindings.values():
+		saved_bindings.shop = KEY_E
+	# Allocate new actions around every previous binding, including customized keys.
+	for id in DEFAULT_BINDINGS:
+		if id in saved_bindings:
+			continue
+		for candidate in [DEFAULT_BINDINGS[id], KEY_J, KEY_V, KEY_B, KEY_N, KEY_M, KEY_H, KEY_G, KEY_K, KEY_L, KEY_P, KEY_U, KEY_I, KEY_O, KEY_Y, KEY_T, KEY_C, KEY_X, KEY_Z]:
+			if candidate not in saved_bindings.values():
+				saved_bindings[id] = candidate
+				break
+	bindings = saved_bindings
 	apply_bindings()
 
 func persist() -> Error:
 	var config := ConfigFile.new()
-	config.set_value("interface", "version", 1)
+	config.set_value("interface", "version", 2)
 	config.set_value("interface", "language", language)
 	for id in options:
 		config.set_value("comfort", id, options[id])

@@ -1,8 +1,10 @@
 # El arquero del claro
 
-**PRD de preproducción · v0.1 · 19 de noviembre de 2026**
+**Diseño de campaña y alcance de la demo**
 
 Nombre de trabajo. Juego incremental activo de arquería, en primera persona, para una persona. La campaña transcurre en un claro de bosque construido con piezas voxel.
+
+La demo jugable llega al décimo blanco y apunta a una primera vuelta de 15–20 minutos. La estimación del 5–15 % se refiere al contenido del juego completo. La cantidad de actos sigue abierta. Los actos posteriores al segundo, los centinelas y el final propuesto en este documento son hipótesis de campaña. La lista vigente de compras, requisitos y efectos está en el [árbol de la demo](arbol-de-la-demo.md).
 
 | Para trabajar en… | Documento |
 |---|---|
@@ -17,7 +19,7 @@ Un arquero llega a un claro tomado por un nudo de madera. Cada impacto descubre 
 
 La promesa es **pasar de disparar cada flecha a dirigir todo el claro, sin perder las ganas de apuntar**. El público principal disfruta comprar una mejora y enseguida sentir la diferencia. La segunda vuelta interesa a quien quiera optimizar la ruta de compras y batir su tiempo.
 
-**Definiciones de producto.** Una persona a tiempo completo desarrollará la campaña de treinta nudos en Godot para Windows, con teclado y ratón. El proyecto no tiene un límite presupuestario ni una fecha comprometida. La campaña es individual y offline, en primera persona y con una arena continua. El récord se conserva en el equipo del jugador.
+**Definiciones de producto.** Una persona a tiempo completo desarrolla el juego en Godot para Windows, con teclado y ratón. El proyecto no tiene un límite presupuestario ni una fecha comprometida. La campaña es individual y offline, en primera persona y con una arena continua. El récord se conserva en el equipo del jugador.
 
 **Ediciones.** El prototipo N1–3 se prueba localmente. La hoja de ruta contempla una demo pública, acceso anticipado y la versión final en Steam e itch.io. El juego y sus materiales de tienda tendrán inglés y español. El rango de precio previsto para la versión final es de 1–2 €.
 
@@ -27,7 +29,7 @@ El punto de partida es el [análisis de AmmoDump facilitado para el proyecto](<C
 
 | Hallazgo en el análisis | Decisión para el juego |
 |---|---|
-| Treinta blancos de tamaño creciente, un jefe y una elección cada cinco, final en una o dos horas | Treinta nudos en seis actos. El mismo claro da escala al viaje. Cada jefe cambia lo que conviene apuntar. |
+| Treinta blancos de tamaño creciente, un jefe y una elección cada cinco, final en una o dos horas | Probar bloques de cinco blancos en el mismo claro. Cada jefe cambia lo que conviene apuntar. El total de bloques se decidirá al desarrollar la campaña. |
 | Cuatro armas con cadencias distintas y una herramienta cuerpo a cuerpo | Cuatro arcos con patrones reconocibles y un golpe de rama que permite recuperar flechas incluso al principio. |
 | Munición en el suelo, seis máquinas y doce torretas que consumen munición | Los haces son inventario real. El arquero decide qué se lleva y qué entrega a los centinelas. Los puestos construidos permanecen visibles. |
 | Árbol anunciado de 77 mejoras. Los contadores por nodo sugieren que son rangos. Tres cartas entre 24, con pocos textos exactos documentados | Árbol propio de 77 compras y baraja propia de 24 dones. El catálogo indica qué equivalencias son directas, cuáles son interpretaciones y qué efectos diseñamos. |
@@ -39,7 +41,7 @@ Los nombres de los jefes finales, las fórmulas, el reparto de rangos y los text
 ## 2. Una vuelta por el claro
 
 1. **Apuntar y soltar.** El primer nudo está frente al jugador, a distancia de tiro. Al impactar, se abre una grieta, baja la integridad y sube la savia. Se entiende el resultado incluso con los números de daño desactivados.
-2. **Elegir una compra.** El árbol muestra coste, requisito, rango actual y el cambio concreto del próximo rango. Al salir se ve o se oye el resultado. Un taller nuevo empieza a apilar flechas en su zócalo.
+2. **Elegir una compra.** Acercarse al perro sentado y apretar la tecla de interacción abre el árbol. Cada icono detalla su requisito, precio, nivel y efecto al pasar el puntero o darle foco. El taller lanza atados que hay que ir a buscar.
 3. **Administrar flechas.** El arquero recoge por proximidad. Puede tirar a una Diana de veta, guardar flechas en el carcaj o desviarse hasta un centinela para cargarlo. Mientras apunta a una oportunidad lateral, oye si el centinela sigue trabajando.
 4. **Romper y seguir.** El nudo suelta un haz. En el mismo sitio crece otro más grande. El arco equipado, las compras, las existencias y los puestos continúan con el jugador.
 5. **Elegir un don y cerrar la campaña.** Las roturas 5, 10, 15, 20 y 25 dan a elegir una de tres cartas. En el nudo 30 la sexta elección ocurre al abrir el núcleo, a media integridad, para poder usarla en el desenlace. La rotura 30 muestra tiempo de juego, mejor combo, rangos adquiridos y contribución de arco, centinelas y fenómenos.
@@ -54,7 +56,7 @@ Los nombres de los jefes finales, las fórmulas, el reparto de rangos y los text
 | Primera compra y primera rotura | Apenas alcanza el precio, el jugador puede comprar daño. Cuando rompe el nudo caen flechas y se oye su roce. | El probador explica qué consiguió y distingue savia de flechas. |
 | Nudos 2–3 | Aparece el plano del taller, se construye y se puede recoger su primera producción. | El probador sabe volver al taller cuando se vacía el carcaj. |
 | Nudos 3–5 | Entran la Chispa de copa y el recurvo. La primera horqueta divide el blanco. | El jugador reconoce una compra por el cambio que siente al disparar. |
-| Nudos 6–10 | El primer centinela dispara solo después de recibir flechas. La veta móvil del jefe invita a dejarlo trabajando. | El jugador puede explicar por qué el centinela se detuvo y reactivarlo. |
+| Blancos 6–10 | El arco largo ofrece más daño por flecha. Tres puntos débiles del jefe cambian qué conviene apuntar. | El jugador distingue los arcos y encuentra el siguiente punto encendido. |
 
 ### Interacción y cámara
 
@@ -66,7 +68,7 @@ Los nombres de los jefes finales, las fórmulas, el reparto de rangos y los text
 | Cambiar de arco | 1–4 o rueda | Entre los ya adquiridos. Se conserva el carcaj compartido. Un cambio de arma respeta el tiempo pendiente de la última suelta. |
 | Golpear con la rama | F | Acción de corto alcance disponible desde el inicio. Con el carcaj vacío permite recuperar flechas. |
 | Abastecer | E junto al centinela | Vista previa de la transferencia, entrega confirmada por sonido y cambio visible en la tolva. Se preserva una reserva para el jugador. |
-| Comprar, pausar y guardar | Tab abre el árbol. Esc abre pausa. | Simulación detenida en árbol, cartas y pausa. Los controles de juego son reasignables. |
+| Comprar, pausar y guardar | E junto al perro abre el árbol. Esc abre pausa. | Clic para comprar un nivel. Con la mejora de reembolso, clic derecho para devolverlo. La simulación se detiene en árbol, cartas y pausa. |
 
 El arco de rama premia elegir el punto de impacto. El recurvo sostiene una cadencia regular. El de abanico abre un frente de hasta tres flechas y admite una suelta parcial cuando queda poca munición. El de tejo repetidor convierte el suministro continuo en una ráfaga sostenida. La trayectoria del proyectil y el impacto deben ser visibles. En la prueba inicial se priorizan respuesta inmediata, leve arco visual y coincidencia entre la retícula y el impacto a la distancia habitual del claro. Ajustar el modelo de vuelo con el prototipo.
 
@@ -83,12 +85,12 @@ El arco de rama premia elegir el punto de impacto. El recurvo sostiene una caden
 
 Un **nudo** es un objetivo de madera formado por módulos. Probar con una altura inicial de 1,5 m y una final de 35–40 m, con la misma piedra de un metro como referencia en ambos extremos. Su huella se conserva dentro del área central y gana altura y volumen por etapas. Los puntos interactivos aparecen sobre caras visibles desde el corredor de tiro. La línea de tiro, el acceso a las pilas y la ubicación de los talleres siguen siendo reconocibles al final. El paso de nudo no recarga la escena ni borra las existencias.
 
-Los minutos dibujan un recorrido nominal de unas 100 min, con margen para un cierre largo. Se acepta una primera vuelta activa de 60–120 min en total. Para una ruta más rápida, los mismos encuentros y compras se adelantan en el reloj. Los desbloqueos de nivel dan acceso a una compra y el jugador elige cuándo pagarla.
+Los primeros diez blancos tienen un objetivo de 15–20 minutos activos. Las filas posteriores ilustran una posible campaña de unas 100 min. En la demo, cada requisito de compra se cumple invirtiendo en el árbol. Los posibles desbloqueos por hitos quedan para una decisión posterior.
 
 | Acto | Tiempo de referencia | Cambio dominante | Jefe y regla propuesta |
 |---|---|---|---|
 | I · N1–5 | 0–10 min | Disparo manual, primera compra, taller, chispa y recurvo | **Horqueta gemela (5).** A media integridad se abren dos lóbulos con reservas visibles. Al romper uno, las flechas restantes deben dirigirse al otro. |
-| II · N6–10 | 10–25 min | Un taller abastece a dos consumidores. Se estrena el primer centinela. | **Corazón errante (10).** El núcleo cambia de cavidad en dos umbrales de daño. Una grieta y un sonido anticipan el destino. El tronco sigue recibiendo daño ordinario. |
+| II · N6–10 | Fin de la demo hacia los 15–20 min | Ahorrar para un arco más potente o invertir en la cadencia y el suministro. | **Segundo jefe (10).** Tiene tres puntos débiles sucesivos. El tronco recibe daño ordinario y cada fase requiere acertar al punto activo o golpear la raíz correspondiente. |
 | III · N11–15 | 25–45 min | El abanico y las oportunidades laterales cambian qué blancos conviene agrupar. | **Semillero fugitivo (15).** Suelta brotes por carriles cortos. Acertarles transfiere daño al tronco. Los que salen del claro solo cierran esa oportunidad. |
 | IV · N16–20 | 45–65 min | Alimentar varios puestos aumenta el daño mientras el jugador se mueve. | **Corona acorazada (20).** Tres placas reciben el fuego sostenido de los puestos. El arquero puede quebrar a mano un broche lateral para exponer antes la veta de esa placa. |
 | V · N21–25 | 65–85 min | Repetidor, altas necesidades de flechas y efectos de área. | **Tronco de los dos cauces (25).** Dos raíces laterales envían pulsos que dan una cubierta temporal al nudo. Cortar el pulso a tiempo abre la veta. Las cubiertas caducan, tienen tope y jamás devuelven integridad perdida. |
@@ -133,7 +135,7 @@ La **Diana de veta** aparece sobre el nudo desde N2 y recompensa precisión. El 
 |---|---|---|
 | Prototipo local · N1–3 | Arco de rama, impactos, compra de daño, primer taller, pilas, recogida y recuperación con la rama. Menús en español e inglés y primer pino editable desde el Inspector de Godot. | ¿Qué se siente al disparar y cuánto tarda el jugador en encontrar su primera producción de flechas? |
 | Corte vertical · N1–5 | Primer acto completo, recurvo, primer fenómeno, un suceso, primer jefe y primera oferta. Un claro con calidad visual representativa. | ¿Se entienden el disparo, la compra, la transformación del claro y la elección sin un tutorial largo? |
-| MVP interno · N1–10 | Dos actos encadenados, dos jefes, dos ofertas, centinela abastecible, guardado/reanudación y ajustes de lectura | ¿El primer centinela crea una tarea que el jugador quiere atender? ¿Qué ajustes conviene introducir antes de construir los cuatro actos restantes? |
+| Demo · blancos 1–10 | Dos actos, dos jefes, dos ofertas, tres arcos, taller, perro y árbol de mejoras con reembolsos | ¿Se llega al décimo blanco con casi todo el árbol comprado? ¿Resulta divertido disparar ráfagas y salir a buscar flechas? |
 | Campaña completa · N1–30 | Seis jefes, seis elecciones, cuatro arcos y rama, 77 rangos, 24 dones, seis talleres, doce centinelas, seis sucesos y los seis fenómenos del catálogo | ¿El último acto paga la escalada, cierra la historia mecánica y admite una segunda vuelta más rápida? |
 
 La entrega base es offline y finita. Quedan fuera multijugador, tabla pública, prestigio infinito, editor para jugadores, mundo abierto, móvil y destrucción voxel bloque por bloque. El panel visual de assets es una herramienta interna para que quien desarrolla el juego pueda generar y previsualizar variantes directamente. El primer caso es el pino. El bosque se construye una vez con zócalos fijos y se transforma delante del jugador.
@@ -143,7 +145,7 @@ La entrega base es offline y finita. Quedan fuera multijugador, tabla pública, 
 | Prueba | Criterio inicial para aceptar o iterar |
 |---|---|
 | Entrada en frío con cinco personas del público objetivo | Al menos cuatro aciertan en 15 s y compran un primer rango en 90 s sin indicaciones verbales. Registrar dónde se detuvo la quinta. |
-| Economía y agencia en N7–10 | Al menos cuatro de cinco detectan por qué cesó el fuego de un centinela y lo restablecen en un minuto. Registrar qué hacen después y si vuelven a apuntar al nudo. |
+| Economía y decisiones en N7–10 | Anotar cuántos niveles se podrían comprar con la savia obtenida antes del jefe y qué priorizó cada jugador. Comprobar si se distingue cuándo conviene ahorrar para el arco largo o mejorar el que ya se tiene. |
 | Ritmo de la campaña | Registrar tiempo por acto, segundos sin flechas, compras y daño por origen. Buscar primera vuelta de 60–120 min y demostrar al menos una ruta de menos de 90 min sin fallos de progreso. Si un acto se alarga, distinguir espera de munición, vida excesiva y compras inasequibles. |
 | Lectura tardía | En una captura jugable de N29–30 con doce centinelas y efecto global, al menos cuatro de cinco localizan la nueva veta en 2 s. Repetir con números y destellos desactivados. |
 | Persistencia y final | Reanudar antes y después de una compra, una rotura, una oferta y la mitad del jefe 30. El saldo, las cartas y el tiempo cuadran. Completar con arco, con centinela y con fenómeno da exactamente un resultado por vuelta. |
