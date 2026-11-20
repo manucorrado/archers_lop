@@ -9,6 +9,7 @@ const RECURVE_ARROW = preload("res://assets/flecha_pluma_ancha.tres")
 const WALK_SPEED := 4.6
 const LOOK_SENSITIVITY := 0.00215
 const EYE_HEIGHT := 1.65
+const JUMP_SPEED := 4.6
 const TOP_TIP := Vector3(0.06, 0.51, 0.15)
 const BOTTOM_TIP := Vector3(0.05, -0.49, 0.15)
 const RECURVE_TOP := Vector3(0.035, 0.54, 0.09)
@@ -30,6 +31,7 @@ var _has_arrows := true
 var _await_release := false
 var _press_pending := false
 var _branch_pending := false
+var _jump_pending := false
 var _pitch := 0.0
 var _aim := 0.0
 var _sway := Vector2.ZERO
@@ -76,11 +78,13 @@ func set_active(enabled: bool) -> void:
 	_active = enabled
 	_press_pending = false
 	_branch_pending = false
+	_jump_pending = false
 	_repeat_on = false
 	_await_release = enabled and Input.is_action_pressed("shoot")
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if enabled else Input.MOUSE_MODE_VISIBLE
 	if not enabled:
-		velocity = Vector3.ZERO
+		velocity.x = 0.0
+		velocity.z = 0.0
 
 func apply_settings(options: Dictionary) -> void:
 	_sensitivity = clampf(options.get("sensitivity", 1.0), 0.05, 5.0)
@@ -105,14 +109,14 @@ func set_bow(id: String) -> void:
 	_pose(0.0)
 
 func save_pose() -> Dictionary:
-	return {"x": position.x, "y": position.y, "z": position.z, "yaw": rotation.y, "pitch": _pitch}
+	return {"x": position.x, "y": position.y, "z": position.z, "yaw": rotation.y, "pitch": _pitch, "vertical_speed": velocity.y}
 
 func restore_pose(pose: Dictionary) -> void:
 	position = Vector3(pose.get("x", 0.0), pose.get("y", 0.0), pose.get("z", 5.0))
 	rotation.y = pose.get("yaw", 0.0)
 	_pitch = clampf(pose.get("pitch", 0.0), deg_to_rad(-82), deg_to_rad(82))
 	camera.rotation.x = _pitch
-	velocity = Vector3.ZERO
+	velocity = Vector3(0, pose.get("vertical_speed", 0.0), 0)
 
 
 func set_has_arrows(has_arrows: bool) -> void:
@@ -138,6 +142,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_await_release = false
 	elif event.is_action_pressed("strike"):
 		_branch_pending = true
+	elif event.is_action_pressed("jump"):
+		_jump_pending = true
 
 
 func _physics_process(delta: float) -> void:
@@ -148,10 +154,13 @@ func _physics_process(delta: float) -> void:
 	var speed := WALK_SPEED * _speed_multiplier * lerpf(1.0, 0.70, _aim)
 	velocity.x = move_toward(velocity.x, direction.x * speed, 27.0 * delta)
 	velocity.z = move_toward(velocity.z, direction.z * speed, 27.0 * delta)
-	if not is_on_floor():
+	if _jump_pending and is_on_floor():
+		velocity.y = JUMP_SPEED
+	elif not is_on_floor() or velocity.y > 0.0:
 		velocity.y = maxf(velocity.y - 18.0 * delta, -25.0)
 	else:
 		velocity.y = -0.5
+	_jump_pending = false
 	move_and_slide()
 	position.x = clampf(position.x, -13.0, 13.0)
 	position.z = clampf(position.z, -13.0, 13.0)

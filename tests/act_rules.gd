@@ -1,5 +1,5 @@
 extends SceneTree
-## Comprueba las reglas de N1–5 sin depender de la animación ni del perfil del jugador.
+## Comprueba las reglas de los dos actos sin depender del perfil del jugador.
 
 const Run := preload("res://scripts/run.gd")
 var failures := 0
@@ -13,8 +13,12 @@ func _initialize() -> void:
 	_test_gift_effects()
 	_test_observed_session()
 	_test_empty_return()
+	_test_workshop_scatter()
+	_test_tree_costs()
+	_test_second_act()
+	_test_required_core()
 	if failures == 0:
-		print("PASS: act I purchases, combo, opportunities, boss milestones and seeded gifts.")
+		print("PASS: two acts, tree prices, scattered arrows, save migration, boss phases and rewards.")
 	quit(1 if failures > 0 else 0)
 
 
@@ -145,13 +149,13 @@ func _test_spark_at_boss_threshold() -> void:
 
 
 func _test_gift_effects() -> void:
-	for id: String in Run.FIRST_GIFTS + ["D03"]:
+	for id: String in Run.FIRST_GIFTS + Run.LATER_GIFTS + ["D03"]:
 		var run := Run.new()
 		run.gift_offer = [id]
 		run.choose_gift(id)
 		match id:
 			"D01": _expect(is_equal_approx(run.shot_interval(), 1.0 / 1.5), "Hare's pulse changes cadence")
-			"D03": _expect(is_equal_approx(run.production_rate(), 1.95), "Wellspring multiplies workshop output")
+			"D03": _expect(is_equal_approx(run.production_rate(), 1.625), "Wellspring multiplies workshop output")
 			"D04": _expect(run.damage() == 12, "Living bark changes manual damage")
 			"D08": _expect(run.capacity() == 48, "Deep quiver holds an extra 24 arrows")
 			"D09": _expect(is_equal_approx(run.pickup_radius(), 3.5), "Magnetic leaves extends pickup reach")
@@ -211,3 +215,119 @@ func _test_empty_return() -> void:
 	restored.observe_workshop_visit(true)
 	_expect(restored.observations.has("returned_empty_to_workshop"),
 		"Returning from outside with an empty quiver records a distinct visit")
+
+
+func _test_workshop_scatter() -> void:
+	var run := Run.new()
+	run.ranks = {"damage": 1, "workshop": 1}
+	run.run_seed = 0
+	run.tick(2.5)
+	_expect(run.workshop_stock == 0 and run.workshop_flights.size() == 1 and run.workshop_flights[0].count == 3,
+		"The first three crafted arrows leave together before they can be picked up")
+	var restored := Run.new()
+	_expect(restored.restore_state(run.save_state()), "A batch in flight saves and loads")
+	for game in [run, restored]:
+		game.tick(7.9)
+		_expect(game.workshop_piles == [3, 3, 3, 3], "Four batches land in distinct zones")
+		game.arrows = 23
+		_expect(game.collect(true, 2) == 1 and game.workshop_piles == [3, 3, 2, 3],
+			"A partial pickup takes only the landed arrows next to the archer")
+		_expect(is_equal_approx(game.workshop_stock + game.collected + game.workshop_buffer + game.workshop_fraction, 13),
+			"Ground, quiver, buffer and fractional production account for all thirteen arrows")
+	_expect(restored.save_state() == run.save_state(), "Relaunch preserves the batch destination and balances")
+	var legacy := run.save_state()
+	for field in ["workshop_piles", "workshop_buffer", "workshop_flights", "batches_launched"]:
+		legacy.erase(field)
+	legacy.workshop_stock = 31
+	_expect(restored.restore_state(legacy) and restored.workshop_stock == 31 and restored.workshop_piles == [31, 0, 0, 0],
+		"All arrows saved at an H2 tray transfer to a reachable landing zone")
+
+
+func _test_tree_costs() -> void:
+	var run := Run.new()
+	run.sap = 3000
+	var initial := run.offers()
+	for id in initial:
+		_expect(initial[id].available == (id == "damage"), "Only damage is initially available")
+	_expect(run.buy("damage") and run.sap == 3000, "The root is free even with a positive wallet")
+	_expect(run.observations.has("first_purchase") and not run.observations.has("first_paid_purchase"),
+		"Claiming the free root is recorded separately from spending sap")
+	run.stage = 10
+	var first_costs := {"damage": 9, "rate": 14, "weak": 14, "recurve": 37, "workshop": 17,
+		"capacity": 7, "wheel": 21, "pickup": 11, "pace": 21, "spark": 18}
+	var offers := run.offers()
+	for id in first_costs:
+		_expect(offers[id].cost == first_costs[id], "A previously available paid rank keeps its price: " + id)
+	for i in range(9):
+		_expect(run.buy("damage"), "Damage has ten purchasable ranks")
+	_expect(run.observations.has("first_paid_purchase"), "The first paid upgrade records a separate playtest time")
+	for i in range(10):
+		_expect(run.buy("rate"), "Attack speed has ten purchasable ranks")
+	_expect(not run.buy("damage") and not run.buy("rate") and run.damage_rank == 10 and run.rank_of("rate") == 10,
+		"Buying a completed branch cannot charge an eleventh rank")
+
+
+func _test_second_act() -> void:
+	var original := Run.new()
+	original.stage = 5
+	original.hp = 0
+	original.chosen_gift = "D09"
+	original.ranks = {"damage": 2, "workshop": 1}
+	var saved := original.save_state()
+	for field in ["first_gift", "core_phase", "workshop_piles", "workshop_buffer", "workshop_flights", "batches_launched"]:
+		saved.erase(field)
+	var run := Run.new()
+	_expect(run.restore_state(saved) and run.at_act_summary() and run.snapshot().can_continue_act,
+		"A completed H2 save opens the first act result and can continue")
+	_expect(run.next_knot() and run.stage == 6 and is_equal_approx(run.pickup_radius(), 3.5) and run.damage_rank == 2,
+		"An older card and purchases remain active after continuing")
+	while run.stage < 10:
+		run.damage_part(run.hp, "body")
+		_expect(run.next_knot(), "Targets six through nine advance in the same campaign")
+	var total := run.hp
+	for phase in 3:
+		var active := "core_%d" % phase
+		var inactive := "core_%d" % ((phase + 1) % 3)
+		_expect(run.manual_impact(active, 10, 15, 0).direct == 15 and run.manual_impact(inactive, 10, 15, 0).direct == 10,
+			"Only the current hollow rewards a precise manual hit")
+		var hp_before := run.hp
+		var effective := run.damage_part(total, "body")
+		_expect(effective == hp_before - run.hp and run.core_phase == mini(phase + 1, 2),
+			"Ordinary damage can clear a phase and cannot skip the next cavity")
+		var check := Run.new()
+		_expect(check.restore_state(run.save_state()) and check.hp == run.hp and check.core_phase == run.core_phase,
+			"Reopening during the second boss restores the correct hollow")
+	_expect(run.hp == 0 and not run.next_knot(), "N10 is the end of this demo")
+	run.prepare_gifts()
+	_expect(run.gift_offer.size() == 3 and not run.gift_offer.has("D09"), "The second offer excludes the previous reward")
+	var second: String = run.gift_offer[0]
+	_expect(run.choose_gift(second) and run.has_gift("D09") and run.has_gift(second) and run.at_act_summary(),
+		"The second choice preserves both rewards and reaches the final result")
+
+
+func _test_required_core() -> void:
+	var run := Run.new()
+	run.stage = 10
+	run.hp = run.max_hp()
+	run.arrows = 0
+	for phase in 3:
+		var current_layer := run.vulnerability("body")
+		var hit := run.manual_impact("body", run.max_hp(), run.max_hp(), 0)
+		_expect(hit.direct == current_layer - 1 and run.core_phase == phase and run.core_needs_hit(),
+			"A body shot alone must leave one point in each layer")
+		var before := run.save_state()
+		_expect(not run.manual_impact("body", 100, 200, 0).hit and run.save_state() == before,
+			"Camping on the trunk cannot farm rewards or pass the required target")
+		_expect(not run.manual_impact("root_%d" % phase, 100, 200, 0).hit,
+			"Shooting at the foot of the trunk cannot bypass aiming")
+		var resumed := Run.new()
+		_expect(resumed.restore_state(before) and resumed.core_needs_hit(), "A blocked layer survives reopening")
+		if phase == 1:
+			var finish := run.manual_impact("core_1", 100, 200, 0)
+			_expect(finish.direct == 1, "The matching hollow unlocks the next layer")
+		else:
+			_expect(run.strike_part(20, "root_%d" % ((phase + 1) % 3)) == 0,
+				"Only the root linked to the exposed hollow opens this layer")
+			_expect(run.strike_part(20, "root_%d" % phase) == 1 and run.arrows == 0,
+				"An archer with no arrows can advance by striking the matching root")
+	_expect(run.hp == 0, "Three aimed contacts complete the second boss")

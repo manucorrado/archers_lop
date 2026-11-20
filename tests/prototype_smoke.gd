@@ -12,7 +12,7 @@ func _initialize() -> void:
 		printerr("Use tests/run-tests.ps1 to isolate the campaign under test.")
 		quit(1)
 		return
-	create_timer(1100.0, true).timeout.connect(func(): _expect(false, "Timed out during the first act"))
+	create_timer(9500.0, true).timeout.connect(func(): _expect(false, "Timed out during the ten-target route"))
 	_run.call_deferred()
 
 
@@ -37,6 +37,13 @@ func _run() -> void:
 	await _click(root.gui_get_focus_owner() as Button)
 	if not _expect(game.view == "play", "The start button enters the clearing"):
 		return
+	await _frames(12)
+	var floor_y := game.archer.position.y
+	await _tap(KEY_SPACE)
+	await _frames(7)
+	if not _expect(game.archer.position.y > floor_y + 0.15, "Space makes the archer jump"):
+		return
+	await _frames(55)
 
 	_mouse_left(true)
 	if not await _until(func(): return game.run.shots == 1, 6, "The first arrow leaves the bow"):
@@ -64,8 +71,12 @@ func _run() -> void:
 	await _tap(KEY_TAB)
 	if not _expect(game.view == "shop", "Tab opens upgrades"):
 		return
-	await _click(game.hud.offer_controls.damage.button)
-	if not _expect(game.run.damage() == 12 and game.run.sap == 0, "First damage purchase spends exactly four sap"):
+	await _click(game.hud.offer_controls["workshop"])
+	if not _expect(game.hud.purchase_upgrade.disabled, "The workshop initially requires the damage root"):
+		return
+	await _click(game.hud.offer_controls["damage"])
+	await _click(game.hud.purchase_upgrade)
+	if not _expect(game.run.damage() == 12 and game.run.sap == 4, "The first damage purchase is free"):
 		return
 	await _tap(KEY_TAB)
 	_mouse_left(true)
@@ -78,7 +89,8 @@ func _run() -> void:
 	_mouse_left(false)
 	await _tap(KEY_TAB)
 	var sap_before := game.run.sap
-	await _click(game.hud.offer_controls.workshop.button)
+	await _click(game.hud.offer_controls["workshop"])
+	await _click(game.hud.purchase_upgrade)
 	if not _expect(game.run.workshop and game.run.sap == sap_before - 17, "Workshop costs seventeen sap"):
 		return
 	var time_before := game.run.elapsed
@@ -107,7 +119,7 @@ func _run() -> void:
 			"Walking into the knot bundle transfers its full contents"):
 		return
 
-	if not await _until(func(): return game.run.workshop_stock >= 32, 1350, "Workshop accumulates while the player is away"):
+	if not await _until(func(): return game.run.workshop_stock >= 32, 2000, "Workshop accumulates while the player is away"):
 		return
 	await _tap(KEY_ESCAPE)
 	var stock_before := game.run.workshop_stock
@@ -117,62 +129,41 @@ func _run() -> void:
 			"Escape freezes an operating workshop"):
 		return
 	await _tap(KEY_ESCAPE)
-	var arrows_before := game.run.arrows
-	var fraction_before := game.run.workshop_fraction
-	time_before = game.run.elapsed
+	var carried := game.run.arrows
 	if not await _walk_to(Vector2(Clearing.WORKSHOP_PICKUP.x, Clearing.WORKSHOP_PICKUP.z)):
 		return
-	var made_during_walk := (game.run.elapsed - time_before) * game.run.WORKSHOP_RATE
-	var accounted := game.run.workshop_stock + game.run.collected + game.run.workshop_fraction
-	if not _expect(game.run.arrows == game.run.capacity() and game.run.workshop_stock > 0
-			and game.run.collected == game.run.capacity() - arrows_before
-			and absf(accounted - stock_before - fraction_before - made_during_walk) < 0.0001,
-			"A partial workshop pickup fills the quiver and conserves the remaining pile"):
+	await _frames(480)
+	if not _expect(game.run.arrows == carried and game.run.workshop_stock > 32,
+			"Standing at the workshop outlet does not collect launched bundles"):
 		return
-
-	# Headless has no captured mouse. Orient the camera at real geometry; all
-	# damage, pickups, shop purchases and phase changes use normal game input.
-	_aim_at("body")
-	_mouse_left(true)
-	if not await _until(func(): return game.run.stage == 3 and game.run.offers().spark.available,
-			7000, "The third target unlocks the spark"):
+	var stock_and_carried := _workshop_inventory()
+	time_before = game.run.elapsed
+	await _refill()
+	var produced := (game.run.elapsed - time_before) * game.run.production_rate()
+	if not _expect(game.run.collected > 0 and absf(_workshop_inventory() - stock_and_carried - produced) < 0.0001,
+			"Buffer, airborne bundles, landed stock and collected arrows reconcile"):
 		return
-	_mouse_left(false)
-	await _tap(KEY_TAB)
-	await _click(game.hud.offer_controls.spark.button)
-	await _tap(KEY_TAB)
-	_mouse_left(true)
-	if not await _until(func(): return game.run.stage == 4 and game.run.offers().recurve.available,
-			10000, "The fast bow is affordable in the fourth encounter"):
+	if not await _fight_until(func(): return game.run.stage == 3 and game.run.offers().spark.available):
 		return
-	_mouse_left(false)
-	await _tap(KEY_TAB)
-	await _click(game.hud.offer_controls.recurve.button)
-	await _tap(KEY_TAB)
-	if not _expect(game.run.bow == "recurve" and game.run.rank_of("spark") == 1,
-			"The purchased bow is equipped and the spark is owned"):
+	await _buy("spark")
+	if not await _fight_until(func(): return game.run.stage == 4 and game.run.offers().recurve.available):
 		return
-	_mouse_left(true)
-	if not await _until(func(): return game.run.split, 22000, "At half health the fifth target splits"):
+	await _buy("recurve")
+	if not _expect(game.run.bow == "recurve" and game.run.rank_of("spark") == 1, "New purchases work in combat"):
 		return
-	_mouse_left(false)
-	await _frames(40)
-	_aim_at("left")
-	_mouse_left(true)
-	if not await _until(func(): return game.run.left_hp == 0, 11000, "Shots can destroy the left half"):
+	if not await _fight_until(func(): return game.run.split):
 		return
-	_mouse_left(false)
+	await _frames(30)
+	if not await _fight_until(func(): return game.run.left_hp == 0, "left"):
+		return
 	var remaining := game.run.right_hp
 	await _reopen()
 	if not _expect(game.view == "pause" and game.run.split and game.run.left_hp == 0 and game.run.right_hp == remaining,
 			"The automatic checkpoint preserves the surviving half"):
 		return
 	await _tap(KEY_ESCAPE)
-	_aim_at("right")
-	_mouse_left(true)
-	if not await _until(func(): return game.view == "gift", 11000, "Destroying the right half opens the three choices"):
+	if not await _fight_until(func(): return game.view == "gift", "right"):
 		return
-	_mouse_left(false)
 	var offer := game.run.gift_offer.duplicate()
 	await _reopen()
 	if not _expect(game.view == "gift" and offer.size() == 3 and game.run.gift_offer == offer,
@@ -202,7 +193,36 @@ func _run() -> void:
 			"Playtest timings are available from the final result"):
 		return
 	await _click(_button_named("Volver al resumen"))
-	await _click(root.gui_get_focus_owner() as Button)
+	await _click(_button_named("Continuar al blanco 6"))
+	if not _expect(game.view == "play" and game.run.stage == 6 and game.run.first_gift == offer[0],
+			"Continuing enters the second act with the saved reward"):
+		return
+	for stage in range(6, 11):
+		for upgrade in ["damage", "rate", "capacity", "wheel"]:
+			while game.run.offers()[upgrade].available:
+				await _buy(upgrade)
+		if stage < 10:
+			if not await _fight_until(func(): return game.run.stage > stage):
+				return
+	for phase in 3:
+		if not await _fight_until(func(): return game.run.core_phase > phase or game.view == "gift", "core_%d" % phase):
+			return
+		if phase == 0:
+			await _reopen()
+			if not _expect(game.view == "pause" and game.run.core_phase == 1,
+					"The moving weak spot survives the automatic phase checkpoint"):
+				return
+			await _tap(KEY_ESCAPE)
+	if not _expect(game.view == "gift" and game.run.stage == 10 and game.run.gift_offer.size() == 3,
+			"The second boss offers three rewards"):
+		return
+	await _click(game.hud.gift_buttons[game.run.gift_offer[0]])
+	await _click(game.hud.confirm_gift)
+	await _reopen()
+	if not _expect(game.view == "end" and game.run.stage == 10 and _button_named("Continuar al blanco 6") == null,
+			"The tenth target ends the demo on the saved result"):
+		return
+	await _click(_button_named("Volver a jugar"))
 	await _click(_button_named("Empezar de nuevo"))
 	await _frames(6)
 	game = current_scene
@@ -210,7 +230,7 @@ func _run() -> void:
 			and game.run.sap == 0 and game.run.arrows == 24 and not game.run.workshop and game.run.shots == 0,
 			"Replay resets position in the campaign, currency, arrows and purchases"):
 		return
-	print("PASS: N1–5, purchases, paused shot on disk, workshop stock, both boss halves, offer, final result and replay.")
+	print("PASS: ten targets, jump, tree purchases, airborne supply, both bosses, rewards, save/resume and replay.")
 	unload_current_scene()
 	# The audio mixer runs on a wall clock even when simulation uses fixed FPS.
 	# Let it retire queued voices from the replay transition before engine shutdown.
@@ -223,6 +243,48 @@ func _run() -> void:
 func _frames(count: int) -> void:
 	for i in count:
 		await physics_frame
+
+
+func _buy(id: String) -> void:
+	await _tap(KEY_TAB)
+	await _click(game.hud.offer_controls[id])
+	await _click(game.hud.purchase_upgrade)
+	await _tap(KEY_TAB)
+
+
+func _workshop_inventory() -> float:
+	var total := game.run.workshop_stock + game.run.collected + game.run.workshop_buffer + game.run.workshop_fraction
+	for bundle: Dictionary in game.run.workshop_flights:
+		total += int(bundle.count)
+	return total
+
+
+func _refill() -> void:
+	# Both destinations lie along a clear route from the shooting position.
+	for slot in [1, 2]:
+		var point: Vector3 = Clearing.WORKSHOP_LANDINGS[slot]
+		if not await _walk_to(Vector2(point.x, point.z)):
+			return
+		if game.run.arrows >= game.run.capacity() / 2.0:
+			break
+	if game.run.arrows == 0:
+		await _until(func(): return game.run.arrows > 0, 800, "Next bundle lands within reach")
+	await _walk_to(Vector2(0.4, 3.8))
+
+
+func _fight_until(done: Callable, target_id := "body") -> bool:
+	for trip in 600:
+		if done.call():
+			return true
+		if game.run.arrows == 0:
+			await _refill()
+		_aim_at(target_id)
+		_mouse_left(true)
+		if not await _until(func(): return done.call() or game.run.arrows == 0, 6500, "A volley reaches a milestone or empties the quiver"):
+			return false
+		_mouse_left(false)
+		await _frames(10)
+	return _expect(done.call(), "Campaign milestone reached")
 
 
 func _button_named(caption: String) -> Button:
@@ -317,6 +379,10 @@ func _click(button: Button) -> void:
 
 
 func _walk_to(target: Vector2) -> bool:
+	var pose := game.archer.save_pose()
+	pose.yaw = 0.0
+	pose.pitch = 0.0
+	game.archer.restore_pose(pose)
 	var keys := {KEY_A: false, KEY_D: false, KEY_W: false, KEY_S: false}
 	for i in 240:
 		var offset := target - Vector2(game.archer.position.x, game.archer.position.z)

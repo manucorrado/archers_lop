@@ -37,6 +37,7 @@ func _ready() -> void:
 	archer.branch_requested.connect(func(): wants_branch = true)
 	hud.start_requested.connect(_start_campaign)
 	hud.continue_requested.connect(_resume_campaign)
+	hud.next_act_requested.connect(_continue_act)
 	hud.save_requested.connect(_manual_save)
 	hud.resume_requested.connect(_resume_play)
 	hud.shop_requested.connect(_set_view.bind("shop"))
@@ -77,7 +78,7 @@ func _start_campaign() -> void:
 
 
 func _resume_play() -> void:
-	if not run.chosen_gift.is_empty():
+	if run.at_act_summary():
 		_set_view("end")
 	elif not run.gift_offer.is_empty():
 		_set_view("gift")
@@ -240,7 +241,7 @@ func _strike() -> void:
 		recovery_wait = 4.0
 		hud.notify("Cayeron cuatro flechas al pie del tronco.", "Four arrows dropped at the foot of the trunk.")
 	var milestone := _boss_milestone()
-	var damage := run.damage_part(roundi(4 * Run.POWER[run.stage - 1]), id)
+	var damage := run.strike_part(roundi(4 * Run.POWER[run.stage - 1]), id)
 	hud.show_damage(damage, "branch")
 	clearing.hit_feedback(point)
 	hud.hit_marker()
@@ -248,6 +249,8 @@ func _strike() -> void:
 
 
 func _boss_milestone() -> int:
+	if run.stage == 10:
+		return run.core_phase * 3 + (1 if run.core_hit else 2 if run.core_needs_hit() else 0)
 	if not run.split:
 		return 0
 	return 2 if run.left_hp == 0 or run.right_hp == 0 else 1
@@ -261,10 +264,17 @@ func _after_damage(previous_milestone: int) -> void:
 		clearing.break_feedback()
 	else:
 		archer.play_cue("hit")
-		if milestone == 1 and previous_milestone == 0:
-			hud.notify("El tronco se abrió. Cada mitad tiene su propia resistencia.",
-				"The trunk split. Each half has its own health.")
-		elif milestone == 2 and previous_milestone == 1:
+		if run.core_needs_hit() and milestone != previous_milestone:
+			hud.notify("¡Falta el punto encendido! Disparale o golpeá su raíz con la rama.",
+				"Hit the glowing hollow, or strike its root with your branch.")
+		elif run.stage == 10 and floori(milestone / 3.0) != floori(previous_milestone / 3.0):
+			clearing.play_encounter_cue("core_%d" % run.core_phase)
+			hud.notify("El punto débil cambió de lugar. Buscá el hueco encendido.",
+				"The weak spot moved. Look for the glowing hollow.")
+		elif run.stage == 5 and milestone == 1 and previous_milestone == 0:
+			hud.notify("¡Se partió! Disparale a cada mitad hasta romper las dos.",
+				"It split! Shoot each side until both break.")
+		elif run.stage == 5 and milestone == 2 and previous_milestone == 1:
 			hud.notify("Una mitad cayó. Apuntá a la que sigue en pie.",
 				"One half fell. Aim at the one still standing.")
 	_sync_piles()
@@ -274,7 +284,7 @@ func _after_damage(previous_milestone: int) -> void:
 
 
 func _next_knot() -> void:
-	if run.stage == 5:
+	if run.stage in [5, 10]:
 		run.prepare_gifts()
 		archer.play_cue("win")
 		_set_view("gift")
@@ -287,19 +297,41 @@ func _next_knot() -> void:
 		2: hud.notify("Ya podés comprar el taller de flechas.", "You can now buy the arrow workshop.")
 		3: hud.notify("Chispa de copa · Una descarga cada ocho aciertos.", "Canopy spark · A discharge every eight hits.")
 		4: hud.notify("Ya podés comprar el arco rápido (recurvo).", "You can now buy the recurve bow.")
-		5: hud.notify("Último blanco · Tronco partido", "Final target · Twin Fork")
+		5: hud.notify("Quinto blanco · Tronco partido", "Fifth target · Twin Fork")
+		10: hud.notify("Último blanco · Apuntá al hueco encendido. El punto débil cambia de lugar.",
+			"Final target · Aim at the glowing hollow. The weak spot moves.")
 	_sync_piles()
 	checkpoint_due = true
+
+
+func _continue_act() -> void:
+	if view != "end" or run.stage != 5 or not run.at_act_summary():
+		return
+	run.sample_session(Time.get_ticks_usec())
+	var previous := run.save_state()
+	if not run.next_knot():
+		return
+	if not _save_campaign():
+		run.restore_state(previous)
+		return
+	_redraw_world()
+	_set_view("play")
+	hud.notify("Segundo acto · Conservás tu recompensa y tus compras.",
+		"Second act · Your reward and upgrades carry over.")
 
 
 func _collect_nearby() -> bool:
 	var pos := Vector2(archer.position.x, archer.position.z)
 	var radius := run.pickup_radius()
 	var total := 0
-	var at_workshop := pos.distance_to(Vector2(Clearing.WORKSHOP_PICKUP.x, Clearing.WORKSHOP_PICKUP.z)) <= radius
-	run.observe_workshop_visit(at_workshop)
-	if run.workshop_stock > 0 and at_workshop:
-		total += run.collect(true)
+	var landed_nearby: Array[int] = []
+	for slot in run.workshop_piles.size():
+		var landing: Vector3 = Clearing.WORKSHOP_LANDINGS[slot]
+		if pos.distance_to(Vector2(landing.x, landing.z)) <= radius:
+			landed_nearby.append(slot)
+	run.observe_workshop_visit(not landed_nearby.is_empty())
+	for slot in landed_nearby:
+		total += run.collect(true, slot)
 	if run.knot_stock > 0 and pos.distance_to(Vector2(Clearing.KNOT_PICKUP.x, Clearing.KNOT_PICKUP.z)) <= radius:
 		total += run.collect(false)
 	for id: String in run.seed_drops.keys():
@@ -356,7 +388,7 @@ func _redraw_world() -> void:
 
 
 func _sync_piles() -> void:
-	clearing.set_piles(run.workshop_stock, run.knot_stock)
+	clearing.set_piles(0, run.knot_stock)
 	_sync()
 
 
@@ -409,7 +441,7 @@ func _resume_campaign() -> void:
 	for flight: Dictionary in in_flight:
 		archer.restore_flight(flight.origin, flight.end, flight.duration, flight.remaining)
 	_redraw_world()
-	if not run.gift_offer.is_empty() or not run.chosen_gift.is_empty():
+	if not run.gift_offer.is_empty() or run.at_act_summary():
 		_resume_play()
 	else:
 		_set_view("pause")

@@ -4,7 +4,18 @@ const TARGET_POSITION := Vector3(0.0, 1.65, -5.0)
 const WORKSHOP_PICKUP := Vector3(-3.6, 0.0, 0.15)
 const KNOT_PICKUP := Vector3(0.9, 0.0, -2.85)
 const WORKSHOP_BASE := Vector3(-4.3, 0.0, -1.15)
+const WORKSHOP_LANDINGS: Array[Vector3] = [
+	Vector3(-4.6, 0, 4.8), Vector3(0.7, 0, 2.0), Vector3(4.5, 0, -0.5), Vector3(-8.4, 0, -3.6)
+]
+const LAUNCH_ORIGIN := WORKSHOP_BASE + Vector3(0.23, 1.12, 1.52)
+const CORE_SOCKETS: Array[Vector3] = [
+	Vector3(-1.15, 2.90, -3.37), Vector3(1.14, 4.86, -3.37), Vector3(-0.26, 6.98, -3.37)
+]
+const CORE_ROOTS: Array[Vector3] = [
+	Vector3(-1.93, 0.30, -2.96), Vector3(1.92, 0.30, -2.91), Vector3(0.0, 0.30, -2.47)
+]
 const KIT = preload("res://assets/kit_claro.tres")
+const TimberFace = preload("res://scripts/timber_face.gd")
 const CUE_AUDIO := preload("res://scripts/bow_audio.gd")
 
 const BARK := Color("#533e32")
@@ -60,13 +71,17 @@ var _workshop_collision: CollisionShape3D
 var _footings := Node3D.new()
 var _wheel := Node3D.new()
 var _tray := Node3D.new()
-var _workshop_piles: Array[Node3D] = []
+var _workshop_piles: Array = []
+var _flying_bundles := {}
+var _glow_material := ShaderMaterial.new()
+var _first_pickup_help := true
 var _knot_piles: Array[Node3D] = []
 var _chip_mesh := BoxMesh.new()
 var _stage := 0
 var _built := false
 var _wheel_time := 0.0
-var _crack: Node3D
+var _crack: TimberFace
+var _cavities := Node3D.new()
 var _targets := {}
 var _seed_piles := {}
 var _audio_sources := {}
@@ -89,7 +104,11 @@ func _ready() -> void:
 	_make_landscape()
 	_make_collisions()
 	_make_workshop()
-	_make_pile_models(WORKSHOP_PICKUP, _workshop_piles)
+	_prepare_pickup_glow()
+	for landing in WORKSHOP_LANDINGS:
+		var models: Array[Node3D] = []
+		_make_pile_models(landing, models)
+		_workshop_piles.append(models)
 	_make_pile_models(KNOT_PICKUP, _knot_piles)
 	_knot.name = "Nudo"
 	_knot.position = Vector3(TARGET_POSITION.x, 0, TARGET_POSITION.z)
@@ -301,7 +320,6 @@ func set_stage(stage: int) -> void:
 		_knot_geometry.queue_free()
 	var blocks := Blocks.new()
 	var growth := _growth()
-	# Deep plates surround an irregular sap seam. Only a timed diana uses rings.
 	blocks.box(Vector3(0, 1.11, -0.04), Vector3(1.88, 2.20, 1.53), BARK)
 	blocks.box(Vector3(0, 1.23, -0.13), Vector3(1.68, 2.44, 1.88), WOOD.darkened(0.2))
 	for i in range(7):
@@ -312,7 +330,7 @@ func set_stage(stage: int) -> void:
 	for side in [-1, 1]:
 		blocks.beam(Vector3(0.70 * side, 0.74, 0.06), Vector3(1.44 * side, 0.15, 0.32), 0.46, 0.68, BARK)
 		blocks.box(Vector3(1.33 * side, 0.11, 0.42), Vector3(0.64, 0.22, 0.63), WOOD.darkened(0.2))
-		blocks.beam(Vector3(0.76 * side, 1.87, -0.28), Vector3(1.18 * side, 2.6 + stage * 0.13, -0.35), 0.23, 0.36, WOOD)
+		blocks.beam(Vector3(0.76 * side, 1.87, -0.28), Vector3(1.18 * side, 2.73, -0.35), 0.23, 0.36, WOOD)
 		var root_base := Vector3(0.43 * side, 0.72, 0.70)
 		var root_knee := Vector3(0.58 * side, 0.24, 0.97)
 		var root_tip := Vector3(1.18 * side, 0.10, 1.18)
@@ -325,41 +343,27 @@ func set_stage(stage: int) -> void:
 		var base_x := (i - 2.5) * 0.31
 		var upper := 0.88 + 0.32 * sin(i * 2)
 		blocks.beam(Vector3(base_x * 1.13,0.05,0.77),Vector3(base_x * 0.90,upper,0.77),0.11,0.105,WOOD.darkened(0.11 + (i % 3) * 0.08))
-	var face_y := TARGET_POSITION.y / growth
-	for i in 7:
-		var x := (i - 3) * 0.285
-		var rise := sin(float(i) * 2.17) * 0.13
-		var height := 1.60 - absf(x) * 0.68 + rise
-		var front := 0.86 + (1 - absf(x)) * 0.09
-		blocks.box(Vector3(x, face_y + rise * 0.6, front), Vector3(0.282, height, 0.12), CUT.darkened(0.055 * (i % 3)))
-		blocks.box(Vector3(x + 0.055, face_y - 0.18 + rise, front + 0.067), Vector3(0.035, height * 0.42, 0.02), WOOD)
-		blocks.box(Vector3(x - 0.081, face_y + height * 0.30, front + 0.068), Vector3(0.06, height * 0.19, 0.02), CUT.lightened(0.14))
-		var shoulder_y := face_y + height * 0.5 + rise * 0.6
-		blocks.box(Vector3(x, shoulder_y, front - 0.035),Vector3(0.285,0.09,0.13),BARK.lightened(0.04))
 	if stage == 5:
 		for facing in [-1.0, 1.0]:
 			blocks.beam(Vector3(facing * 0.47, 1.53, 0), Vector3(facing * 0.95, 2.98, -0.08), 0.54, 0.53, WOOD)
 			blocks.box(Vector3(facing * 0.95, 2.96, -0.08), Vector3(0.50, 0.11, 0.51), CUT)
 	# Fresh shoots mark each stage along the jagged crown rather than covering the rings.
-	for i in range(stage + 1):
-		var sprout := Vector3(-0.85 + i * 0.36, 2.45 + 0.13 * (i % 2), -0.5)
+	for i in range(mini(stage + 1, 6)):
+		var sprout := Vector3(-0.8 + i * 0.30, 2.40 + 0.08 * (i % 2), -0.5)
 		blocks.beam(sprout, sprout + Vector3(-0.08, 0.33, 0), 0.11, 0.11, MOSS)
 		blocks.box(sprout + Vector3(-0.20, 0.31, 0), Vector3(0.33, 0.13, 0.19), Color("#93a962"))
 	_knot_geometry = blocks.bake(_knot, _cube, "Madera y veta")
-	_knot_geometry.scale = Vector3.ONE * growth
-	var seam := Blocks.new()
-	seam.beam(Vector3(-0.13,-0.60,0), Vector3(0.12,-0.20,0), 0.12, 0.040, BARK.darkened(0.5))
-	seam.beam(Vector3(0.12,-0.20,0), Vector3(-0.10,0.19,0), 0.16, 0.045, BARK.darkened(0.5))
-	seam.beam(Vector3(-0.10,0.19,0), Vector3(0.17,0.55,0), 0.11, 0.04, BARK.darkened(0.5))
-	seam.beam(Vector3(0.09,-0.18,0.03), Vector3(-0.092,0.18,0.03), 0.059, 0.035, SAP)
-	seam.box(Vector3(-0.058,0.101,0.057), Vector3(0.070,0.095,0.031), FEATHER, Vector3(0,0,0.26))
-	_crack = seam.bake(_knot_geometry, _cube, "Grieta de savia")
-	_crack.position = Vector3(0,face_y,1.055)
+	_knot_geometry.scale = growth
+	_crack = TimberFace.new()
+	_crack.name = "Corte de madera"
+	_crack.position = Vector3(0, 1.45, 0.986)
+	_knot_geometry.add_child(_crack)
 	_knot_collision.size = Vector3(2.2, 2.64, 2.08) * growth
 	_knot_collider.position = Vector3(0, 1.32, 0.025) * growth
 
-func _growth() -> float:
-	return 1.0 + 0.16 * (clampi(_stage, 1, 5) - 1)
+func _growth() -> Vector3:
+	var progress := float(clampi(_stage, 1, 10) - 1) / 9.0
+	return Vector3(1.0 + progress, 1.0 + 4.0 * progress, 1.0 + 0.32 * progress)
 
 func _disc(blocks: Blocks, center: Vector3, radius: float, tone: Color) -> void:
 	var widths := [0.54, 0.82, 0.96, 1.0, 0.96, 0.82, 0.54]
@@ -390,13 +394,16 @@ func _make_encounter() -> void:
 			var x := (i - 2) * 0.24
 			var height := 1.49 - absf(x) * 0.87
 			plates.box(Vector3(x, 1.94 + side * x * 0.38, 0.76), Vector3(0.245, height, 0.27), CUT.darkened(0.07 * (i % 3)))
-		plates.beam(Vector3(-side * 0.13,1.52,0.93), Vector3(side * 0.12,1.94,0.93), 0.11,0.04,BARK)
-		plates.beam(Vector3(side * 0.12,1.94,0.93), Vector3(-side * 0.08,2.29,0.93), 0.13,0.05,BARK)
-		plates.beam(Vector3(side * 0.12,1.94,0.97), Vector3(-side * 0.08,2.29,0.97), 0.06,0.04,SAP)
-		plates.bake(lobe, _cube, "Madera hendida")
-		_collider(lobe, Vector3(0, 1.6, 0), Vector3(1.24, 3.2, 1.93))
+		var lobe_scale := Vector3(1.10, 1.73, 1)
+		plates.bake(lobe, _cube, "Madera hendida").scale = lobe_scale
+		var mark := Blocks.new()
+		_target_rings(mark, 0.38)
+		var mark_mesh := mark.bake(lobe, _cube, "Blanco expuesto", false)
+		mark_mesh.position = Vector3(0, 1.94 * lobe_scale.y, 1.01)
+		_collider(lobe, Vector3(0, 1.6, 0) * lobe_scale, Vector3(1.24, 3.2, 1.93) * lobe_scale)
 		_collider(lobe, Vector3(side * 0.43, 0.20, 0.75), Vector3(0.69, 0.4, 1.10))
 		_set_interactive(id, false)
+	_make_core_sockets()
 	var target := _new_interactive("target")
 	var ring := Blocks.new()
 	_disc(ring, Vector3.ZERO, 0.40, Color("#382d30"))
@@ -447,6 +454,64 @@ func _new_interactive(id: String) -> StaticBody3D:
 	_targets[id] = body
 	return body
 
+func _target_rings(blocks: Blocks, radius: float) -> void:
+	_disc(blocks, Vector3.ZERO, radius, Color("#322925"))
+	_disc(blocks, Vector3(0, 0, 0.028), radius * 0.84, FEATHER)
+	_disc(blocks, Vector3(0, 0, 0.055), radius * 0.6, Color("#a45e2e"))
+	_disc(blocks, Vector3(0, 0, 0.077), radius * 0.32, Color("#ffeab0"))
+
+func _make_core_sockets() -> void:
+	add_child(_cavities)
+	for i in CORE_SOCKETS.size():
+		var point := CORE_SOCKETS[i]
+		var rim := Blocks.new()
+		_disc(rim, Vector3.ZERO, 0.68, BARK.lightened(0.10))
+		_disc(rim, Vector3(0, 0, 0.022), 0.56, Color("#4d3d33"))
+		_disc(rim, Vector3(0, 0, 0.045), 0.41, Color("#382e29"))
+		rim.bake(_cavities, _cube, "Cavidad").position = point
+		var core := _new_interactive("core_%d" % i)
+		core.position = point + Vector3(0, 0, 0.09)
+		var layers := Blocks.new()
+		_target_rings(layers, 0.52)
+		layers.bake(core, _cube, "Corazón expuesto")
+		var shape := CylinderShape3D.new()
+		shape.radius = 0.53
+		shape.height = 0.17
+		var collider := CollisionShape3D.new()
+		collider.shape = shape
+		collider.rotation.x = PI * 0.5
+		core.add_child(collider)
+		_set_interactive("core_%d" % i, false)
+		_make_core_root(i)
+	_cavities.hide()
+
+func _make_core_root(index: int) -> void:
+	var start := CORE_SOCKETS[index]
+	var foot := CORE_ROOTS[index]
+	var spine: Array[Vector3] = [
+		start - Vector3.UP * 0.51,
+		Vector3(lerpf(start.x, foot.x, 0.22), start.y * 0.61, start.z - 0.025),
+		Vector3(lerpf(start.x, foot.x, 0.57), 1.05, start.z),
+		Vector3(lerpf(start.x, foot.x, 0.86), 0.49, start.z + 0.12),
+		foot,
+	]
+	var root := _new_interactive("root_%d" % index)
+	root.position = foot
+	var wood := Blocks.new()
+	var sap_line := Blocks.new()
+	for segment in spine.size() - 1:
+		var age := float(segment) / 3.0
+		wood.beam(spine[segment], spine[segment + 1], lerpf(0.16, 0.40, age), lerpf(0.12, 0.26, age), WOOD.darkened(0.24))
+		var front := Vector3.BACK * lerpf(0.075, 0.16, age)
+		sap_line.beam(spine[segment] - foot + front, spine[segment + 1] - foot + front, 0.058, 0.04, SAP)
+	wood.box(foot, Vector3(0.63, 0.43, 0.67), BARK, Vector3(-0.13,0,0))
+	wood.bake(_cavities, _cube, "Raíz de la cavidad")
+	sap_line.box(Vector3(0, 0.19, 0.17), Vector3(0.39, 0.13, 0.30), SAP)
+	sap_line.box(Vector3(0, 0.265, 0.18), Vector3(0.17, 0.048, 0.15), FEATHER)
+	sap_line.bake(root, _cube, "Savia en la raíz", false)
+	_collider(root, Vector3.ZERO, Vector3(0.74, 0.62, 0.80))
+	_set_interactive("root_%d" % index, false)
+
 func _set_interactive(id: String, enabled: bool) -> void:
 	var body: StaticBody3D = _targets[id]
 	body.visible = enabled
@@ -460,10 +525,10 @@ func seed_drop_position(id: String) -> Vector3:
 
 func target_center(id: String) -> Vector3:
 	if id in ["left", "right"]:
-		return (_targets[id] as Node3D).position + Vector3(0, 1.94, 0.96)
+		return (_targets[id] as Node3D).position + Vector3(0, 1.94 * 1.73, 0.96)
 	if _targets.has(id):
 		return (_targets[id] as Node3D).position
-	return TARGET_POSITION + Vector3(0, 0, 1.05 * _growth())
+	return TARGET_POSITION + Vector3(0, 0, 1.05 * _growth().z)
 
 func target_id(collider: Object, _point: Vector3) -> String:
 	if collider == _knot and not _split:
@@ -487,8 +552,7 @@ func sync_encounter(state: Dictionary) -> void:
 	_knot_geometry.visible = not _split
 	_knot.collision_layer = 0 if _split else 1
 	var health_fraction := clampf(float(state.get("hp", 1)) / maxf(float(state.get("max_hp", 1)), 1), 0, 1)
-	_crack.scale.x = lerpf(2.2, 0.7, health_fraction)
-	_crack.scale.y = lerpf(1.36, 0.8, health_fraction)
+	_crack.set_damage(1.0 - health_fraction)
 	_set_interactive("left", _split and int(state.get("left_hp", 0)) > 0)
 	_set_interactive("right", _split and int(state.get("right_hp", 0)) > 0)
 	_set_interactive("target", bool(state.get("target_active", false)) and not _split)
@@ -496,7 +560,14 @@ func sync_encounter(state: Dictionary) -> void:
 	var which := clampi(int(state.get("target_side", 0)), 0, 2)
 	var x := [-0.60, 0.62, -0.21]
 	var y := [0.28, -0.16, 0.64]
-	diana.position = target_center("body") + Vector3(float(x[which]) * _growth(), float(y[which]), 0.19)
+	diana.position = target_center("body") + Vector3(float(x[which]) * _growth().x, float(y[which]), 0.19)
+	_cavities.visible = _stage == 10
+	for i in CORE_SOCKETS.size():
+		var exposed := _stage == 10 and int(state.get("core_phase", 0)) == i and int(state.get("hp", 0)) > 0
+		_set_interactive("core_%d" % i, exposed)
+		_set_interactive("root_%d" % i, exposed)
+	_first_pickup_help = not state.get("fired_after_collect", false)
+	_update_workshop_delivery(state)
 	var active := {}
 	for seed_state: Dictionary in state.get("seeds", []):
 		active[seed_state.id] = float(seed_state.remaining)
@@ -520,9 +591,10 @@ func apply_settings(options: Dictionary) -> void:
 		source.volume_db = -7 + linear_to_db(maxf(_world_volume, 0.00001))
 
 func play_encounter_cue(cue: String) -> void:
-	if _audio_sources.has(cue) and _world_volume > 0:
-		var source: AudioStreamPlayer3D = _audio_sources[cue]
-		source.position = target_center("target" if cue == "target" else "seed_0")
+	var key := "target" if cue.begins_with("core_") else cue
+	if _audio_sources.has(key) and _world_volume > 0:
+		var source: AudioStreamPlayer3D = _audio_sources[key]
+		source.position = target_center("seed_0" if cue == "event" else cue)
 		source.play()
 
 func play_spark(point: Vector3) -> void:
@@ -566,8 +638,11 @@ func _make_workshop() -> void:
 	frame.box(Vector3(0.63, 1.51, 0.56), Vector3(0.39, 0.53, 0.065), Color("#d18b3c"))
 	frame.box(Vector3(0.63, 1.56, 0.608), Vector3(0.07, 0.23, 0.035), FEATHER)
 	frame.box(Vector3(0.63, 1.67, 0.61), Vector3(0.15, 0.09, 0.036), FEATHER)
-	# Output chute leads from the bench to the pickup.
-	frame.beam(Vector3(0.42, 0.63, 0.57), Vector3(0.66, 0.13, 1.0), 0.49, 0.10, WOOD)
+	# A spring arm projects past the eave: each load leaves from the pale cradle.
+	frame.beam(Vector3(0.23, 0.52, 0.46), Vector3(0.23, 0.87, 1.48), 0.19, 0.19, WOOD)
+	for side in [-1, 1]:
+		frame.beam(Vector3(0.23, 0.84, 1.32), Vector3(0.23 + side * 0.27, 1.07, 1.56), 0.105, 0.115, CUT)
+	frame.box(Vector3(0.23, 0.99, 1.50), Vector3(0.57, 0.08, 0.26), FEATHER)
 	frame.bake(_workshop, _cube, "Caballetes")
 	_wheel.position = Vector3(-0.87, 0.66, 0.0)
 	_workshop.add_child(_wheel)
@@ -596,14 +671,72 @@ func _make_pile_models(location: Vector3, models: Array[Node3D]) -> void:
 		model.position = location
 		model.visible = false
 		models.append(model)
+	var glow := MeshInstance3D.new()
+	glow.mesh = PlaneMesh.new()
+	(glow.mesh as PlaneMesh).size = Vector2(1.75, 1.75)
+	glow.material_override = _glow_material
+	glow.position = location + Vector3(0, 0.075, 0)
+	glow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(glow)
+	models[0].set_meta("pickup_glow", glow)
+	glow.hide()
+
+func _prepare_pickup_glow() -> void:
+	var shader := Shader.new()
+	shader.code = """
+		shader_type spatial;
+		render_mode unshaded, cull_disabled, depth_draw_never;
+		void fragment() {
+			float r = length(UV * 2.0 - 1.0);
+			float halo = 1.0 - smoothstep(0.24, 1.0, r);
+			float rim = 1.0 - smoothstep(0.0, 0.055, abs(r - 0.68));
+			ALBEDO = mix(vec3(1.0, 0.60, 0.15), vec3(1.0, 0.90, 0.59), rim);
+			ALPHA = 0.39 * halo + 0.50 * rim;
+		}
+	"""
+	_glow_material.shader = shader
+
+func workshop_landing_position(slot: int) -> Vector3:
+	return WORKSHOP_LANDINGS[slot]
+
+func _update_workshop_delivery(state: Dictionary) -> void:
+	var piles: Array = state.get("workshop_piles", [])
+	for slot in _workshop_piles.size():
+		var amount := int(piles[slot]) if slot < piles.size() and _built else 0
+		_show_pile(_workshop_piles[slot], amount)
+	_show_pile(_knot_piles, int(state.get("knot_stock", 0)))
+	var visible_serials := {}
+	for batch: Dictionary in state.get("workshop_flights", []):
+		var serial: int = batch.serial
+		visible_serials[serial] = true
+		if not _flying_bundles.has(serial):
+			var model := KIT.haz_pequeno.instantiate() as Node3D
+			add_child(model)
+			model.scale *= 0.83
+			_flying_bundles[serial] = {"node": model, "landing": workshop_landing_position(batch.slot)}
+		var flight: Dictionary = _flying_bundles[serial]
+		flight.duration = batch.duration
+		flight.age = maxf(0, float(batch.duration) - float(batch.remaining))
+		_position_bundle(flight)
+	for serial in _flying_bundles.keys():
+		if not visible_serials.has(serial):
+			var node: Node3D = _flying_bundles[serial].node
+			node.hide()
+			node.queue_free()
+			_flying_bundles.erase(serial)
+
+func _position_bundle(flight: Dictionary) -> void:
+	var t := clampf(float(flight.age) / maxf(0.001, float(flight.duration)), 0, 1)
+	var node: Node3D = flight.node
+	node.position = LAUNCH_ORIGIN.lerp(flight.landing, t) + Vector3.UP * (8.4 * t * (1.0 - t))
+	node.rotation.x = -1.4 * sin(t * PI)
 
 func set_workshop(built: bool) -> void:
 	_built = built
 	_workshop.visible = built
 	_workshop_collision.set_deferred("disabled", not built)
 
-func set_piles(workshop_amount: int, knot_amount: int) -> void:
-	_show_pile(_workshop_piles, workshop_amount if _built else 0)
+func set_piles(_workshop_amount: int, knot_amount: int) -> void:
 	_show_pile(_knot_piles, knot_amount)
 
 func _show_pile(models: Array[Node3D], amount: int) -> void:
@@ -616,8 +749,13 @@ func _show_pile(models: Array[Node3D], amount: int) -> void:
 		level = 0
 	for i in models.size():
 		models[i].visible = i == level
+	var glow: Node3D = models[0].get_meta("pickup_glow")
+	glow.visible = amount > 0 and _first_pickup_help
 
 func _process(delta: float) -> void:
+	for flight: Dictionary in _flying_bundles.values():
+		flight.age += delta
+		_position_bundle(flight)
 	if _built:
 		_wheel_time = fmod(_wheel_time + delta * 2.5, TAU)
 		_wheel.rotation.x = _wheel_time

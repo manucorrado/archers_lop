@@ -1,6 +1,6 @@
 # El arquero del claro
 
-Juego de arquería en primera persona para Windows. El primer acto tiene cinco blancos de madera. Cada impacto te da savia para comprar mejoras y construir un taller de flechas. El quinto blanco se parte en dos a mitad de la pelea. Cuando rompés las dos mitades, elegís una mejora entre tres y ves el resultado de tu partida. Podés cambiar entre español e inglés desde los menús.
+Juego de arquería en primera persona para Windows, con diez blancos y dos jefes. Los impactos te dan savia para mejorar tu arquero. El quinto blanco se parte en dos. Cuando rompés ambas mitades, elegís una recompensa y podés continuar al sexto blanco desde el resumen. El décimo tiene tres puntos débiles que se activan por turno. Podés cambiar entre español e inglés desde los menús.
 
 ## Jugar en Windows
 
@@ -9,6 +9,7 @@ Abrí [ElArqueroDelClaro.exe](build/windows/ElArqueroDelClaro.exe) y elegí **En
 | Control | Acción |
 |---|---|
 | WASD y ratón | Caminar y mirar |
+| Espacio | Dar un salto corto |
 | Clic izquierdo / mantener | Soltar una flecha / repetir el disparo |
 | Botón derecho mantenido | Acercar la mira |
 | 1, 2 o la rueda del mouse | Cambiar entre los arcos comprados |
@@ -16,11 +17,13 @@ Abrí [ElArqueroDelClaro.exe](build/windows/ElArqueroDelClaro.exe) y elegí **En
 | F cerca del nudo | Golpear con la rama. Con el carcaj vacío, el golpe puede desprender cuatro flechas |
 | Esc | Pausar y acceder al guardado, los ajustes y la opción de empezar de nuevo |
 
-**Primera vuelta.** Empezás con 24 flechas. Después de seis impactos al cuerpo, abrí las mejoras y comprá **Pulso de madera** por 4 de savia. El siguiente impacto en el primer nudo hace 12 de daño. En el segundo nudo podés construir el **Taller de flechas** por 17. Mientras jugás, el taller produce 1,5 flechas por segundo. Acercate al haz frente a la bandeja, a la izquierda del punto de partida. Si el carcaj está lleno, el excedente espera en el suelo. Las mejoras y la pausa detienen el reloj.
+**Primera vuelta.** Empezás con 24 flechas. Abrí el árbol con Tab, seleccioná **Daño por flecha** y elegí **Obtener gratis**. Tu arco pasa de 10 a 12 de daño base y se abren las primeras ramas. Daño y velocidad de ataque tienen diez niveles cada uno. En el segundo blanco podés construir el taller por 17 de savia. Produce 1,25 flechas por segundo y lanza tandas de tres a distintos puntos del claro. Seguí el vuelo y acercate al atado para recogerlo. Si el carcaj está lleno, el resto queda en el suelo.
 
 En el tercer blanco podés comprar una descarga que se activa cada ocho aciertos. En el cuarto se habilita un arco que dispara más rápido y consume más flechas por segundo. Ambos requieren la primera mejora de daño.
 
-**Guardar y continuar.** Podés guardar desde pausa. El juego también guarda las compras, el cambio de blanco, la división del último tronco, la caída de su primera mitad y la elección final. En el menú de inicio, **Continuar** recupera la posición y la mira. Si cerraste mientras elegías la recompensa, vuelven las mismas tres cartas. Durante la pausa y con el juego cerrado se detienen el reloj y el taller. Empezar de nuevo requiere confirmación y conserva los ajustes.
+**Guardar y continuar.** Podés guardar desde pausa. También se guardan las compras, los cambios de blanco y de fase y las recompensas. En el menú de inicio, **Continuar** recupera la partida. Si cerraste mientras elegías la recompensa, vuelven las mismas tres cartas. Si terminaste la versión anterior, en su resumen aparece **Continuar al blanco 6**. Durante la pausa y con el juego cerrado se detienen el reloj y el taller.
+
+[Árbol, precios y opciones para la demo](docs/arbol-de-la-demo.md) · [Catálogo de mejoras potenciales](docs/catalogo-de-mejoras-potenciales.docx)
 
 ## Cambiar un asset desde el editor
 

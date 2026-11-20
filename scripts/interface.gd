@@ -7,19 +7,21 @@ signal quit_requested
 signal buy_requested(id: String)
 signal shop_requested
 signal continue_requested
+signal next_act_requested
 signal save_requested
 signal gift_requested(id: String)
 signal equip_requested(id: String)
 signal settings_changed(options: Dictionary)
 
 const Preferences := preload("res://scripts/play_preferences.gd")
+const UpgradeMap := preload("res://scripts/upgrade_map.gd")
 const UPGRADES := {
-	"damage": ["Pulso de madera", "Timber pulse", "Daño base del arco de rama", "Branch bow base damage"],
-	"workshop": ["Taller de flechas", "Arrow workshop", "Producción en la bandeja", "Arrows at the tray"],
+	"damage": ["Daño por flecha", "Arrow damage", "Daño base del arco de rama", "Branch bow base damage"],
+	"workshop": ["Taller de flechas", "Arrow workshop", "Producción del taller", "Workshop output"],
 	"capacity": ["Carcaj de viaje", "Travel quiver", "Capacidad del carcaj", "Quiver capacity"],
-	"rate": ["Ritmo de suelta", "Release rhythm", "Cadencia de todos los arcos", "Firing rate for every bow"],
+	"rate": ["Velocidad de ataque", "Attack speed", "Cadencia de todos los arcos", "Firing rate for every bow"],
 	"weak": ["Ojo de veta", "Grain eye", "Daño al acertar en el punto débil", "Grain target damage"],
-	"recurve": ["Arco rápido (recurvo)", "Recurve bow", "Cadencia base del arco", "Bow's base firing rate"],
+	"recurve": ["Arco rápido", "Recurve bow", "Cadencia base del arco", "Bow's base firing rate"],
 	"wheel": ["Rueda de savia", "Sap wheel", "Producción por taller", "Production per workshop"],
 	"pickup": ["Recogida de hojas", "Leaf gathering", "Radio de recogida", "Pickup radius"],
 	"pace": ["Paso del porteador", "Carrier's stride", "Velocidad con 4 o más flechas", "Speed with 4 or more arrows"],
@@ -143,6 +145,12 @@ var start_continue: Button
 var start_new: Button
 var overlay_notice: Label
 var offer_controls: Dictionary = {}
+var upgrade_map: UpgradeMap
+var selected_upgrade := "damage"
+var selected_title: Label
+var selected_effect: Label
+var selected_requirement: Label
+var purchase_upgrade: Button
 var ui_font := SystemFont.new()
 var title_font := SystemFont.new()
 var mono_font := SystemFont.new()
@@ -414,8 +422,8 @@ func _build_start(parent: Control) -> void:
 	var title := _label(content, _t("El arquero\ndel claro", "Archer of\nthe Clearing"), 65, PAPER, title_font)
 	title.add_theme_constant_override("line_spacing", -9)
 	var description := _label(content, _t(
-		"Construí tu primer taller de flechas y rompé los dos lados del tronco partido.",
-		"Build your first arrow workshop and break both sides of the split trunk."
+		"Rompé diez blancos de madera. Elegí cómo mejorar tu arco y buscá los puntos débiles de los dos jefes.",
+		"Break ten wooden targets. Upgrade your bow and find the weak points on both bosses."
 	), 20, LINEN)
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var actions := _row(content, 9)
@@ -453,14 +461,39 @@ func _scroll_column(parent: Control, height: int) -> VBoxContainer:
 
 func _build_shop(content: Control) -> void:
 	var heading := _row(content, 20)
-	var title := _label(heading, _t("Mejoras", "Upgrades"), 36, PAPER, title_font)
+	var title := _label(heading, _t("Árbol de mejoras", "Upgrade tree"), 36, PAPER, title_font)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_sap = _label(heading, "", 20, AMBER, mono_font)
-	var column := _scroll_column(content, 335)
+	shop_sap = _label(heading, "", 17, AMBER, mono_font)
+	var layout := _row(content, 14)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(548, 382)
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.follow_focus = true
+	layout.add_child(scroll)
+	upgrade_map = UpgradeMap.new()
+	scroll.add_child(upgrade_map)
 	var available: Dictionary = values.get("offers", {})
-	for id in UPGRADES:
+	for id: String in UPGRADES:
 		if available.has(id):
-			_add_offer(column, id)
+			var node := _button(upgrade_map, "", false, _select_upgrade.bind(id))
+			node.add_theme_font_size_override("font_size", 14)
+			node.add_theme_stylebox_override("hover", _box(Color("#354a40"), AMBER, 4, 2))
+			node.clip_text = true
+			upgrade_map.buttons[id] = node
+			offer_controls[id] = node
+	upgrade_map.arrange(available)
+	var details_panel := _panel(layout, Color("#263b32"), EDGE, 14, 12)
+	details_panel.custom_minimum_size.x = 244
+	var details := _stack(details_panel, 10)
+	selected_title = _label(details, "", 25, PAPER, title_font)
+	selected_effect = _label(details, "", 17, LINEN)
+	selected_requirement = _label(details, "", 15, LINEN)
+	for caption in [selected_title, selected_effect, selected_requirement]:
+		caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	selected_requirement.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	purchase_upgrade = _button(details, "", true, func(): buy_requested.emit(selected_upgrade))
+	purchase_upgrade.add_theme_font_size_override("font_size", 16)
+	purchase_upgrade.add_theme_stylebox_override("disabled", _box(INK, EDGE, 8, 6))
 	var equipment := _row(content, 10)
 	var branch := _button(equipment, _t("Equipar arco de rama", "Equip branch bow"), false, equip_requested.emit.bind("branch"))
 	branch.disabled = values.get("bow", "branch") == "branch"
@@ -470,22 +503,14 @@ func _build_shop(content: Control) -> void:
 	recurve.name = "EquipRecurve"
 	shop_notice = _label(content, "", 16, AMBER)
 	shop_notice.hide()
-	_button(content, _t("Volver al claro", "Return to the clearing"), true, resume_requested.emit).grab_focus()
+	_button(content, _t("Volver al claro", "Return to the clearing"), false, resume_requested.emit)
+	if offer_controls.has(selected_upgrade):
+		offer_controls[selected_upgrade].grab_focus()
 
-func _add_offer(content: Control, id: String) -> void:
-	var card := _panel(content, Color("#263b32"), Color("#52685a"), 12, 6)
-	var row := _row(card, 10)
-	var description := _stack(row, 0)
-	description.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var title := _label(description, _upgrade_name(id), 18, PAPER)
-	var effect := _label(description, "", 15, LINEN)
-	effect.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var purchase := _button(row, "", false, buy_requested.emit.bind(id))
-	purchase.custom_minimum_size.x = 150
-	purchase.add_theme_font_size_override("font_size", 15)
-	purchase.add_theme_stylebox_override("disabled", _box(Color("#21322b"), Color("#49594d"), 12, 6))
-	purchase.add_theme_color_override("font_disabled_color", Color("#b8c3b2"))
-	offer_controls[id] = {"title": title, "effect": effect, "button": purchase}
+func _select_upgrade(id: String) -> void:
+	selected_upgrade = id
+	shop_notice.hide()
+	_update_values()
 
 func _upgrade_name(id: String) -> String:
 	var item: Array = UPGRADES[id]
@@ -493,7 +518,8 @@ func _upgrade_name(id: String) -> String:
 
 func _build_gifts(content: Control) -> void:
 	_label(content, _t("Elegí una mejora", "Choose a reward"), 37, PAPER, title_font)
-	_label(content, _t("Rompiste los dos lados del tronco. Elegí qué mejora llevarte.", "You broke both sides of the split trunk. Choose an upgrade to keep."), 18, LINEN)
+	var first_boss := int(values.get("stage", 5)) == 5
+	_label(content, _t("Rompiste los dos lados del tronco. Elegí qué mejora llevarte.", "You broke both sides of the split trunk. Choose an upgrade to keep.") if first_boss else _t("Venciste al segundo jefe. Elegí tu recompensa final.", "You defeated the second boss. Choose your final reward."), 18, LINEN)
 	var cards := _row(content, 10)
 	for id in values.get("gift_offer", []):
 		if not GIFTS.has(id):
@@ -532,13 +558,20 @@ func _commit_gift() -> void:
 	gift_requested.emit(selected_gift)
 
 func _build_end(content: Control) -> void:
-	_label(content, _t("El claro es tuyo", "The clearing is yours"), 38, PAPER, title_font)
-	_label(content, _t("Primer acto completado · Cinco blancos rotos", "First act complete · Five targets broken"), 18, LINEN)
+	var first_act := int(values.get("stage", 5)) == 5
+	_label(content, _t("Primer acto completado", "First act complete") if first_act else _t("El claro es tuyo", "The clearing is yours"), 38, PAPER, title_font)
+	_label(content, _t("Cinco blancos rotos", "Five targets broken") if first_act else _t("Diez blancos rotos", "Ten targets broken"), 18, LINEN)
 	end_stats = _label(content, "", 16, PAPER)
 	end_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	end_stats.add_theme_constant_override("line_spacing", 5)
 	_button(content, _t("Ver tiempos de la prueba", "View playtest times"), false, _open_submenu.bind("test_times"))
-	_button(content, _t("Volver a jugar", "Play again"), true, _open_submenu.bind("confirm_new")).grab_focus()
+	var replay := _button(content, _t("Volver a jugar", "Play again"), not first_act, _open_submenu.bind("confirm_new"))
+	if first_act:
+		var proceed := _button(content, _t("Continuar al blanco 6", "Continue to target 6"), true, next_act_requested.emit)
+		content.move_child(proceed, 3)
+		proceed.grab_focus()
+	else:
+		replay.grab_focus()
 	_button(content, _t("Ajustes", "Settings"), false, _open_submenu.bind("settings"))
 	_button(content, _t("Salir", "Quit"), false, quit_requested.emit)
 
@@ -562,6 +595,7 @@ func _build_test_times(content: Control) -> void:
 	var milestones := {
 		"first_hit": _t("Primer acierto", "First hit"),
 		"first_purchase": _t("Primera compra", "First purchase"),
+		"first_paid_purchase": _t("Primera compra con savia", "First paid purchase"),
 		"first_production_pickup": _t("Primera recogida del taller", "First workshop pickup"),
 		"returned_empty_to_workshop": _t("Volviste al taller sin flechas", "Returned to the workshop empty"),
 		"fired_after_collection": _t("Disparaste tras recoger flechas", "Fired after collecting arrows"),
@@ -616,11 +650,14 @@ func _update_values() -> void:
 		_update_hud()
 	elif current_view == "shop" and is_instance_valid(shop_sap):
 		var ranks := 0
+		var maximum := 0
 		for id in offer_controls:
 			var offer: Dictionary = values.get("offers", {}).get(id, {})
 			ranks += int(offer.get("rank", 0))
+			maximum += int(offer.get("max_rank", 0))
 			_update_offer(id, offer)
-		shop_sap.text = _t("%d savia  ·  %d/77 rangos", "%d sap  ·  %d/77 ranks") % [values.get("sap", 0), ranks]
+		upgrade_map.queue_redraw()
+		shop_sap.text = _t("%d savia  ·  %d/%d niveles", "%d sap  ·  %d/%d levels") % [values.get("sap", 0), ranks, maximum]
 		var branch: Button = overlay.find_child("EquipBranch", true, false)
 		var recurve: Button = overlay.find_child("EquipRecurve", true, false)
 		branch.disabled = values.get("bow", "branch") == "branch"
@@ -648,7 +685,7 @@ func _update_hud() -> void:
 	var stage := int(values.get("stage", 1))
 	var ammo := int(values.get("arrows", 24))
 	sap_text.text = str(values.get("sap", 0))
-	stage_text.text = _t("BLANCO %d DE 5", "TARGET %d OF 5") % stage
+	stage_text.text = _t("BLANCO %d DE 10", "TARGET %d OF 10") % stage
 	hp_text.text = "%d / %d" % [values.get("hp", 160), values.get("max_hp", 160)]
 	hp_bar.max_value = maxi(1, int(values.get("max_hp", 160)))
 	hp_bar.value = values.get("hp", 160)
@@ -670,6 +707,18 @@ func _update_hud() -> void:
 	guide_text.text = guide
 
 func _guide() -> String:
+	if values.get("split", false) and int(values.get("hp", 0)) > 0:
+		if int(values.get("left_hp", 0)) == 0:
+			return _t("Rompé la mitad derecha.", "Break the right half.")
+		if int(values.get("right_hp", 0)) == 0:
+			return _t("Rompé la mitad izquierda.", "Break the left half.")
+		return _t("¡Se partió! Disparale a cada mitad del tronco.", "It split! Shoot both halves of the trunk.")
+	if int(values.get("stage", 1)) == 10:
+		if values.get("core_needs_hit", false):
+			if int(values.get("arrows", 0)) == 0:
+				return _t("%s · Golpeá la raíz del hueco encendido.", "%s · Strike the root below the glowing hollow.") % preferences.binding_name("strike")
+			return _t("¡Ahí! Pegale al hueco encendido para romper esta parte.", "Hit the glowing hollow to break this section.")
+		return _t("Seguí la marca encendida. Cambia de lugar con los impactos.", "Follow the glowing mark. It moves as you damage the trunk.")
 	if values.get("fired_after_collect", false):
 		return ""
 	var shoot := preferences.binding_name("shoot")
@@ -678,18 +727,18 @@ func _guide() -> String:
 		return _t("%s · Volvé a disparar con las flechas del taller.", "%s · Fire again with the workshop arrows.") % shoot
 	if int(values.get("arrows", 24)) == 0:
 		if int(values.get("workshop_stock", 0)) > 0:
-			return _t("Volvé a la bandeja del taller para recoger flechas.", "Return to the workshop tray to collect arrows.")
+			return _t("Buscá en el suelo las flechas que lanzó el taller.", "Look on the ground for the arrows launched by the workshop.")
 		if int(values.get("knot_stock", 0)) > 0:
 			return _t("Recogé las flechas al pie del tronco.", "Collect the arrows at the foot of the trunk.")
 		return _t("%s · Acercate al tronco y golpeá con la rama.", "%s · Get close to the trunk and strike it.") % preferences.binding_name("strike")
 	if values.get("workshop", false):
 		if int(values.get("arrows", 0)) >= int(values.get("capacity", 24)):
 			return _t("%s · Dispará para hacer lugar en el carcaj.", "%s · Shoot to make room in your quiver.") % shoot
-		return _t("Acercate a la bandeja del taller para recoger su primera tanda.", "Walk to the workshop tray to collect its first batch.")
+		return _t("Seguí el atado que lanza el taller y recogelo donde caiga.", "Follow a bundle from the workshop and collect it where it lands.")
 	if values.get("offers", {}).get("workshop", {}).get("available", false):
 		return _t("%s · Construí tu taller de flechas.", "%s · Build your arrow workshop.") % shop
 	if int(values.get("damage_rank", 0)) == 0 and values.get("offers", {}).get("damage", {}).get("available", false):
-		return _t("%s · Comprá Pulso de madera con tu savia.", "%s · Spend sap on Timber pulse.") % shop
+		return _t("%s · Obtené gratis tu primer nivel de daño.", "%s · Claim your first damage level for free.") % shop
 	if int(values.get("shots", 0)) < 1:
 		return _t("%s · Apuntá al tronco y dispará.", "%s · Aim at the trunk and shoot.") % shoot
 	return ""
@@ -724,23 +773,51 @@ func _effect(id: String, offer: Dictionary) -> String:
 	return _t(words[2], words[3]) + "  " + change + suffix
 
 func _update_offer(id: String, offer: Dictionary) -> void:
-	var entry: Dictionary = offer_controls[id]
+	var node: Button = offer_controls[id]
 	var rank := int(offer.get("rank", 0))
-	entry.title.text = _upgrade_name(id) + _t("  ·  Rango %d", "  ·  Rank %d") % rank
-	var detail := _effect(id, offer)
-	var prerequisite := str(offer.get("requires", ""))
-	if UPGRADES.has(prerequisite) and not bool(offer.get("requirement_met", true)):
-		detail += _t("  ·  Requiere %s", "  ·  Requires %s") % _upgrade_name(prerequisite)
-	entry.effect.text = detail
-	var button: Button = entry.button
-	button.disabled = not bool(offer.get("available", false))
-	var price := int(offer.get("cost", 0))
-	if bool(offer.get("maxed", false)):
-		button.text = _t("Completado", "Complete")
-	elif int(values.get("stage", 1)) < int(offer.get("stage", 1)):
-		button.text = _t("Blanco %d · %d savia", "Target %d · %d sap") % [offer.get("stage", 1), price]
+	var max_rank := int(offer.get("max_rank", 1))
+	var cost := int(offer.get("cost", 0))
+	var gate := int(offer.get("stage", 1))
+	var met := bool(offer.get("requirement_met", true))
+	var stage_met := int(values.get("stage", 1)) >= gate
+	var name_tag := _upgrade_name(id)
+	var level := _t("Nivel %d/%d", "Level %d/%d") % [rank, max_rank]
+	var status := level
+	if rank == 0:
+		if not met:
+			status = _t("Bloqueada", "Locked")
+		elif not stage_met:
+			status = _t("Blanco %d", "Target %d") % gate
+		elif cost == 0:
+			status = _t("Gratis", "Free")
+	node.text = name_tag + "\n" + status
+	var parent := str(offer.get("requires", ""))
+	upgrade_map.unlocked_edges[id] = met
+	var fill := Color("#314c3c") if rank > 0 or bool(offer.available) else Color("#20312b")
+	var edge := AMBER if id == selected_upgrade or bool(offer.available) else EDGE
+	node.add_theme_stylebox_override("normal", _box(fill, edge, 3, 2))
+	node.add_theme_color_override("font_color", PAPER if met and stage_met else LINEN)
+	node.accessibility_name = name_tag + ". " + status
+	if id != selected_upgrade:
+		return
+	selected_title.text = name_tag
+	selected_effect.text = _effect(id, offer)
+	var lines: PackedStringArray = [level]
+	if UPGRADES.has(parent):
+		lines.append(_t("Requiere %s", "Requires %s") % _upgrade_name(parent))
+	if not stage_met:
+		lines.append(_t("Se habilita en el blanco %d", "Unlocks at target %d") % gate)
+	if not bool(offer.maxed) and cost > 0:
+		var balance := int(values.get("sap", 0)) - cost
+		lines.append(_t("Te quedarían %d de savia", "%d sap after purchase") % balance if balance >= 0 else _t("Te faltan %d de savia", "Need %d more sap") % -balance)
+	selected_requirement.text = "\n".join(lines)
+	purchase_upgrade.disabled = not bool(offer.get("available", false))
+	if bool(offer.maxed):
+		purchase_upgrade.text = _t("Completo", "Complete")
+	elif cost == 0:
+		purchase_upgrade.text = _t("Obtener gratis", "Claim for free")
 	else:
-		button.text = (_t("%d savia", "%d sap") if button.disabled else _t("Comprar · %d", "Buy · %d")) % price
+		purchase_upgrade.text = _t("Comprar · %d savia", "Buy · %d sap") % cost
 
 
 func _build_settings(content: Control) -> void:

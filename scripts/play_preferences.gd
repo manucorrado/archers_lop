@@ -7,6 +7,7 @@ const DEFAULT_BINDINGS := {
 	"shoot": -MOUSE_BUTTON_LEFT, "aim": -MOUSE_BUTTON_RIGHT, "strike": KEY_F,
 	"shop": KEY_TAB, "pause": KEY_ESCAPE, "bow_1": KEY_1, "bow_2": KEY_2,
 	"bow_previous": -MOUSE_BUTTON_WHEEL_UP, "bow_next": -MOUSE_BUTTON_WHEEL_DOWN,
+	"jump": KEY_SPACE,
 }
 const ACTION_NAMES := {
 	"move_forward": ["Avanzar", "Move forward"], "move_back": ["Retroceder", "Move backward"],
@@ -16,6 +17,7 @@ const ACTION_NAMES := {
 	"pause": ["Pausar", "Pause"], "bow_1": ["Arco de rama", "Branch bow"],
 	"bow_2": ["Arco recurvo", "Recurve bow"], "bow_next": ["Arco siguiente", "Next bow"],
 	"bow_previous": ["Arco anterior", "Previous bow"],
+	"jump": ["Saltar", "Jump"],
 }
 const MOUSE_NAMES := {
 	1: ["Clic izquierdo", "Left click"], 2: ["Clic derecho", "Right click"],
@@ -56,6 +58,12 @@ func load_settings() -> void:
 	var saved_bindings := {}
 	for id in DEFAULT_BINDINGS:
 		var code = config.get_value("bindings", id, DEFAULT_BINDINGS[id])
+		# Older profiles may already use Space for another action.
+		if id == "jump" and not config.has_section_key("bindings", id):
+			for candidate in [KEY_SPACE, KEY_J, KEY_V, KEY_B, KEY_N, KEY_M, KEY_H, KEY_G, KEY_K, KEY_L, KEY_P, KEY_U, KEY_I, KEY_O]:
+				if candidate not in saved_bindings.values():
+					code = candidate
+					break
 		if typeof(code) != TYPE_INT or code == 0 or code < -9 or code in saved_bindings.values():
 			saved_bindings.clear()
 			break
