@@ -15,11 +15,17 @@ signal settings_changed(options: Dictionary)
 
 const Preferences := preload("res://scripts/play_preferences.gd")
 const UpgradeMap := preload("res://scripts/upgrade_map.gd")
+const Paths := preload("res://scripts/upgrade_paths.gd")
 const UPGRADES := {
-	"damage": ["Daño por flecha", "Arrow damage", "Cada nivel multiplica el daño de todas tus flechas por 1,2. En el nivel 10 salen tres flechas por disparo si tenés munición.", "Each level multiplies all arrow damage by 1.2. At level 10, fire three full-strength arrows per shot when you have enough ammunition."],
+	"damage": ["Daño por flecha", "Arrow damage", "Cada nivel suma un 20 % del daño base del arco. En el nivel 10 salen hasta tres flechas por disparo.", "Each level adds 20% of your bow’s base damage. At level 10, release up to three arrows per shot."],
 	"workshop": ["Taller de flechas", "Arrow workshop", "Construí un taller que lanza atados de tres flechas por el claro.", "Build a workshop that launches bundles of three arrows across the clearing."],
 	"capacity": ["Carcaj de viaje", "Travel quiver", "Llevá 16 flechas más por cada nivel.", "Carry 16 extra arrows per level."],
-	"rate": ["Velocidad de ataque", "Attack speed", "Cada nivel suma un disparo por segundo al arco que tengas en la mano.", "Each level adds one shot per second to your equipped bow."],
+	"rate": ["Velocidad de ataque", "Attack speed", "Cada nivel suma un 12 % de la cadencia base de tu arco.", "Each level adds 12% of your bow’s base firing rate."],
+	"damage_step": ["Punta reforzada", "Reinforced tip", "Sumá 1 de daño base por flecha antes de aplicar los multiplicadores.", "Add 1 base damage per arrow before multipliers."],
+	"rate_step": ["Suelta ágil", "Quick release", "Sumá un 2 % de la cadencia base de tu arco.", "Add 2% of your bow’s base firing rate."],
+	"wheel_step": ["Engranaje del taller", "Workshop gearing", "El taller produce 0,025 flechas más por segundo.", "The workshop produces an extra 0.025 arrows per second."],
+	"damage_mult": ["Potencia multiplicada", "Compound power", "Cada nivel multiplica por 1,2 el daño que ya tiene cada flecha.", "Each level multiplies your existing arrow damage by 1.2."],
+	"rate_flat": ["Disparo adicional", "Extra shot", "Cada nivel agrega un disparo por segundo a cualquiera de tus arcos.", "Each level adds one shot per second to any bow."],
 	"weak": ["Ojo de veta", "Grain eye", "Duplicá el daño de tus flechas al acertar en el punto débil.", "Deal double arrow damage when you hit a weak point."],
 	"recurve": ["Arco rápido", "Recurve bow", "Desbloqueá un segundo arco de tiro rápido. Usa las flechas de tu carcaj.", "Unlock a second, faster-firing bow. It uses arrows from your quiver."],
 	"wheel": ["Rueda de savia", "Sap wheel", "Acelerá la producción del taller para que lance atados más seguido.", "Speed up workshop production so bundles launch more often."],
@@ -28,7 +34,7 @@ const UPGRADES := {
 	"spark": ["Chispa de copa", "Canopy spark", "Cada ocho aciertos, una descarga le hace daño extra al blanco.", "Every eight hits, a spark deals extra damage to the target."],
 	"refund": ["Recuperar savia", "Reclaim sap", "Con un clic derecho sobre una mejora comprada, devolvés un nivel y recuperás lo que pagaste.", "Right-click a purchased upgrade to return one level and recover the sap you spent."],
 	"longbow": ["Arco largo", "Longbow", "Desbloqueá un tercer arco. Sus flechas pegan más fuerte que las del arco rápido.", "Unlock a third bow. Its arrows hit harder than the recurve bow’s."],
-	"combo": ["Buena racha", "On a roll", "Un acierto preciso hace crecer el combo el doble. Tenés un segundo más antes de que empiece a bajar.", "A precision hit grows the combo twice as much. Gain one extra second before it starts to fall."],
+	"combo": ["Buena racha", "On a roll", "Desbloqueá el combo. Los aciertos seguidos dan savia extra y los puntos débiles hacen crecer la racha más rápido.", "Unlock the combo. Consecutive hits earn bonus sap and weak points build your streak faster."],
 	"crit": ["Golpe crítico", "Critical hit", "Cada vez que disparás hay un 10 % de probabilidad de que todas las flechas de ese tiro hagan el doble de daño.", "Each shot has a 10% chance to deal double damage with every arrow in that volley."],
 	"steady": ["Tiro sostenido", "Steady fire", "Encadená cuatro disparos sin parar para ganar un 20 % de daño.", "Fire four shots without a break to gain 20% damage."],
 	"leap": ["Salto al atado", "Bundle leap", "Mirá un atado de flechas en el suelo y saltá para impulsarte hacia él.", "Look at a bundle of arrows on the ground and jump to spring toward it."],
@@ -117,6 +123,9 @@ var hud: Control
 var overlay: Control
 var sight: Sight
 var sap_text: Label
+var sap_gain: Label
+var gain_remaining := 0.0
+var grouped_sap := 0
 var hp_bar: ProgressBar
 var hp_text: Label
 var stage_text: Label
@@ -131,6 +140,7 @@ var end_stats: Label
 var preferences := Preferences.new()
 var options: Dictionary
 var combo_text: Label
+var combo_panel: PanelContainer
 var combo_hint: Label
 var lobes_text: Label
 var bow_text: Label
@@ -277,7 +287,9 @@ func _build_hud() -> void:
 	var wallet_values := _stack(wallet_row, -3)
 	_label(wallet_values, _t("SAVIA", "SAP"), 11, LINEN, mono_font)
 	sap_text = _label(wallet_values, "", 20, AMBER, mono_font)
-	var combo_panel := _panel(hud, Color("#162720e8"), Color("#73807495"), 12, 5)
+	sap_gain = _label(wallet_row, "", 15, PAPER, mono_font)
+	sap_gain.hide()
+	combo_panel = _panel(hud, Color("#162720e8"), Color("#73807495"), 12, 5)
 	_place(combo_panel, 1, 0, -180, 22, -24, 75)
 	var combo_col := _stack(combo_panel, 0)
 	combo_text = _label(combo_col, "", 18, AMBER, mono_font)
@@ -482,6 +494,7 @@ func _build_shop(content: Control) -> void:
 	shop_sap = _label(heading, "", 17, AMBER, mono_font)
 	var layout := _row(content, 12)
 	upgrade_map = UpgradeMap.new()
+	upgrade_map.language = language
 	upgrade_map.custom_minimum_size = Vector2(525, 478)
 	upgrade_map.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	layout.add_child(upgrade_map)
@@ -566,7 +579,7 @@ func _bow_name(id: String) -> String:
 	return _t("Arco de rama", "Branch bow")
 
 func _upgrade_name(id: String) -> String:
-	var item: Array = UPGRADES[id]
+	var item: Array = UPGRADES[Paths.family(id)]
 	return _t(item[0], item[1])
 
 func _build_gifts(content: Control) -> void:
@@ -726,10 +739,13 @@ func _update_values() -> void:
 	elif current_view == "end" and is_instance_valid(end_stats):
 		var elapsed := int(values.get("elapsed", 0))
 		var gift: Array = GIFTS.get(str(values.get("chosen_gift", "")), ["—", "—", "", ""])
-		end_stats.text = _t("Tiempo activo     %d:%02d\nAciertos     %d / %d\nFlechas recogidas del taller     %d\nMejor combo     ×%s\nRecompensa     %s\n%s",
-			"Active time     %d:%02d\nHits     %d / %d\nArrows collected from the workshop     %d\nBest combo     ×%s\nReward     %s\n%s") % [
+		end_stats.text = _t("Tiempo activo     %d:%02d\nAciertos     %d / %d\nFlechas recogidas del taller     %d",
+			"Active time     %d:%02d\nHits     %d / %d\nArrows collected from the workshop     %d") % [
 			floori(elapsed / 60.0), elapsed % 60, values.get("hits", 0), values.get("shots", 0),
-			values.get("collected", 0), _number(values.get("max_combo", 1.0), 2), _t(gift[0], gift[1]), _t(gift[2], gift[3])]
+			values.get("collected", 0)]
+		if int(values.get("ranks", {}).get("combo", 0)) > 0 or float(values.get("max_combo", 1.0)) > 1.0:
+			end_stats.text += _t("\nMejor combo     ×%s", "\nBest combo     ×%s") % _number(values.max_combo, 2)
+		end_stats.text += _t("\nRecompensa     %s\n%s", "\nReward     %s\n%s") % [_t(gift[0], gift[1]), _t(gift[2], gift[3])]
 		end_stats.text += "\n" + _reward_result(str(values.get("chosen_gift", "")))
 
 func _reward_result(id: String) -> String:
@@ -757,6 +773,7 @@ func _update_hud() -> void:
 	ammo_text.text = "%d / %d" % [ammo, values.get("capacity", 24)]
 	ammo_text.modulate = AMBER if ammo == 0 else Color.WHITE
 	var combo := float(values.get("combo", 1.0))
+	combo_panel.visible = int(values.get("ranks", {}).get("combo", 0)) > 0
 	combo_text.text = "Combo  ×" + _number(combo, 2)
 	combo_hint.visible = combo > 1.001
 	combo_hint.text = _t("En descenso", "Falling") if float(values.get("combo_grace", 0.0)) <= 0 else _t("En racha", "Streak active")
@@ -771,8 +788,8 @@ func _guide() -> String:
 	if values.get("near_dog", false):
 		var interact := preferences.binding_name("shop")
 		if int(values.get("offers", {}).get("pet", {}).get("rank", 0)) > 0:
-			return _t("%s · Mejoras     %s · Acariciar al perro", "%s · Upgrades     %s · Pet the dog") % [interact, preferences.binding_name("pet_dog")]
-		return _t("%s · Abrir mejoras con el perro", "%s · Open upgrades with the dog") % interact
+			return _t("%s · Mejoras     %s · Acariciar a Pipo", "%s · Upgrades     %s · Pet Pipo") % [interact, preferences.binding_name("pet_dog")]
+		return _t("%s · Abrir mejoras con Pipo", "%s · Open upgrades with Pipo") % interact
 	if values.get("split", false) and int(values.get("hp", 0)) > 0:
 		if int(values.get("left_hp", 0)) == 0:
 			return _t("Rompé la mitad derecha.", "Break the right half.")
@@ -801,9 +818,9 @@ func _guide() -> String:
 			return _t("%s · Dispará para hacer lugar en el carcaj.", "%s · Shoot to make room in your quiver.") % shoot
 		return _t("Seguí el atado que lanza el taller y recogelo donde caiga.", "Follow a bundle from the workshop and collect it where it lands.")
 	if values.get("offers", {}).get("workshop", {}).get("available", false):
-		return _t("Volvé con el perro para comprar el taller de flechas.", "Go back to the dog to buy the arrow workshop.")
+		return _t("Volvé con Pipo para comprar el taller de flechas.", "Go back to Pipo to buy the arrow workshop.")
 	if int(values.get("damage_rank", 0)) == 0 and values.get("offers", {}).get("damage", {}).get("available", false):
-		return _t("Acercate al perro. Tiene tu primera mejora de daño gratis.", "Walk up to the dog for your free first damage upgrade.")
+		return _t("Buscá a Pipo bajo el pino de la izquierda. Tiene tu primera mejora gratis.", "Find Pipo under the pine on the left for your free first upgrade.")
 	if int(values.get("shots", 0)) < 1:
 		return _t("%s · Apuntá al tronco y dispará.", "%s · Aim at the trunk and shoot.") % shoot
 	return ""
@@ -818,12 +835,19 @@ func _effect_values(id: String, offer: Dictionary) -> String:
 	var name_tag := ""
 	var suffix := ""
 	var prefix := ""
-	match id:
-		"damage": name_tag = _t("Daño", "Damage")
-		"rate":
+	match Paths.family(id):
+		"damage": name_tag = _t("Daño del arco de rama", "Branch bow damage")
+		"damage_step": name_tag = _t("Daño adicional", "Extra base damage")
+		"damage_mult":
+			name_tag = _t("Multiplicador", "Multiplier")
+			prefix = "×"
+		"rate", "rate_step":
+			name_tag = _t("Cadencia adicional", "Extra firing rate")
+			suffix = "%"
+		"rate_flat":
 			name_tag = _t("Cadencia adicional", "Extra firing rate")
 			suffix = _t(" disparos/s", " shots/s")
-		"workshop", "wheel":
+		"workshop", "wheel", "wheel_step":
 			name_tag = _t("Producción", "Production")
 			suffix = _t(" flechas/s", " arrows/s")
 		"capacity": name_tag = _t("Capacidad", "Capacity")
@@ -834,8 +858,9 @@ func _effect_values(id: String, offer: Dictionary) -> String:
 			name_tag = _t("Alcance", "Reach")
 			suffix = " m"
 		_: return ""
-	var current := prefix + _number(float(offer.current), 2)
-	var next := prefix + _number(float(offer.next), 2)
+	var precision := 3 if Paths.family(id) == "wheel_step" else 2
+	var current := prefix + _number(float(offer.current), precision)
+	var next := prefix + _number(float(offer.next), precision)
 	return name_tag + "  " + current + ("" if bool(offer.maxed) else " → " + next) + suffix
 
 func _update_offer(id: String, offer: Dictionary) -> void:
@@ -857,7 +882,8 @@ func _update_offer(id: String, offer: Dictionary) -> void:
 	selected_icon.texture = UpgradeMap.Icons.texture(id)
 	selected_level.text = level.to_upper()
 	selected_title.text = name_tag
-	selected_effect.text = _t(UPGRADES[id][2], UPGRADES[id][3])
+	var item: Array = UPGRADES[Paths.family(id)]
+	selected_effect.text = _t(item[2], item[3])
 	selected_values.text = _effect_values(id, offer)
 	selected_values.visible = not selected_values.text.is_empty()
 
@@ -1065,6 +1091,14 @@ func notify(es: String, en: String) -> void:
 func hit_marker() -> void:
 	hit_remaining = 0.16
 
+func show_sap_earned(amount: int) -> void:
+	if amount <= 0:
+		return
+	grouped_sap = (grouped_sap if gain_remaining > 0 else 0) + amount
+	gain_remaining = 0.55
+	sap_gain.text = "+%d" % grouped_sap
+	sap_gain.show()
+
 func show_damage(amount: int, source: String = "manual") -> void:
 	if amount <= 0 or float(options.damage_opacity) <= 0:
 		return
@@ -1085,6 +1119,9 @@ func show_damage(amount: int, source: String = "manual") -> void:
 func _process(delta: float) -> void:
 	if current_view != "play" or not is_instance_valid(sight):
 		return
+	if gain_remaining > 0:
+		gain_remaining = maxf(0, gain_remaining - delta)
+		sap_gain.visible = gain_remaining > 0
 	if toast_remaining > 0.0:
 		toast_remaining = maxf(0.0, toast_remaining - delta)
 		toast.text = _t(notice_es, notice_en)

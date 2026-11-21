@@ -65,8 +65,8 @@ func _run() -> void:
 	if not await _until(func(): return game.run.hits == 6, 400, "Six held shots hit from spawn"):
 		return
 	_mouse_left(false)
-	if not _expect(game.run.shots == 6 and game.run.hp == 100 and game.run.sap == 4 and game.run.arrows == 18,
-			"Six 10-damage arrows yield four sap"):
+	if not _expect(game.run.shots == 6 and game.run.hp == 100 and game.run.sap == 7 and game.run.arrows == 18
+			and not game.hud.combo_panel.is_visible_in_tree(), "Six hits yield seven sap, with the combo still locked"):
 		return
 	await _tap(KEY_E)
 	if not _expect(game.view == "play", "Interacting away from the dog keeps the player in the clearing"):
@@ -81,12 +81,24 @@ func _run() -> void:
 	if not _expect(first_nodes == ["damage", "rate", "refund", "weak", "workshop"],
 			"The new tree starts with the center and four neighboring nodes"):
 		return
+	var root_button: Button = game.hud.offer_controls.damage
+	var anchor := root_button.get_global_rect().get_center()
+	var initial_zoom: float = game.hud.upgrade_map.zoom
+	await _click(root_button, MOUSE_BUTTON_WHEEL_UP)
+	if not _expect(game.hud.upgrade_map.zoom > initial_zoom and root_button.get_global_rect().get_center().distance_to(anchor) < 2
+			and game.run.damage_rank == 0, "Wheel zoom keeps the node under the pointer without buying it"):
+		return
+	await _click(root_button, MOUSE_BUTTON_WHEEL_DOWN)
+	if not _expect(is_equal_approx(game.hud.upgrade_map.zoom, initial_zoom), "Scrolling down restores the original scale"):
+		return
 	if not _expect(not game.run.offers().workshop.requirement_met, "The workshop initially requires the damage root"):
 		return
 	await _click(game.hud.offer_controls["damage"])
-	if not _expect(game.run.damage() == 12 and game.run.sap == 4, "The first damage purchase is free"):
+	if not _expect(game.run.damage() == 12 and game.run.sap == 7, "The first damage purchase is free"):
 		return
 	await _tap(KEY_E)
+	if not await _walk_to(Vector2(0.0, 5.0)):
+		return
 	_aim_at("body")
 	_mouse_left(true)
 	if not await _until(func(): return game.run.hits == 7, 65, "Shooting resumes after the shop"):
@@ -108,6 +120,8 @@ func _run() -> void:
 	if not _expect(game.run.workshop_stock == 0 and game.run.elapsed == time_before, "An open shop freezes production and time"):
 		return
 	await _tap(KEY_E)
+	if not await _walk_to(Vector2(0.0, 5.0)):
+		return
 	_aim_at("body")
 	_mouse_left(true)
 	if not await _until(func(): return game.run.arrows == 0, 650, "Empty the quiver through ordinary shots"):
@@ -220,7 +234,7 @@ func _run() -> void:
 			"Continuing enters the second act with the saved reward"):
 		return
 	for stage in range(6, 11):
-		for upgrade in ["rate", "longbow", "capacity", "pickup", "leap", "wheel", "damage"]:
+		for upgrade in ["rate", "rate_step_01", "rate_step_02", "longbow", "capacity", "pickup", "leap", "wheel", "damage"]:
 			if upgrade == "rate" and game.run.rank_of("rate") > 0:
 				continue
 			while game.run.offers()[upgrade].available:
@@ -237,12 +251,15 @@ func _run() -> void:
 		return
 	if not await _check_supply_jump():
 		return
-	await _buy("pet")
+	for upgrade in ["damage_step_13", "damage_step_14", "damage_step_15", "damage_step_16", "pet"]:
+		await _buy(upgrade)
 	await _tap(KEY_R)
 	if not _expect(game.run.rank_of("pet") > 0 and game.view == "play", "Petting is available alongside the dog interaction"):
 		return
 	if game.run.arrows < 3:
 		await _refill()
+	elif not await _walk_to(Vector2(0.0, 5.0)):
+		return
 	_aim_at("core_0")
 	var arrows_before := game.run.arrows
 	_mouse_left(true)
@@ -280,6 +297,17 @@ func _run() -> void:
 			and game.run.sap == 0 and game.run.arrows == 24 and not game.run.workshop and game.run.shots == 0,
 			"Replay resets position in the campaign, currency, arrows and purchases"):
 		return
+	if not await _walk_to(Vector2(10.6, 12.1)):
+		return
+	_key(KEY_D, true)
+	_key(KEY_S, true)
+	await _frames(100)
+	_key(KEY_D, false)
+	_key(KEY_S, false)
+	var corner := game.archer.position
+	if not _expect(corner.x > 10.6 and corner.z > 12.1 and corner.x < Clearing.ARENA_HALF_WIDTH
+			and corner.z < Clearing.ARENA_HALF_LENGTH, "The larger clearing opens both old limits and stops at the new fences"):
+		return
 	print("PASS: ten targets, dog shop and refunds, directed jump, longbow, triple shots, supply, both bosses, rewards, save/resume and replay.")
 	unload_current_scene()
 	# The audio mixer runs on a wall clock even when simulation uses fixed FPS.
@@ -298,6 +326,9 @@ func _frames(count: int) -> void:
 func _open_shop() -> bool:
 	var dog := Clearing.DOG_POSITION
 	if not game.clearing.is_near_dog(game.archer.position):
+		# Approach from the path in front of the workshop rather than through its walls.
+		if game.archer.position.z < 2.0 and not await _walk_to(Vector2(game.archer.position.x, 2.8)):
+			return false
 		if not await _walk_to(Vector2(dog.x + 0.95, dog.z + 0.65)):
 			return false
 	await _tap(KEY_E)
@@ -346,6 +377,8 @@ func _refill() -> void:
 
 
 func _fight_until(done: Callable, target_id := "body") -> bool:
+	if game.clearing.is_near_dog(game.archer.position) and not await _walk_to(Vector2(0, 5)):
+		return false
 	for trip in 600:
 		if done.call():
 			return true

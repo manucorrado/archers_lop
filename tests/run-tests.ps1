@@ -11,7 +11,7 @@ New-Item -ItemType Directory -Path $qaRoot | Out-Null
 try {
     $env:APPDATA = $qaRoot
     $env:ARCHER_QA_DIR = $qaRoot
-    foreach ($suite in 'save_recovery', 'act_rules', 'prototype_smoke') {
+    foreach ($suite in 'save_recovery', 'act_rules', 'upgrade_map', 'prototype_smoke') {
         $env:APPDATA = Join-Path $qaRoot $suite
         New-Item -ItemType Directory -Path $env:APPDATA | Out-Null
         $log = Join-Path $qaRoot ($suite + '.log')

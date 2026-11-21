@@ -53,7 +53,7 @@ Los nombres de los jefes finales, las fórmulas, el reparto de rangos y los text
 | Momento de la primera partida | Experiencia que debe ocurrir | Señal para el diseñador |
 |---|---|---|
 | Entrada | Se ven la veta, el arco de rama y 24 flechas. Un único aviso enseña disparo. | Se puede acertar desde donde aparece el personaje. |
-| Primera compra y primera rotura | Apenas alcanza el precio, el jugador puede comprar daño. Cuando rompe el nudo caen flechas y se oye su roce. | El probador explica qué consiguió y distingue savia de flechas. |
+| Primera compra y primera rotura | Junto a Pipo, el jugador puede obtener el primer nivel de daño gratis. Cada ocho puntos de vida que le quita al blanco gana una savia. Cuando rompe el tronco caen flechas. | El probador explica qué consiguió y distingue savia de flechas. |
 | Nudos 2–3 | Aparece el plano del taller, se construye y se puede recoger su primera producción. | El probador sabe volver al taller cuando se vacía el carcaj. |
 | Nudos 3–5 | Entran la Chispa de copa y el recurvo. La primera horqueta divide el blanco. | El jugador reconoce una compra por el cambio que siente al disparar. |
 | Blancos 6–10 | El arco largo ofrece más daño por flecha. Tres puntos débiles del jefe cambian qué conviene apuntar. | El jugador distingue los arcos y encuentra el siguiente punto encendido. |
@@ -79,7 +79,7 @@ El arco de rama premia elegir el punto de impacto. El recurvo sostiene una caden
 - La savia compra rangos. Las flechas alimentan tanto al arquero como a los centinelas. Tomar parte de un haz deja el resto en el suelo. Un puesto vacío muestra su tolva abierta y vuelve a disparar en cuanto recibe munición.
 - Se puede terminar con cualquier arco desbloqueado, sin acertar objetivos cronometrados. Cada fase deja una superficie de madera golpeable junto al suelo. Si hay dos lóbulos, cada uno conserva una raíz conectada a su propia reserva de vida. El jugador puede acercarse, usar la rama y reabastecerse aun con todos los puestos secos.
 - No hay vida del arquero, daño por enemigos ni pérdida de campaña por fallar. El coste de una mala secuencia de compras es tardar más. Una oportunidad expirada se retira sin quitar integridad ya dañada ni savia ya ganada.
-- El combo alcanza ×6. El tiro manual y la elección de blancos aportan a la prima de savia. Los centinelas por sí solos no mantienen el combo. Las cifras de acumulación, consumo y precios están en el catálogo.
+- En la demo, la compra Buena racha activa el combo. Llega a ×6 y el daño de los tiros manuales puede generar una prima de savia. Los aciertos a puntos débiles lo hacen subir más rápido.
 
 ## 3. Campaña y encuentros
 
@@ -118,7 +118,7 @@ La **Diana de veta** aparece sobre el nudo desde N2 y recompensa precisión. El 
 | Pantalla o estado | Requisito de producto |
 |---|---|
 | HUD | Savia arriba a la izquierda. Nudo e integridad en el borde superior central. Combo y aviso de decaimiento a la derecha. Arco y carcaj abajo. La tolva del centinela muestra su nivel en el mundo y en contexto de interacción. |
-| Árbol | Ramas de tiro, logística, automatización y fenómenos. Mostrar rangos comprados sobre 77, coste, próximo efecto y prerrequisitos. Comprar descuenta una sola vez. Se puede consultar la próxima mejora aunque falte savia. |
+| Árbol | En la demo el dibujo se arma tramo a tramo con 112 nodos y 140 niveles. La rueda acerca o aleja el mapa. Cada nodo indica nivel, costo, próximo efecto y compras previas necesarias. |
 | Dones | Tres opciones legibles con efecto, unidad y sistema beneficiado. Pausa sin cuenta atrás. Confirmar una opción aplica el efecto una vez. |
 | Lectura y confort | Retícula configurable, números de daño agrupables con opacidad hasta cero, temblor y destellos reducibles, sensibilidad, campo de visión, volumen por familia y control reasignable. Cada aviso importante tiene forma o sonido además de color. |
 | Guardado local | Una campaña activa y récords locales por separado. Guardado manual desde pausa, automático en compras, elecciones, cambios de nudo y al salir normalmente. Guardar también dentro de un jefe mediante pausa. Escritura atómica, copia anterior recuperable y versión de esquema. |

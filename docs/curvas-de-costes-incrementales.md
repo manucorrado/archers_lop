@@ -1,5 +1,7 @@
 # Cuándo se puede pagar una mejora en El arquero del claro
 
+Este análisis recoge la versión de **17 nodos y 36 niveles** y conserva las cifras de aquella prueba. La demo actual paga una savia por cada ocho puntos de vida efectivos y tiene 112 nodos. Los precios, requisitos y ejemplos vigentes están en el [árbol de la demo](arbol-de-la-demo.md).
+
 **Propuesta para la demo.** ¿En qué blanco debería poder probar un arco nuevo quien ahorra? ¿Cuánto más tarda quien compra antes el taller? Usaría esas dos rutas para poner precio a las mejoras que cambian la forma de jugar. Para los rangos que repiten un efecto, usaría una curva corta entre precios conocidos. Así se pueden añadir actos y subir la escala de la savia conservando decisiones reconocibles.
 
 ## Qué curvas usan otros incrementales

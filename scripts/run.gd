@@ -2,7 +2,7 @@ extends RefCounted
 ## Reglas y estado de los dos primeros actos.
 
 const HEALTH := [160, 821, 2079, 5057, 19430, 20446, 41932, 74796, 144178, 357311]
-const SAP_BUDGET := [20, 30, 45, 67, 101, 205, 345, 545, 795, 900]
+const DAMAGE_PER_SAP := 8
 const POWER := [1.0, 1.52, 2.3104, 3.511808, 5.33794816, 8.1136812032, 12.332795428864,
 	18.74584905187328, 28.49369055884739, 43.31040964944803]
 const SHOT_INTERVAL := 1.0
@@ -11,26 +11,8 @@ const WORKSHOP_RATE := 1.25
 const WORKSHOP_BATCH := 3
 const WORKSHOP_FLIGHT := 0.8
 const LANDING_COUNT := 4
-# Prices are independent of target rewards. Each purchased rank is one step in a node.
-const TREE := {
-	"damage": {"costs": [0, 9, 9, 14, 21, 31, 46, 69, 103, 154], "parent": ""},
-	"rate": {"costs": [14, 21, 31, 46, 68, 103, 154, 231, 346, 346], "parent": "damage"},
-	"weak": {"costs": [14], "parent": "damage"},
-	"workshop": {"costs": [17], "parent": "damage"},
-	"refund": {"costs": [6], "parent": "damage"},
-	"recurve": {"costs": [37], "parent": "rate"},
-	"longbow": {"costs": [226], "parent": "recurve"},
-	"spark": {"costs": [18], "parent": "weak"},
-	"crit": {"costs": [24], "parent": "spark"},
-	"combo": {"costs": [19], "parent": "weak"},
-	"steady": {"costs": [26], "parent": "combo"},
-	"wheel": {"costs": [21], "parent": "workshop"},
-	"capacity": {"costs": [7, 24], "parent": "workshop"},
-	"pickup": {"costs": [11], "parent": "capacity"},
-	"pace": {"costs": [21], "parent": "capacity"},
-	"leap": {"costs": [32], "parent": "pickup"},
-	"pet": {"costs": [28], "parent": "refund", "extra_parent": "damage", "extra_rank": 10},
-}
+const Paths = preload("res://scripts/upgrade_paths.gd")
+static var TREE := Paths.build_tree()
 const FIRST_GIFTS := ["D01", "D04", "D08"]
 const LATER_GIFTS := ["D09", "D14"]
 const SAVE_FIELDS := [
@@ -45,6 +27,7 @@ const SAVE_FIELDS := [
 var stage := 1
 var hp := 160
 var sap := 0
+var sap_remainder := 0
 var arrows := 24
 var ranks: Dictionary = {}
 var paid_prices: Dictionary = {}
@@ -147,7 +130,9 @@ func _arrow_power(weak_spot: bool) -> float:
 		base = 22.0
 	elif bow == "recurve":
 		base = 11.0
-	base *= pow(1.2, damage_rank) * POWER[stage - 1]
+	base *= 1.0 + 0.2 * damage_rank
+	base += _family_ranks("damage_step")
+	base *= pow(1.2, rank_of("damage_mult")) * POWER[stage - 1]
 	if has_gift("D04"):
 		base *= 1.2
 	if weak_spot:
@@ -185,7 +170,8 @@ func shot_interval() -> float:
 		rate = 2.5
 	elif bow == "longbow":
 		rate = 2.0
-	rate += rank_of("rate")
+	rate *= 1.0 + 0.12 * rank_of("rate") + 0.02 * _family_ranks("rate_step")
+	rate += rank_of("rate_flat")
 	if has_gift("D01"):
 		rate *= 1.5
 	return 1.0 / rate
@@ -200,7 +186,16 @@ func pickup_radius() -> float:
 
 
 func production_rate() -> float:
-	return WORKSHOP_RATE * (1.0 + 0.2 * rank_of("wheel")) * (1.3 if has_gift("D03") else 1.0)
+	var base := WORKSHOP_RATE * (1.0 + 0.2 * rank_of("wheel")) + 0.025 * _family_ranks("wheel_step")
+	return base * (1.3 if has_gift("D03") else 1.0)
+
+
+func _family_ranks(family: String) -> int:
+	var total := 0
+	for id: String in ranks:
+		if Paths.family(id) == family:
+			total += rank_of(id)
+	return total
 
 
 func speed_multiplier() -> float:
@@ -212,9 +207,13 @@ func combo_delay() -> float:
 
 
 func _rank_value(id: String, rank: int) -> float:
-	match id:
-		"damage": return 10.0 * pow(1.2, rank)
-		"rate": return rank
+	match Paths.family(id):
+		"damage": return 10.0 * (1.0 + 0.2 * rank)
+		"rate": return 12 * rank
+		"damage_mult": return pow(1.2, rank)
+		"rate_flat", "damage_step": return rank
+		"rate_step": return 2 * rank
+		"wheel_step": return 0.025 * rank
 		"weak": return 1.5 + 0.5 * rank
 		"recurve": return 1.0 if rank == 0 else 2.5
 		"workshop": return WORKSHOP_RATE * rank * (1.0 + 0.2 * rank_of("wheel"))
@@ -296,6 +295,9 @@ func refund(id: String) -> bool:
 		paid_prices[id] = history
 	if bow == id and rank_of(id) == 0:
 		equip("longbow" if rank_of("longbow") > 0 else ("recurve" if rank_of("recurve") > 0 else "branch"))
+	if id == "combo":
+		combo = 1.0
+		combo_grace = 0.0
 	return true
 
 
@@ -355,6 +357,8 @@ func strike_part(amount: int, id: String) -> int:
 
 
 func _add_combo(opportunity: bool) -> void:
+	if rank_of("combo") == 0:
+		return
 	combo = minf(6.0, combo + (0.25 * (1 + rank_of("combo")) if opportunity else 0.05))
 	max_combo = maxf(max_combo, combo)
 	combo_grace = combo_delay()
@@ -369,9 +373,11 @@ func damage_part(amount: int, id: String, manual := false) -> int:
 	var effective := mini(amount, remaining)
 	if effective <= 0:
 		return 0
-	var budget: int = SAP_BUDGET[stage - 1]
-	var hit_budget := floori(budget * 0.6)
-	var before := floori(float(hit_budget * (max_hp() - hp)) / max_hp())
+	# Keep the unpaid damage across hits, targets and sessions.
+	sap_remainder += effective
+	@warning_ignore("integer_division")
+	sap += sap_remainder / DAMAGE_PER_SAP
+	sap_remainder %= DAMAGE_PER_SAP
 	hp -= effective
 	if split:
 		if id == "left":
@@ -380,10 +386,8 @@ func damage_part(amount: int, id: String, manual := false) -> int:
 			right_hp -= effective
 		if hp > 0 and (left_hp == 0 or right_hp == 0):
 			mark("first_lobe_broken")
-	var after := floori(float(hit_budget * (max_hp() - hp)) / max_hp())
-	sap += after - before
-	if manual:
-		bonus_fraction += float(hit_budget * effective) / max_hp() * 0.1 * (combo - 1.0)
+	if manual and rank_of("combo") > 0:
+		bonus_fraction += float(effective) / DAMAGE_PER_SAP * 0.1 * (combo - 1.0)
 		var whole := floori(bonus_fraction)
 		sap += whole
 		bonus_fraction -= whole
@@ -394,7 +398,6 @@ func damage_part(amount: int, id: String, manual := false) -> int:
 		core_hit = false
 		mark("core_phase_" + str(core_phase))
 	if hp == 0:
-		sap += budget - hit_budget
 		knot_stock += 8
 		mark("broke_" + str(stage))
 	return effective
@@ -598,6 +601,8 @@ func prepare_gifts() -> void:
 	var pool := FIRST_GIFTS.duplicate()
 	if stage == 10:
 		pool.append_array(LATER_GIFTS)
+		if rank_of("combo") == 0:
+			pool.erase("D14")
 		if workshop:
 			pool.append("D03")
 		pool.erase(first_gift)
@@ -617,7 +622,7 @@ func choose_gift(id: String) -> bool:
 
 
 func save_state() -> Dictionary:
-	var data := {"session_elapsed_us": session_elapsed_us,
+	var data := {"session_elapsed_us": session_elapsed_us, "sap_remainder": sap_remainder,
 		"paid_prices": paid_prices, "steady_count": steady_count, "last_volley": last_volley,
 		"session_observations": session_observations, "at_workshop": _at_workshop,
 		"workshop_piles": workshop_piles, "workshop_flights": workshop_flights, "workshop_buffer": workshop_buffer,
@@ -684,6 +689,9 @@ func restore_state(data: Dictionary) -> bool:
 	if data.get("core_phase", 0) not in [0, 1, 2] or not data.get("core_hit", false) is bool or not _valid_workshop_state(data):
 		return false
 	var history = data.get("paid_prices", {})
+	var saved_remainder = data.get("sap_remainder", 0)
+	if not saved_remainder is int or saved_remainder < 0 or saved_remainder >= DAMAGE_PER_SAP:
+		return false
 	var saved_streak = data.get("steady_count", 0)
 	var saved_last_volley = data.get("last_volley", -10.0)
 	if not history is Dictionary or not saved_streak is int or saved_streak < 0 or saved_streak > 4:
@@ -703,6 +711,10 @@ func restore_state(data: Dictionary) -> bool:
 				return false
 	for field: String in SAVE_FIELDS:
 		set(field, data[field])
+	sap_remainder = saved_remainder
+	if rank_of("combo") == 0:
+		combo = 1.0
+		combo_grace = 0.0
 	paid_prices = history.duplicate(true)
 	# The five-target build charged four sap for the root; the following build made it free.
 	if not data.has("paid_prices") and damage_rank > 0 and _had_paid_root(data):

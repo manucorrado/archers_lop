@@ -8,6 +8,8 @@ const COLORS := {
 }
 
 const SPRITES := {
+	"damage_mult": ["...a.....app", "...p.a..app.", ".a.ap..app..", "..pps.app...", "...p.app...a", "....app...p.", "...tw...ppp.", "..tw...a.p.a", ".tw......p..", "tw...a......", "w....p......", "...appa....."],
+	"rate_flat": ["........appp", "....aa..ppp.", "...ap..ppt..", "..ap..pt..ap", ".ap..tw..app", ".a..tw..apt.", "...tw..at..a", "..tw..at..ap", ".tw..at..ap.", "tw..at..at..", "w..at..at...", "..at..at...."],
 	"damage": [".........ppp", "........ppsp", ".......ppssp", ".......psss.", "......tts...", ".....tt.....", "....tt......", ".gpww.......", ".ggw........", ".wwgg.......", "tw.pg.......", "t..........."],
 	"rate": [".........aaa", ".....gg..taa", "....gssg.at.", "...gssg.ta..", "....gg.ta...", "..sss.ta...a", ".ssg.ta...aa", "..g.ta...at.", "...ta...ta..", "..ta...ta...", ".ta...ta....", "ta...ta....."],
 	"weak": ["....wwww....", "..wwttttww..", ".wttppppttw.", ".wtppggpptw.", "wtppgssgpptw", "wtpgsaasgptw", "wtpgsaasgptw", "wtppgssgpptw", ".wtppggpptw.", ".wttppppttw.", "..wwttttww..", "....wwww...."],
@@ -30,13 +32,16 @@ const SPRITES := {
 static var cache: Dictionary = {}
 
 static func texture(id: String) -> Texture2D:
-	if not cache.has(id):
-		var sprite: Array = SPRITES[id]
+	var symbol := id
+	if id.contains("_step_"):
+		symbol = id.get_slice("_step_", 0)
+	if not cache.has(symbol):
+		var sprite: Array = SPRITES[symbol]
 		var pixels := Image.create_empty(12, 12, false, Image.FORMAT_RGBA8)
 		for y in sprite.size():
 			for x in sprite[y].length():
 				var key: String = sprite[y][x]
 				if COLORS.has(key):
 					pixels.set_pixel(x, y, COLORS[key])
-		cache[id] = ImageTexture.create_from_image(pixels)
-	return cache[id]
+		cache[symbol] = ImageTexture.create_from_image(pixels)
+	return cache[symbol]

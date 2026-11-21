@@ -122,7 +122,7 @@ func _input(event: InputEvent) -> void:
 		elif clearing.is_near_dog(archer.position):
 			_set_view("shop")
 		else:
-			hud.notify("Acercate al perro para abrir las mejoras.", "Move closer to the dog to open upgrades.")
+			hud.notify("Acercate a Pipo, bajo el pino de la izquierda.", "Walk up to Pipo under the pine on the left.")
 	elif view == "play":
 		if event.is_action_pressed("pet_dog") and run.rank_of("pet") > 0 and clearing.is_near_dog(archer.position):
 			get_viewport().set_input_as_handled()
@@ -241,11 +241,13 @@ func _tick_flights(delta: float) -> void:
 
 func _land_shot(flight: Dictionary) -> void:
 	var milestone := _boss_milestone()
+	var balance := run.sap
 	var outcome := run.manual_impact(flight.id, flight.damage, flight.weak_damage, flight.serial)
 	if not outcome.hit:
 		archer.play_cue("miss")
 		return
 	hud.hit_marker()
+	hud.show_sap_earned(run.sap - balance)
 	clearing.hit_feedback(flight.end)
 	if outcome.direct > 0:
 		var source := "critical" if flight.get("critical", false) else ("weak" if outcome.weak_spot else "manual")
@@ -270,7 +272,9 @@ func _strike() -> void:
 		recovery_wait = 4.0
 		hud.notify("Cayeron cuatro flechas al pie del tronco.", "Four arrows dropped at the foot of the trunk.")
 	var milestone := _boss_milestone()
+	var balance := run.sap
 	var damage := run.strike_part(roundi(4 * Run.POWER[run.stage - 1]), id)
+	hud.show_sap_earned(run.sap - balance)
 	hud.show_damage(damage, "branch")
 	clearing.hit_feedback(point)
 	hud.hit_marker()
@@ -323,8 +327,8 @@ func _next_knot() -> void:
 		return
 	clearing.set_stage(run.stage)
 	match run.stage:
-		2: hud.notify("Si aparece un punto débil, acertarle da más daño y mejora la racha.",
-			"When a weak spot appears, hit it for extra damage and a bigger combo.")
+		2: hud.notify("Apuntá al punto débil para hacer más daño y ganar más savia.",
+			"Aim for the weak spot to deal more damage and earn more sap.")
 		5: hud.notify("Quinto blanco · Tronco partido", "Fifth target · Twin Fork")
 		10: hud.notify("Último blanco · Apuntá al hueco encendido. El punto débil cambia de lugar.",
 			"Final target · Aim at the glowing hollow. The weak spot moves.")

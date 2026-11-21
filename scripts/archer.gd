@@ -190,8 +190,6 @@ func _physics_process(delta: float) -> void:
 		_leap_speed = 0.0
 		velocity.x = 0.0
 		velocity.z = 0.0
-	position.x = clampf(position.x, -13.0, 13.0)
-	position.z = clampf(position.z, -13.0, 13.0)
 	_pace = minf(Vector2(velocity.x, velocity.z).length() / WALK_SPEED, 1.0)
 
 	var held := Input.is_action_pressed("shoot")

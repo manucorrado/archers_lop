@@ -2,7 +2,9 @@ extends Node3D
 
 const TARGET_POSITION := Vector3(0.0, 1.65, -5.0)
 const WORKSHOP_PICKUP := Vector3(-6.6, 0.0, 0.15)
-const DOG_POSITION := Vector3(-2.55, 0, 1.45)
+const DOG_POSITION := Vector3(-9.55, 0, 1.28)
+const ARENA_HALF_WIDTH := 11.70
+const ARENA_HALF_LENGTH := 13.55
 const DOG_REACH := 1.9
 const KNOT_PICKUP := Vector3(0.9, 0.0, -2.85)
 const WORKSHOP_BASE := Vector3(-7.2, 0.0, -1.40)
@@ -33,6 +35,8 @@ const DOG = preload("res://assets/ovejero.tscn")
 
 var _cube := BoxMesh.new()
 var _dog = DOG.instantiate()
+var _dog_sign := Sprite3D.new()
+var _sign_check := 0.0
 var _rng := RandomNumberGenerator.new()
 var _knot := StaticBody3D.new()
 var _knot_geometry: Node3D
@@ -78,6 +82,7 @@ func _ready() -> void:
 	_dog.position = DOG_POSITION
 	_dog.rotation.y = 0.05
 	add_child(_dog)
+	_add_dog_name()
 	_make_workshop()
 	_prepare_pickup_glow()
 	for landing in WORKSHOP_LANDINGS:
@@ -148,15 +153,16 @@ func _make_landscape() -> void:
 	# Wood and stone rails indicate the edge of the playable clearing.
 	for side in [-1, 1]:
 		for index in range(7):
-			var z := -10.3 + index * 3.6
-			var post := Vector3(10.15 * side, 0.0, z)
+			var post_spacing := 2.0 * (ARENA_HALF_LENGTH - 0.45) / 6.0
+			var z := -(ARENA_HALF_LENGTH - 0.45) + index * post_spacing
+			var post := Vector3((ARENA_HALF_WIDTH - 0.24) * side, 0.0, z)
 			terrain.box(post + Vector3(0, 0.52, 0), Vector3(0.28, 1.04, 0.34), BARK)
 			terrain.box(post + Vector3(0, 1.06, 0), Vector3(0.30, 0.08, 0.36), CUT)
 			if index < 6:
-				terrain.beam(post + Vector3(0, 0.67, 0), post + Vector3(0, 0.55, 3.60), 0.14, 0.14, WOOD)
+				terrain.beam(post + Vector3(0, 0.67, 0), post + Vector3(0, 0.55, post_spacing), 0.14, 0.14, WOOD)
 	for side in [-1, 1]:
 		for index in range(11):
-			var base := Vector3(-9.8 + index * 2.0, 0.0, 11.35 * side)
+			var base := Vector3((index / 5.0 - 1.0) * (ARENA_HALF_WIDTH - 0.5), 0.0, (ARENA_HALF_LENGTH - 0.2) * side)
 			_rock(terrain, base, _rng.randf_range(0.45, 0.78))
 	# A weathered reference stone to judge the size of each successive knot.
 	terrain.box(Vector3(2.5, 0.43, -4.1), Vector3(0.67, 0.86, 0.62), STONE)
@@ -165,7 +171,7 @@ func _make_landscape() -> void:
 		terrain.box(Vector3(2.52, 0.23 + index * 0.20, -3.783), Vector3(0.28 - index * 0.045, 0.045, 0.035), Color("#515c53"))
 	# Grass, small wildflowers and stones stay on the shoulders of the lane.
 	for index in range(270):
-		var point := Vector3(_rng.randf_range(-13, 13), 0, _rng.randf_range(-13, 12))
+		var point := Vector3(_rng.randf_range(-14, 14), 0, _rng.randf_range(-15, 15))
 		if absf(point.x) < 2.1 and point.z > -7.0:
 			continue
 		if point.distance_to(WORKSHOP_BASE) < 2.2 or point.distance_to(WORKSHOP_PICKUP) < 1.45 or point.distance_to(DOG_POSITION) < 0.85:
@@ -204,8 +210,8 @@ func _make_landscape() -> void:
 		_fir(forest, Vector3(11.9 * side, 0, -3.5), 10.4 - side * 0.7, 0)
 	forest.bake(self, _cube, "Linde")
 	var pine_sites: Array[Vector3] = [
-		Vector3(-5.9, 0, -12.2), Vector3(5.8, 0, -12.1), Vector3(-10.9, 0, 2.2),
-		Vector3(11.1, 0, 4.2), Vector3(-4.2, 0, 12.1)
+		Vector3(-5.9, 0, -14.4), Vector3(5.8, 0, -14.3), Vector3(-11.9, 0, 2.6),
+		Vector3(12.4, 0, 4.2), Vector3(-4.2, 0, 14.3)
 	]
 	var pines: Array[PackedScene] = [KIT.pino_normal, KIT.pino_alto, KIT.pino_inclinado]
 	for i in pine_sites.size():
@@ -271,8 +277,8 @@ func _make_collisions() -> void:
 	add_child(limits)
 	_collider(limits, Vector3(0, -0.25, 0), Vector3(150, 0.5, 150))
 	for side in [-1, 1]:
-		_collider(limits, Vector3(side * 10.4, 1.7, 0), Vector3(0.55, 3.4, 24.0))
-		_collider(limits, Vector3(0, 1.7, side * 11.55), Vector3(21.5, 3.4, 0.65))
+		_collider(limits, Vector3(side * ARENA_HALF_WIDTH, 1.7, 0), Vector3(0.55, 3.4, 2 * ARENA_HALF_LENGTH + 0.65))
+		_collider(limits, Vector3(0, 1.7, side * ARENA_HALF_LENGTH), Vector3(2 * ARENA_HALF_WIDTH + 0.55, 3.4, 0.65))
 	_collider(limits, Vector3(2.48, 0.5, -4.1), Vector3(0.68, 1.0, 0.64))
 	_collider(limits, DOG_POSITION + Vector3(0, 0.41, 0), Vector3(0.42, 0.82, 0.52))
 	for side in [-1, 1]:
@@ -280,6 +286,56 @@ func _make_collisions() -> void:
 
 func is_near_dog(feet: Vector3) -> bool:
 	return feet.distance_squared_to(DOG_POSITION) <= DOG_REACH * DOG_REACH
+
+func _add_dog_name() -> void:
+	var surface := SubViewport.new()
+	surface.size = Vector2i(116, 44)
+	surface.transparent_bg = true
+	surface.render_target_update_mode = SubViewport.UPDATE_ONCE
+	add_child(surface)
+	var box := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#192d28ed")
+	style.border_color = Color("#bcab84")
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(7)
+	box.add_theme_stylebox_override("panel", style)
+	box.size = Vector2(surface.size)
+	surface.add_child(box)
+	var nameplate := Label.new()
+	nameplate.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	nameplate.text = "Pipo"
+	nameplate.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	nameplate.add_theme_font_size_override("font_size", 27)
+	nameplate.add_theme_color_override("font_color", Color("#fff4dc"))
+	box.add_child(nameplate)
+	_dog_sign.name = "Pipo"
+	_dog_sign.texture = surface.get_texture()
+	_dog_sign.fixed_size = true
+	_dog_sign.pixel_size = 0.00085
+	_dog_sign.visibility_range_end = 20.0
+	_dog_sign.no_depth_test = true
+	_dog_sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_dog_sign.position = DOG_POSITION + Vector3.UP * 1.48
+	_dog_sign.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_dog_sign)
+
+func _physics_process(delta: float) -> void:
+	_sign_check -= delta
+	if _sign_check > 0.0:
+		return
+	_sign_check = 0.12
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		return
+	var head := DOG_POSITION + Vector3.UP * 0.95
+	_dog_sign.visible = camera.global_position.distance_squared_to(head) < 400.0 and not camera.is_position_behind(head)
+	if _dog_sign.visible:
+		var sight := PhysicsRayQueryParameters3D.create(camera.global_position, head)
+		var player := camera.get_parent() as CollisionObject3D
+		if player:
+			sight.exclude = [player.get_rid()]
+		_dog_sign.visible = get_world_3d().direct_space_state.intersect_ray(sight).is_empty()
 
 func pet_dog() -> void:
 	_dog.pet()
@@ -304,6 +360,7 @@ func set_stage(stage: int) -> void:
 	var growth := _growth()
 	blocks.box(Vector3(0, 1.11, -0.04), Vector3(1.88, 2.20, 1.53), BARK)
 	blocks.box(Vector3(0, 1.23, -0.13), Vector3(1.68, 2.44, 1.88), WOOD.darkened(0.2))
+	_back_bark(blocks, 0.0, 0.0, -1.08, 1.66, 2.42, stage)
 	for i in range(7):
 		var x := (i - 3) * 0.30
 		var height := 2.3 + 0.30 * sin(i * 2.3 + stage)
@@ -347,6 +404,27 @@ func _growth() -> Vector3:
 	var progress := float(clampi(_stage, 1, 10) - 1) / 9.0
 	return Vector3(1.0 + progress, 1.0 + 4.0 * progress, 1.0 + 0.32 * progress)
 
+
+func _back_bark(blocks: Blocks, cx: float, bottom: float, back: float, width: float, height: float, seed_: int) -> void:
+	# Uneven bark plates split around a branch scar on the face opposite the target.
+	var grain := RandomNumberGenerator.new()
+	grain.seed = 8317 + seed_
+	var count := maxi(5, roundi(width * 6))
+	var pitch := width / count
+	for i in count:
+		var x := cx - width / 2.0 + pitch * (i + 0.5)
+		var y := bottom + grain.randf_range(0.0, 0.09)
+		while y < bottom + height - 0.04:
+			var length := minf(grain.randf_range(0.26, 0.78), bottom + height - y)
+			var p := Vector3(x, y + length * 0.5, back - grain.randf_range(0.012, 0.045))
+			var shade := BARK.lerp(WOOD, grain.randf_range(0.12, 0.70))
+			blocks.box(p, Vector3(pitch * grain.randf_range(0.67, 0.92), length, 0.10), shade,
+				Vector3(0, 0, grain.randf_range(-0.045, 0.045)))
+			y += length + grain.randf_range(0.012, 0.042)
+	var scar := Vector3(cx + width * 0.18, bottom + height * 0.66, back - 0.105)
+	blocks.box(scar, Vector3(width * 0.17, height * 0.10, 0.07), BARK, Vector3(0, 0, 0.46))
+	blocks.box(scar + Vector3(0, 0, -0.038), Vector3(width * 0.10, height * 0.06, 0.028), WOOD, Vector3(0, 0, 0.46))
+
 func _disc(blocks: Blocks, center: Vector3, radius: float, tone: Color) -> void:
 	var widths := [0.54, 0.82, 0.96, 1.0, 0.96, 0.82, 0.54]
 	for strip in 7:
@@ -360,6 +438,7 @@ func _make_encounter() -> void:
 		lobe.add_to_group("knot")
 		lobe.position = Vector3(side * 1.16, 0, TARGET_POSITION.z)
 		var plates := Blocks.new()
+		_back_bark(plates, -side * 0.045, 0.25, -0.71, 0.95, 2.62, 15 if side < 0 else 16)
 		plates.beam(Vector3(-side * 0.31, 0.22, 0), Vector3(side * 0.18, 3.13, 0), 1.12, 1.39, BARK)
 		plates.beam(Vector3(-side * 0.22, 0.47, 0.08), Vector3(side * 0.44, 0.15, 0.99), 0.49, 0.45, WOOD)
 		plates.box(Vector3(side * 0.46, 0.13, 1.07), Vector3(0.61, 0.26, 0.55), BARK)

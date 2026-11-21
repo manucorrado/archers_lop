@@ -1,54 +1,15 @@
 extends Control
-## A bow, nocked arrow and full quiver. The main strokes are purchase paths;
-## the paired outlines and their small rivets reveal the equipment silhouette.
+## Map sockets and their purchase requirements share a single set of vertices.
 
 const Icons := preload("res://scripts/upgrade_icons.gd")
-const POSITIONS := {
-	"damage": Vector2(438, 470), "weak": Vector2(379, 411), "rate": Vector2(497, 411),
-	"refund": Vector2(379, 529), "workshop": Vector2(497, 529),
-	"spark": Vector2(254, 283), "crit": Vector2(100, 132), "combo": Vector2(351, 265),
-	"steady": Vector2(506, 183), "recurve": Vector2(615, 288), "longbow": Vector2(783, 102),
-	"wheel": Vector2(618, 741), "capacity": Vector2(719, 526), "pickup": Vector2(650, 428),
-	"leap": Vector2(810, 209), "pace": Vector2(500, 702), "pet": Vector2(89, 819),
-}
-
-# The main paths start and end at the corresponding buttons. Internal points
-# follow the outline through bends and forks, as in the reference drawing.
-const BENDS := {
-	"combo": [300,331], "crit": [184,230, 230,207, 169,168],
-	"steady": [401,212], "capacity": [601,624],
-	"wheel": [583,637, 617,666], "pickup": [704,485, 679,452],
-	"pace": [583,637, 546,666], "leap": [690,388, 732,353, 741,300],
-}
-const DETAILS := {
-	"crit": [[100,132, 126,207, 152,273, 184,230, 243,293, 282,342, 424,484]],
-	"spark": [[88,819, 115,758, 137,662, 126,608, 112,539, 142,430, 194,355, 243,293],
-		[88,819, 134,785, 157,719, 174,653, 165,587, 156,539, 179,453, 230,389, 282,342],
-		[194,355, 230,389]],
-	"combo": [[254,283, 318,230, 351,265]],
-	"steady": [[318,230, 385,174, 507,144, 638,157, 682,156, 721,147, 755,130, 783,102],
-		[506,183, 637,188, 678,186, 719,174, 752,148, 783,102]],
-	"longbow": [[497,411, 592,313, 687,213, 752,148, 783,102]],
-	"pet": [[89,819, 135,785, 219,685, 296,609, 379,529]],
-	"wheel": [[617,666, 698,662, 776,741, 702,743, 699,819, 618,741],
-		[497,529, 601,624, 702,743], [438,470, 472,526, 583,637, 617,666, 702,743]],
-	"capacity": [[583,637, 546,666, 477,620, 438,563, 472,526],
-		[438,563, 401,606, 442,657, 500,702, 546,666]],
-	"pace": [[401,606, 339,679, 375,729, 411,769, 500,702],
-		[339,679, 271,777, 294,818, 335,823, 411,769],
-		[271,777, 249,802, 272,848, 319,848, 335,823]],
-	"pickup": [[719,526, 683,514, 647,486, 614,451, 595,422, 584,397, 607,398, 626,406, 650,428],
-		[595,440, 626,406, 666,356, 744,271, 810,209],
-		[617,465, 650,428], [643,489, 679,452], [677,506, 704,485]],
-	"leap": [[666,356, 698,306, 694,260, 764,190, 767,232, 810,209, 808,229, 741,300, 698,306],
-		[767,232, 808,229], [732,353, 782,353, 848,293, 855,272, 799,296, 741,353],
-		[799,296, 810,268, 763,327, 810,327, 855,272],
-		[679,452, 719,414, 782,353], [704,485, 739,442, 781,412, 834,412, 892,353, 898,317, 842,352, 809,381, 781,412],
-		[781,412, 784,381, 850,319, 842,352, 892,353], [809,381, 863,381]],
-}
+const Paths := preload("res://scripts/upgrade_paths.gd")
 const LATENT := Color("#455a4f")
 const OPEN := Color("#92a990")
 const GROWN := Color("#dfb77a")
+const MAP_CENTER := Vector2(493.5, 474)
+const MAP_SPAN := Vector2(822, 761)
+const MIN_ZOOM := 0.75
+const MAX_ZOOM := 5.0
 
 class Socket extends Button:
 	var symbol: Texture2D
@@ -57,10 +18,10 @@ class Socket extends Button:
 	var met := false
 	var affordable := false
 	var inspected := false
-	var radius := 17.0
 
 	func _draw() -> void:
 		var c := size * 0.5
+		var radius := c.x - 2
 		var outline := Color("#6c8173")
 		var fill := Color("#263931")
 		if rank > 0:
@@ -72,14 +33,13 @@ class Socket extends Button:
 		elif met:
 			outline = Color("#91a78c")
 		if inspected or has_focus() or is_hovered():
-			draw_circle(c, radius + 2.5, Color("#e9d5a7"), false, 1.3, true)
-		draw_circle(c + Vector2(0, 1), radius + 0.9, Color("#0e1c17"), true, -1, true)
+			draw_circle(c, radius + 1.5, Color("#e9d5a7"), false, 1.2, true)
 		draw_circle(c, radius, fill, true, -1, true)
-		draw_circle(c, radius, outline, false, 1.4, true)
-		if rank > 0 and ranks > 1:
+		draw_circle(c, radius, outline, false, 1.1, true)
+		if rank > 0 and ranks > 1 and radius >= 7:
 			draw_arc(c, radius - 2, -PI * 0.5, -PI * 0.5 + TAU * rank / ranks,
 				36, Color("#f5ca80"), 1.6, true)
-		var icon_size := Vector2(24, 24) if radius >= 16.0 else Vector2(21, 21)
+		var icon_size := Vector2.ONE * floorf(radius * 1.40)
 		var tint := Color.WHITE if met or rank > 0 else Color("#91a697")
 		draw_texture_rect(symbol, Rect2((c - icon_size * 0.5).round(), icon_size), false, tint)
 
@@ -87,10 +47,52 @@ var buttons: Dictionary = {}
 var parents: Dictionary = {}
 var offers: Dictionary = {}
 var revealed: Dictionary = {}
+var language := "es"
+var zoom := 1.0
+var pan := Vector2.ZERO
+var _nearest: Dictionary = {}
+var _drag_button := 0
+var _last_drag_point := Vector2.ZERO
+var _zoom_value: Button
+var _toolbar := HBoxContainer.new()
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	clip_contents = true
+	mouse_filter = Control.MOUSE_FILTER_STOP
 	resized.connect(_place_buttons)
+	add_child(_toolbar)
+	_toolbar.name = "Zoom"
+	_toolbar.z_index = 1
+	_toolbar.mouse_filter = Control.MOUSE_FILTER_STOP
+	_toolbar.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_toolbar.offset_left = -135
+	_toolbar.offset_top = 6
+	_toolbar.offset_right = -6
+	_toolbar.offset_bottom = 34
+	_toolbar.add_theme_constant_override("separation", 2)
+	_zoom_button("−", "Alejar", "Zoom out", func(): _zoom_at(zoom / 1.25, size / 2))
+	_zoom_value = _zoom_button("100 %", "Centrar mapa (Inicio)", "Fit map (Home)", _reset_camera)
+	_zoom_button("+", "Acercar", "Zoom in", func(): _zoom_at(zoom * 1.25, size / 2))
+	tooltip_text = ("Rueda: zoom · Arrastrá el fondo para mover el mapa"
+		if language == "es" else "Scroll to zoom · Drag the background to pan")
+
+func _zoom_button(caption: String, es: String, en: String, action: Callable) -> Button:
+	var button := Button.new()
+	button.text = caption
+	button.tooltip_text = es if language == "es" else en
+	button.accessibility_name = button.tooltip_text
+	button.custom_minimum_size = Vector2(52 if caption.contains("%") else 30, 26)
+	button.add_theme_font_size_override("font_size", 13)
+	button.add_theme_color_override("font_color", Color("#e6e0c6"))
+	for state in ["normal", "hover", "pressed"]:
+		var box := StyleBoxFlat.new()
+		box.bg_color = Color("#243b30") if state == "normal" else Color("#3f5844")
+		box.set_border_width_all(1)
+		box.border_color = Color("#627365")
+		button.add_theme_stylebox_override(state, box)
+	button.pressed.connect(action)
+	_toolbar.add_child(button)
+	return button
 
 func add_socket(id: String) -> Socket:
 	var node := Socket.new()
@@ -99,14 +101,11 @@ func add_socket(id: String) -> Socket:
 	node.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	node.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	node.focus_mode = Control.FOCUS_ALL
-	node.radius = 18.0 if id == "damage" else 15.0
-	node.custom_minimum_size = Vector2.ONE * (node.radius * 2 + 5)
-	node.size = node.custom_minimum_size
 	for style in ["normal", "hover", "focus", "pressed", "hover_pressed"]:
 		node.add_theme_stylebox_override(style, StyleBoxEmpty.new())
 	node.mouse_entered.connect(node.queue_redraw)
 	node.mouse_exited.connect(node.queue_redraw)
-	node.focus_entered.connect(node.queue_redraw)
+	node.focus_entered.connect(_focus_socket.bind(node))
 	node.focus_exited.connect(node.queue_redraw)
 	buttons[id] = node
 	add_child(node)
@@ -116,7 +115,19 @@ func arrange(new_offers: Dictionary) -> void:
 	offers = new_offers
 	for id: String in buttons:
 		parents[id] = str(offers[id].requires)
+		var distance := INF
+		var location := Paths.position_of(id)
+		for other: String in buttons:
+			if other != id:
+				distance = minf(distance, location.distance_to(Paths.position_of(other)))
+		_nearest[id] = distance
 	sync_visibility()
+	# On a first visit the whole bow would reduce the five central emblems to a
+	# tiny cluster. Frame the grip once and keep the camera still during purchases.
+	if revealed.size() <= 10:
+		zoom = 2.0
+		pan = (MAP_CENTER - Paths.position_of("damage")) * _scale_factor()
+		_zoom_value.text = "200 %"
 	_place_buttons()
 
 func sync_visibility() -> void:
@@ -125,8 +136,8 @@ func sync_visibility() -> void:
 		var parent: String = parents[id]
 		if parent.is_empty() or parent == "damage" or int(offers[parent].rank) > 0:
 			revealed[id] = true
-		# Purchased descendants stay usable if a player refunds their parent.
-		# Keep the path back to the centre, including for older save layouts.
+		# A refund or a migration can leave an owned node beyond a missing parent.
+		# Its purchased descendants remain accessible and the route can be repurchased.
 		if int(offers[id].rank) > 0:
 			var path := id
 			while not path.is_empty():
@@ -141,17 +152,108 @@ func closest_revealed(id: String) -> String:
 		id = parents[id]
 	return id if revealed.has(id) else "damage"
 
+func _scale_factor() -> float:
+	return maxf(0.01, minf((size.x - 44) / MAP_SPAN.x, (size.y - 46) / MAP_SPAN.y)) * zoom
+
 func _point(p: Vector2) -> Vector2:
-	# The silhouette has deliberately asymmetric bounds (arrowheads on the right).
-	var bounds := Vector2(822, 761)
-	var fit := minf((size.x - 56.0) / bounds.x, (size.y - 48.0) / bounds.y)
-	return (size * 0.5 + (p - Vector2(493.5, 474.0)) * fit).round()
+	return size * 0.5 + pan + (p - MAP_CENTER) * _scale_factor()
 
 func _place_buttons() -> void:
+	var factor := _scale_factor()
 	for id: String in buttons:
 		var node: Socket = buttons[id]
-		node.position = (_point(POSITIONS[id]) - node.size * 0.5).round()
+		# Each hit rectangle fits between its neighbors even at overview scale.
+		var target_size := 40.0 if id == "damage" else 33.0
+		var room := 0.88 * float(_nearest.get(id, target_size))
+		var diameter := clampf(minf(target_size, room) * factor, 8.0, target_size)
+		node.size = Vector2.ONE * floorf(diameter)
+		node.position = (_point(Paths.position_of(id)) - node.size * 0.5).round()
+		node.queue_redraw()
 	queue_redraw()
+
+func _limit_pan() -> void:
+	var limit := (size + MAP_SPAN * _scale_factor()) / 2 - Vector2.ONE * 58
+	pan = pan.clamp(-limit.max(Vector2.ZERO), limit.max(Vector2.ZERO))
+
+func _zoom_at(requested: float, anchor: Vector2) -> void:
+	var previous := zoom
+	zoom = clampf(requested, MIN_ZOOM, MAX_ZOOM)
+	pan += (anchor - size * 0.5 - pan) * (1.0 - zoom / previous)
+	_limit_pan()
+	_zoom_value.text = "%d %%" % roundi(zoom * 100)
+	_place_buttons()
+
+func _reset_camera() -> void:
+	zoom = 1.0
+	pan = Vector2.ZERO
+	_zoom_value.text = "100 %"
+	_place_buttons()
+
+func _ensure_in_view(node: Socket) -> void:
+	var margin := node.size / 2 + Vector2(6, 6)
+	var center := node.get_rect().get_center()
+	var delta := center.clamp(margin, size - margin) - center
+	if _toolbar.get_rect().grow(margin.y).has_point(center + delta):
+		delta.y = _toolbar.get_rect().end.y + margin.y - center.y
+	if delta.length_squared() > 0.01:
+		pan += delta
+		_limit_pan()
+		_place_buttons()
+
+func _focus_socket(node: Socket) -> void:
+	_ensure_in_view(node)
+	node.queue_redraw()
+
+func _input(event: InputEvent) -> void:
+	if not is_visible_in_tree():
+		_drag_button = 0
+		return
+	if event is InputEventKey and event.pressed and not event.echo:
+		var focus := get_viewport().gui_get_focus_owner()
+		if focus == null or not is_ancestor_of(focus):
+			return
+		var anchor := get_local_mouse_position()
+		if focus is Socket:
+			anchor = focus.get_rect().get_center()
+		match event.keycode:
+			KEY_PLUS, KEY_EQUAL, KEY_KP_ADD: _zoom_at(zoom * 1.25, anchor)
+			KEY_MINUS, KEY_KP_SUBTRACT: _zoom_at(zoom / 1.25, anchor)
+			KEY_HOME: _reset_camera()
+			_: return
+		get_viewport().set_input_as_handled()
+	elif event is InputEventMouse:
+		var local := make_input_local(event) as InputEventMouse
+		if event is InputEventMouseMotion:
+			if _drag_button != 0:
+				pan += local.position - _last_drag_point
+				_last_drag_point = local.position
+				_limit_pan()
+				_place_buttons()
+				get_viewport().set_input_as_handled()
+			return
+		if not event is InputEventMouseButton:
+			return
+		if _drag_button != 0 and event.button_index == _drag_button and not event.pressed:
+			_drag_button = 0
+			get_viewport().set_input_as_handled()
+			return
+		if not event.pressed or not Rect2(Vector2.ZERO, size).has_point(local.position) or _toolbar.get_rect().has_point(local.position):
+			return
+		if event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			var direction := 1.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -1.0
+			_zoom_at(zoom * pow(1.22, direction * maxf(0.1, event.factor)), local.position)
+		elif event.button_index == MOUSE_BUTTON_MIDDLE or (event.button_index == MOUSE_BUTTON_LEFT and _empty_at(local.position)):
+			_drag_button = event.button_index
+			_last_drag_point = local.position
+		else:
+			return
+		get_viewport().set_input_as_handled()
+
+func _empty_at(point: Vector2) -> bool:
+	for id: String in revealed:
+		if buttons[id].get_rect().has_point(point):
+			return false
+	return true
 
 func update_socket(id: String, offer: Dictionary, inspected: bool) -> void:
 	offers[id] = offer
@@ -163,31 +265,18 @@ func update_socket(id: String, offer: Dictionary, inspected: bool) -> void:
 	socket.inspected = inspected
 	socket.queue_redraw()
 
-func _trace(raw: Array, tint: Color, width: float) -> void:
-	var points := PackedVector2Array()
-	for i in range(0, raw.size(), 2):
-		points.append(_point(Vector2(raw[i], raw[i + 1])))
-	draw_polyline(points, tint, width, true)
-	for p in points:
-		draw_circle(p, width + 0.6, tint, true, -1, true)
+func _edge(from: String, to: String, tint: Color, width: float) -> void:
+	draw_line(_point(Paths.position_of(from)), _point(Paths.position_of(to)), tint, width, true)
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("#172a24"))
 	draw_rect(Rect2(Vector2.ZERO, size), Color("#46594b"), false, 1.0)
-	for id: String in DETAILS:
-		if int(offers.get(id, {}).get("rank", 0)) == 0:
-			continue
-		for stroke: Array in DETAILS[id]:
-			_trace(stroke, Color("#b29b72"), 1.3)
-	for id: String in parents:
+	for id: String in revealed:
 		var parent: String = parents[id]
-		if parent.is_empty() or not revealed.has(id):
-			continue
-		var offer: Dictionary = offers[id]
-		var tint := GROWN if int(offer.rank) > 0 else OPEN if bool(offer.requirement_met) else LATENT
-		var start: Vector2 = POSITIONS[parent]
-		var finish: Vector2 = POSITIONS[id]
-		var stroke := [start.x, start.y]
-		stroke.append_array(BENDS.get(id, []))
-		stroke.append_array([finish.x, finish.y])
-		_trace(stroke, tint, 2.25)
+		if not parent.is_empty():
+			var offer: Dictionary = offers[id]
+			var tone := GROWN if int(offer.rank) > 0 else OPEN if bool(offer.requirement_met) else LATENT
+			_edge(parent, id, tone, 1.8)
+	for pair: Array in Paths.SEAMS:
+		if int(offers.get(pair[0], {}).get("rank", 0)) > 0 and int(offers.get(pair[1], {}).get("rank", 0)) > 0:
+			_edge(pair[0], pair[1], GROWN, 1.3)
