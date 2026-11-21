@@ -14,6 +14,8 @@ Abrí [ElArqueroDelClaro.exe](build/windows/ElArqueroDelClaro.exe) y elegí **En
 | Botón derecho mantenido | Acercar la mira |
 | 1, 2, 3 o la rueda del mouse | Equipar el arco de rama, el rápido o el largo, entre los comprados |
 | E cerca de Pipo | Abrir las mejoras. E o Esc para volver al claro |
+| E cerca de Brizno | Hablar con el mensajero o pasar de página. Esc cierra la charla |
+| E junto a la ballesta | Pasar hasta ocho flechas del carcaj al depósito. Siempre te quedan al menos cuatro para el arco |
 | Clic izquierdo / derecho en un nodo | Comprar un nivel / devolver un nivel después de desbloquear los reembolsos |
 | Rueda sobre el árbol / arrastrar el fondo | Acercar o alejar el dibujo / recorrerlo. Inicio recupera la vista completa |
 | R cerca de Pipo | Acariciarlo después de desbloquear la mejora |
@@ -24,7 +26,11 @@ Abrí [ElArqueroDelClaro.exe](build/windows/ElArqueroDelClaro.exe) y elegí **En
 
 El taller cuesta 17 de savia. Produce 1,25 flechas por segundo y lanza tandas de tres. Seguí el vuelo y acercate al atado para recogerlo. Si el carcaj se llena, el resto queda en el suelo.
 
+La guía de primeros pasos te señala el blanco, a Pipo y un atado que ya cayó. Se retira cuando volvés a disparar tras recoger flechas del taller. Podés desactivarla en Ajustes. A la derecha del sendero está **Brizno**, el mensajero. Sus relatos cambian con lo que pasa en el claro y podés seguir una charla al reabrir el juego. Para escribirle más diálogos, editá [sus charlas bilingües](assets/charlas_de_brizno.tres) en el Inspector.
+
 Cada compra revela los nodos vecinos y otro tramo del dibujo. Las mejoras iniciales suman daño o cadencia según la base del arco. En daño 10 salen hasta tres flechas por disparo. Más afuera aparecen los multiplicadores de daño y los disparos adicionales por segundo. La compra **Buena racha** activa el combo y su prima de savia.
+
+La **Ballesta del claro** se compra siguiendo la Rueda de savia y cuatro engranajes del taller. Con munición en su depósito dispara sola mientras buscás flechas o apuntás con el arco. En cada resumen, **Registro de la vuelta** muestra cuánto duró cada blanco y compara tus tiempos por acto y de la demo completa con tus récords locales. El tiempo se mide hasta el golpe que rompe el blanco. Empezar de nuevo conserva los récords.
 
 **Guardar y continuar.** Podés guardar desde pausa. También se guardan las compras, los cambios de blanco y de fase y las recompensas. En el menú de inicio, **Continuar** recupera la partida. Si cerraste mientras elegías la recompensa, vuelven las mismas tres cartas. Si terminaste la versión anterior, en su resumen aparece **Continuar al blanco 6**. Durante la pausa y con el juego cerrado se detienen el reloj y el taller.
 

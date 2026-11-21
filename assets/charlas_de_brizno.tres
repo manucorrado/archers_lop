@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/forest_stories.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+entries = Array[Dictionary]([{
+"id": "arrival",
+"es": ["Soy Brizno. Traigo cartas de la otra punta del monte. ¿Me sostenés esta un segundo? Tengo una hoja en el ala.", "Ahí está. Gracias. Esa es para Pipo. Desde que le llegó una con olor a queso, espera al cartero todos los días."],
+"en": ["I'm Brizno. I bring letters from the far side of the woods. Hold this one a second, would you? I've got a leaf stuck in my wing.", "There. Thanks. That one's for Pipo. Ever since he got a letter that smelled of cheese, he waits for the post every day."]
+}, {
+"id": "last_tree", "from": 10,
+"es": ["De chico le escribí una carta al árbol más alto del monte. La metí en un hueco como esos.", "Cada primavera me cae una bellota en el techo. Para mí que me está contestando."],
+"en": ["When I was a kit, I wrote to the tallest tree in the woods. I tucked the letter into a hollow like one of those.", "Every spring an acorn lands on my roof. I think that's my answer."]
+}, {
+"id": "far_side", "from": 6,
+"es": ["¿Oíste? Desde que cayó aquel tronco se escucha el arroyo de allá atrás.", "Anoche dormí con la ventana abierta. Hacía años que no me despertaba una rana."],
+"en": ["Hear that? Since the big trunk fell, you can hear the creek behind it.", "I slept with my window open last night. First time in years a frog woke me up."]
+}, {
+"id": "twins", "from": 5, "until": 5, "split": true,
+"es": ["Mi abuela llamaba a ese tronco «los mellizos». Apoyaba una oreja en cada mitad.", "Decía que discutían por quién daba mejor sombra. Yo siempre escuché crujidos, nomás."],
+"en": ["My gran called that trunk “the twins.” She'd put an ear to each half.", "She said they argued over which one cast the better shade. All I ever heard was creaking."]
+}, {
+"id": "workshop", "workshop": true,
+"es": ["La primera vez que escuché ese taller creí que había llegado un pájaro carpintero enorme.", "Le dejé una lombriz en el banco. Hoy a la mañana ya no estaba. No saquemos conclusiones."],
+"en": ["First time I heard that workshop, I thought a giant woodpecker had moved in.", "I left a worm on the workbench. It was gone this morning. Let's keep an open mind."]
+}, {
+"id": "pockets", "repeat": true,
+"es": ["¿Ves este bolsillo? Acá guardo las cartas que llegan sin dirección.", "La de arriba dice «al del sombrero». Hace tres inviernos que ando mirando sombreros."],
+"en": ["See this pocket? It's for letters that come without an address.", "The top one says “to the fellow with the hat.” I've been checking hats for three winters."]
+}, {
+"id": "seed", "repeat": true,
+"es": ["Si alguna vez ves una semillita como la mía entre el pasto, dejala ahí.", "La primavera pasada me quedé dormido al sol. Me desperté con dos gorriones haciendo fila."],
+"en": ["If you spot a little seed like mine in the grass, leave it be.", "I dozed off in the sun last spring. Woke up with two sparrows waiting in line."]
+}])

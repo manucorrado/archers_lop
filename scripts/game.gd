@@ -5,6 +5,9 @@ const Clearing = preload("res://scripts/clearing.gd")
 const Archer = preload("res://scripts/archer.gd")
 const Interface = preload("res://scripts/interface.gd")
 const SaveData = preload("res://scripts/save_data.gd")
+const BriznoDialogue := preload("res://scripts/brizno_dialogue.gd")
+const FirstSteps = preload("res://scripts/first_steps.gd")
+const RunLog = preload("res://scripts/run_log.gd")
 const BOWS := ["branch", "recurve", "longbow"]
 const VOLLEY_ANGLES := [0.0, -0.035, 0.035]
 const SUPPLY_JUMP_REACH := 8.0
@@ -13,6 +16,7 @@ var run := Run.new()
 var clearing := Clearing.new()
 var archer := Archer.new()
 var hud := Interface.new()
+var dialogue := BriznoDialogue.new()
 var view := "start"
 var shot_wait := 0.0
 var branch_wait := 0.0
@@ -25,6 +29,7 @@ var campaign_started := false
 var has_save := false
 var hud_wait := 0.0
 var checkpoint_due := false
+var trail_marker := FirstSteps.new()
 
 
 func _ready() -> void:
@@ -36,6 +41,11 @@ func _ready() -> void:
 	add_child(clearing)
 	add_child(archer)
 	add_child(hud)
+	add_child(dialogue)
+	dialogue.advance_requested.connect(_advance_dialogue)
+	dialogue.leave_requested.connect(_leave_dialogue)
+	trail_marker.camera = archer.camera
+	hud.layer_root.add_child(trail_marker)
 	archer.shot_requested.connect(func(): wants_shot = true)
 	archer.branch_requested.connect(func(): wants_branch = true)
 	hud.start_requested.connect(_start_campaign)
@@ -96,9 +106,16 @@ func _set_view(next: String) -> void:
 	wants_shot = false
 	wants_branch = false
 	get_tree().paused = view != "play"
-	archer.set_active(view == "play")
+	archer.set_active(view == "play", view != "dialogue")
 	_sync()
 	hud.set_view(view)
+	if view == "dialogue":
+		dialogue.display(hud.language, hud.preferences.binding_name("shop"), hud.preferences.binding_name("pause"))
+	else:
+		dialogue.hide()
+	if view == "end" and run.at_act_summary():
+		if not SaveData.update_best_times(RunLog.splits(run.observations)):
+			hud.notify("No se pudo guardar el récord local.", "Could not save the local best time.")
 
 
 func _focus_lost() -> void:
@@ -108,6 +125,20 @@ func _focus_lost() -> void:
 
 func _input(event: InputEvent) -> void:
 	if event.is_echo() or not hud.is_node_ready() or hud.is_submenu_open():
+		return
+	if view == "play" and event.is_action_pressed("shop") and clearing.sentinel.is_within_reach(archer.position):
+		get_viewport().set_input_as_handled()
+		_load_sentinel()
+		return
+	if view == "dialogue":
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and get_viewport().gui_get_hovered_control() is Button:
+			return
+		if event.is_action_pressed("pause"):
+			get_viewport().set_input_as_handled()
+			_leave_dialogue()
+		elif event.is_action_pressed("shop"):
+			get_viewport().set_input_as_handled()
+			_advance_dialogue()
 		return
 	if event.is_action_pressed("pause") and view in ["play", "shop", "gift", "pause"]:
 		get_viewport().set_input_as_handled()
@@ -121,6 +152,10 @@ func _input(event: InputEvent) -> void:
 			_set_view("play")
 		elif clearing.is_near_dog(archer.position):
 			_set_view("shop")
+		elif clearing.is_near_brizno(archer.position):
+			if dialogue.begin(run.stage, run.workshop, run.split):
+				_set_view("dialogue")
+				_save_campaign()
 		else:
 			hud.notify("Acercate a Pipo, bajo el pino de la izquierda.", "Walk up to Pipo under the pine on the left.")
 	elif view == "play":
@@ -153,6 +188,22 @@ func _equip(id: String) -> void:
 		_sync()
 
 
+func _advance_dialogue() -> void:
+	if view != "dialogue":
+		return
+	if dialogue.advance():
+		dialogue.display(hud.language, hud.preferences.binding_name("shop"), hud.preferences.binding_name("pause"))
+		_save_campaign()
+	else:
+		_leave_dialogue()
+
+
+func _leave_dialogue() -> void:
+	if view == "dialogue":
+		_resume_play()
+		_save_campaign()
+
+
 func _physics_process(delta: float) -> void:
 	if view != "play":
 		return
@@ -166,6 +217,7 @@ func _physics_process(delta: float) -> void:
 	branch_wait = maxf(0.0, branch_wait - delta)
 	recovery_wait = maxf(0.0, recovery_wait - delta)
 	_tick_flights(delta)
+	_tick_sentinel(delta)
 	if old_target != run.target_serial or old_rain != run.event_serial:
 		_sync()
 		clearing.play_encounter_cue("target" if old_target != run.target_serial else "event")
@@ -242,6 +294,14 @@ func _tick_flights(delta: float) -> void:
 func _land_shot(flight: Dictionary) -> void:
 	var milestone := _boss_milestone()
 	var balance := run.sap
+	if flight.get("source", "") == "sentinel":
+		var effective := run.damage_part(flight.damage, flight.id)
+		if effective > 0:
+			hud.show_sap_earned(run.sap - balance)
+			hud.show_damage(effective, "sentinel")
+			clearing.hit_feedback(flight.end)
+			_after_damage(milestone, false)
+		return
 	var outcome := run.manual_impact(flight.id, flight.damage, flight.weak_damage, flight.serial)
 	if not outcome.hit:
 		archer.play_cue("miss")
@@ -289,14 +349,15 @@ func _boss_milestone() -> int:
 	return 2 if run.left_hp == 0 or run.right_hp == 0 else 1
 
 
-func _after_damage(previous_milestone: int) -> void:
+func _after_damage(previous_milestone: int, personal_hit := true) -> void:
 	var milestone := _boss_milestone()
 	if run.hp == 0:
 		break_wait = 0.65
 		archer.play_cue("break")
 		clearing.break_feedback()
 	else:
-		archer.play_cue("hit")
+		if personal_hit:
+			archer.play_cue("hit")
 		if run.core_needs_hit() and milestone != previous_milestone:
 			hud.notify("¡Falta el punto encendido! Disparale o golpeá su raíz con la rama.",
 				"Hit the glowing hollow, or strike its root with your branch.")
@@ -428,6 +489,8 @@ func _change_upgrade(id: String, refund: bool) -> void:
 		return
 	if id == "workshop":
 		clearing.set_workshop(run.workshop)
+	if id == Run.Paths.SENTINEL_NODE and refund:
+		clearing.set_piles(0, run.knot_stock)
 	archer.set_bow(run.bow)
 	archer.play_cue("buy")
 	_sync()
@@ -467,16 +530,24 @@ func _sync() -> void:
 	archer.set_speed_multiplier(run.speed_multiplier())
 	var state := run.snapshot()
 	state.near_dog = clearing.is_near_dog(archer.position)
+	state.near_brizno = clearing.is_near_brizno(archer.position)
 	state.has_save = has_save
+	var target := run.sentinel_target()
+	clearing.sentinel.sync_state(state.sentinel_owned, run.sentinel_ammo, not target.is_empty(), clearing.target_center(target))
+	state.near_sentinel = clearing.sentinel.is_within_reach(archer.position)
 	clearing.sync_encounter(state)
 	hud.refresh(state)
+	var goal := {}
+	if view == "play" and hud.options.first_steps:
+		goal = FirstSteps.objective(state, archer.position, clearing.target_center("body"))
+	trail_marker.update_goal(goal, hud.language)
 
 
 func _save_campaign() -> bool:
 	if not campaign_started:
 		return false
 	run.sample_session(Time.get_ticks_usec())
-	var data := {"run": run.save_state(), "pose": archer.save_pose(),
+	var data := {"run": run.save_state(), "pose": archer.save_pose(), "brizno": dialogue.bookmark(),
 		"shot_wait": shot_wait, "branch_wait": branch_wait, "recovery_wait": recovery_wait,
 		"break_wait": break_wait, "in_flight": in_flight.duplicate(true)}
 	if not SaveData.store_campaign(data):
@@ -508,11 +579,15 @@ func _resume_campaign() -> void:
 	break_wait = data.break_wait
 	in_flight = data.in_flight
 	archer.restore_pose(data.pose)
+	var story: Variant = data.get("brizno", {})
+	dialogue.restore(story)
 	for flight: Dictionary in in_flight:
 		archer.restore_flight(flight.origin, flight.end, flight.duration, flight.remaining)
 	_redraw_world()
 	if not run.gift_offer.is_empty() or run.at_act_summary():
 		_resume_play()
+	elif story is Dictionary and story.get("open") == true and not dialogue.topic.is_empty() and clearing.is_near_brizno(archer.position):
+		_set_view("dialogue")
 	else:
 		_set_view("pause")
 
@@ -527,3 +602,34 @@ func _quit() -> void:
 	if campaign_started and not _save_campaign():
 		return
 	get_tree().quit()
+
+
+func _load_sentinel() -> void:
+	if run.sentinel_load_size() == 0:
+		if run.sentinel_ammo == Run.SENTINEL_CAPACITY:
+			hud.notify("El depósito de la ballesta está lleno.", "The crossbow magazine is full.")
+		else:
+			hud.notify("Reservás cuatro flechas. Recogé más para cargar la ballesta.", "You keep four arrows. Gather more to load the crossbow.")
+		return
+	var previous := run.save_state()
+	var amount := run.load_sentinel()
+	if not _save_campaign():
+		run.restore_state(previous)
+		return
+	clearing.sentinel.receive()
+	_sync()
+	hud.notify("Cargaste %d flechas en la ballesta." % amount if amount != 1 else "Cargaste una flecha en la ballesta.",
+		"Loaded %d arrows into the crossbow." % amount if amount != 1 else "Loaded one arrow into the crossbow.")
+
+
+func _tick_sentinel(delta: float) -> void:
+	var id := run.tick_sentinel(delta)
+	if id.is_empty():
+		return
+	var endpoint := clearing.target_center(id)
+	var origin := clearing.sentinel.release(endpoint, run.sentinel_ammo == 0)
+	var duration := maxf(0.07, origin.distance_to(endpoint) / 28.0)
+	in_flight.append({"source": "sentinel", "stage": run.stage, "id": id, "origin": origin,
+		"end": endpoint, "duration": duration, "remaining": duration, "damage": roundi(8.0 * Run.POWER[run.stage - 1])})
+	archer.restore_flight(origin, endpoint, duration, duration)
+	_sync()

@@ -82,8 +82,9 @@ func _ready() -> void:
 	_pose(0.0)
 
 
-func set_active(enabled: bool) -> void:
+func set_active(enabled: bool, bow_visible := true) -> void:
 	_active = enabled
+	_view.visible = bow_visible
 	_press_pending = false
 	_branch_pending = false
 	_jump_pending = false

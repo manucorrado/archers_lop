@@ -3,6 +3,7 @@ extends RefCounted
 
 const SCHEMA := 1
 const SLOTS := ["user://campaign-a.save", "user://campaign-b.save"]
+const RECORD_SLOTS := ["user://run-records-a.save", "user://run-records-b.save"]
 const MAGIC := "ARCHSAVE"
 const DIGEST_SIZE := 32
 const MAX_BYTES := 1024 * 1024
@@ -41,9 +42,9 @@ static func _read_slot(path: String) -> Dictionary:
 	return {"generation": contents[1], "campaign": contents[2]}
 
 
-static func _latest() -> Dictionary:
+static func _latest(slots: Array = SLOTS) -> Dictionary:
 	var latest := {}
-	for slot: String in SLOTS:
+	for slot: String in slots:
 		var state := _read_slot(slot)
 		if state.get("generation", 0) > latest.get("generation", 0):
 			latest = state
@@ -60,10 +61,28 @@ static func load_campaign() -> Dictionary:
 
 
 static func store_campaign(data: Dictionary) -> bool:
+	return _store(data, SLOTS)
+
+
+static func best_times() -> Dictionary:
+	return _latest(RECORD_SLOTS).get("campaign", {})
+
+
+static func update_best_times(times: Dictionary) -> bool:
+	var prior := best_times()
+	var updated := prior.duplicate()
+	for id: String in times:
+		var seconds := float(times[id])
+		if seconds > 0.0 and is_finite(seconds) and seconds < float(prior.get(id, INF)):
+			updated[id] = seconds
+	return updated == prior or _store(updated, RECORD_SLOTS)
+
+
+static func _store(data: Dictionary, slots: Array) -> bool:
 	if data.is_empty():
 		return false
-	var previous := _latest()
-	var slot: String = SLOTS[1] if previous.get("slot", "") == SLOTS[0] else SLOTS[0]
+	var previous := _latest(slots)
+	var slot: String = slots[1] if previous.get("slot", "") == slots[0] else slots[0]
 	var bytes := var_to_bytes([SCHEMA, int(previous.get("generation", 0)) + 1, data])
 	if bytes.is_empty() or bytes.size() > MAX_BYTES:
 		return false

@@ -34,11 +34,14 @@ En los tramos intermedios, cada vértice es una compra de un nivel. Cuanto más 
 |---|---|---|---|
 | Punta reforzada | 31 vértices | 21–1.071 por vértice | Suma 1 al daño de la flecha antes de aplicar los multiplicadores. |
 | Suelta ágil | 36 vértices | 45–933 por vértice | Suma un 2 % de la cadencia base del arco. |
-| Engranaje del taller | 26 vértices | 45–686 por vértice | El taller produce 0,025 flechas más por segundo. |
+| Engranaje del taller | 25 vértices | 45–686 por vértice | El taller produce 0,025 flechas más por segundo. |
+| Ballesta del claro | Después de los cuatro engranajes que bajan desde la Rueda hacia el extremo derecho de la flecha | 235 | Instala una ballesta a la derecha del sendero y suma otras 0,025 flechas/s al taller. |
 | Potencia multiplicada | Extremo de la rama que pasa por Golpe crítico | 390, 820, 1.460 | Cada nivel multiplica el daño que ya tiene la flecha por 1,2. Los tres juntos aplican ×1,728. |
 | Disparo adicional | Después del arco largo | 260, 320, 420, 550, 720, 930, 1.210, 1.560 | Suma un disparo por segundo por nivel, para cualquiera de los tres arcos. |
 
 Al devolver un nivel conservás las otras compras. Para comprar otro nivel vuelven a contar los requisitos que tengas en ese momento. Los arcos comparten munición. Devolver capacidad con el carcaj lleno te deja gastar las flechas que ya cargaste. Los atados en el aire y en el suelo se conservan si devolvés el taller.
+
+**Cargar la ballesta.** Acercate al depósito y apretá **E**. Cada toque pasa hasta ocho flechas, deja cuatro en el carcaj y respeta las doce plazas del depósito. La banderita baja indica que está vacío. La ballesta dispara una flecha cada dos segundos y hace ocho de daño base, multiplicados por la potencia del blanco. Sus tiros pagan savia por el daño efectivo. En el quinto blanco apunta a una mitad viva y en el décimo espera cuando hace falta acertar a la cavidad encendida. Si devolvés la mejora, recuperás las flechas que entran en el carcaj y el resto queda al pie del tronco.
 
 ## Ritmo y prueba de juego
 
@@ -50,4 +53,4 @@ En una prueba nueva, anotá el minuto en que encontraste al perro, el momento en
 
 ## Qué queda para después
 
-El [catálogo editable](catalogo-de-mejoras-potenciales.docx) conserva las 65 fichas de ideas y el orden de trabajo propuesto para las nuevas familias. Quedan para diseñar la frecuencia de blancos opcionales, los ecos de disparos, la quemadura con sus tres especializaciones, los tiros en el aire y los giros de 360°, la ballesta fija que abastecés con flechas y el arco láser de fin de juego.
+El [catálogo editable](catalogo-de-mejoras-potenciales.docx) conserva las 65 fichas de ideas y el orden de trabajo propuesto para las nuevas familias. Quedan para diseñar la frecuencia de blancos opcionales, los ecos de disparos, la quemadura con sus tres especializaciones, los tiros en el aire y los giros de 360°, las mejoras de la ballesta y el arco láser de fin de juego.

@@ -3,6 +3,7 @@ extends Node3D
 const TARGET_POSITION := Vector3(0.0, 1.65, -5.0)
 const WORKSHOP_PICKUP := Vector3(-6.6, 0.0, 0.15)
 const DOG_POSITION := Vector3(-9.55, 0, 1.28)
+const BRIZNO_POSITION := Vector3(6.7, 0, -0.65)
 const ARENA_HALF_WIDTH := 11.70
 const ARENA_HALF_LENGTH := 13.55
 const DOG_REACH := 1.9
@@ -32,10 +33,14 @@ const STONE := Color("#788176")
 
 const Blocks = preload("res://scripts/voxel_blocks.gd")
 const DOG = preload("res://assets/ovejero.tscn")
+const BRIZNO := preload("res://assets/brizno.tscn")
+const Journal := preload("res://scripts/field_journal.gd")
 
 var _cube := BoxMesh.new()
+var sentinel := preload("res://scripts/sentinel.gd").new()
 var _dog = DOG.instantiate()
 var _dog_sign := Sprite3D.new()
+var _brizno_sign := Sprite3D.new()
 var _sign_check := 0.0
 var _rng := RandomNumberGenerator.new()
 var _knot := StaticBody3D.new()
@@ -82,7 +87,12 @@ func _ready() -> void:
 	_dog.position = DOG_POSITION
 	_dog.rotation.y = 0.05
 	add_child(_dog)
-	_add_dog_name()
+	_nameplate(_dog_sign, "Pipo", DOG_POSITION + Vector3.UP * 1.48)
+	var courier := BRIZNO.instantiate() as Node3D
+	courier.position = BRIZNO_POSITION
+	courier.rotation.y = -0.86
+	add_child(courier)
+	_nameplate(_brizno_sign, "Brizno", BRIZNO_POSITION + Vector3.UP * 1.62)
 	_make_workshop()
 	_prepare_pickup_glow()
 	for landing in WORKSHOP_LANDINGS:
@@ -100,6 +110,8 @@ func _ready() -> void:
 	set_stage(1)
 	set_workshop(false)
 	set_piles(0, 0)
+	add_child(sentinel)
+	sentinel.build(_cube, preload("res://scripts/run.gd").SENTINEL_CAPACITY)
 
 func _setup_light() -> void:
 	var sky_colors := ProceduralSkyMaterial.new()
@@ -281,44 +293,46 @@ func _make_collisions() -> void:
 		_collider(limits, Vector3(0, 1.7, side * ARENA_HALF_LENGTH), Vector3(2 * ARENA_HALF_WIDTH + 0.55, 3.4, 0.65))
 	_collider(limits, Vector3(2.48, 0.5, -4.1), Vector3(0.68, 1.0, 0.64))
 	_collider(limits, DOG_POSITION + Vector3(0, 0.41, 0), Vector3(0.42, 0.82, 0.52))
+	_collider(limits, BRIZNO_POSITION + Vector3.UP * 0.48, Vector3(0.48, 0.96, 0.44))
 	for side in [-1, 1]:
 		_collider(limits, Vector3(8.0 * side, 1.6, -8.2), Vector3(0.5, 3.2, 0.5))
 
 func is_near_dog(feet: Vector3) -> bool:
 	return feet.distance_squared_to(DOG_POSITION) <= DOG_REACH * DOG_REACH
 
-func _add_dog_name() -> void:
+func is_near_brizno(feet: Vector3) -> bool:
+	return feet.distance_squared_to(BRIZNO_POSITION) <= 2.0 * 2.0
+
+func _nameplate(sign_sprite: Sprite3D, caption: String, where: Vector3) -> void:
 	var surface := SubViewport.new()
-	surface.size = Vector2i(116, 44)
+	surface.size = Vector2i(116 if caption == "Pipo" else 146, 44)
 	surface.transparent_bg = true
 	surface.render_target_update_mode = SubViewport.UPDATE_ONCE
 	add_child(surface)
-	var box := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("#192d28ed")
-	style.border_color = Color("#bcab84")
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(7)
-	box.add_theme_stylebox_override("panel", style)
+	var box := Journal.sheet(7, 1)
 	box.size = Vector2(surface.size)
 	surface.add_child(box)
 	var nameplate := Label.new()
 	nameplate.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	nameplate.text = "Pipo"
+	nameplate.text = caption
 	nameplate.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	nameplate.add_theme_font_size_override("font_size", 27)
-	nameplate.add_theme_color_override("font_color", Color("#fff4dc"))
+	nameplate.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var face := Journal.serif()
+	face.font_italic = true
+	nameplate.add_theme_font_override("font", face)
+	nameplate.add_theme_font_size_override("font_size", 30)
+	nameplate.add_theme_color_override("font_color", Journal.INK)
 	box.add_child(nameplate)
-	_dog_sign.name = "Pipo"
-	_dog_sign.texture = surface.get_texture()
-	_dog_sign.fixed_size = true
-	_dog_sign.pixel_size = 0.00085
-	_dog_sign.visibility_range_end = 20.0
-	_dog_sign.no_depth_test = true
-	_dog_sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_dog_sign.position = DOG_POSITION + Vector3.UP * 1.48
-	_dog_sign.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(_dog_sign)
+	sign_sprite.name = caption if caption == "Pipo" else caption + " · nombre"
+	sign_sprite.texture = surface.get_texture()
+	sign_sprite.fixed_size = true
+	sign_sprite.pixel_size = 0.00085
+	sign_sprite.visibility_range_end = 20.0
+	sign_sprite.no_depth_test = true
+	sign_sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	sign_sprite.position = where
+	sign_sprite.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(sign_sprite)
 
 func _physics_process(delta: float) -> void:
 	_sign_check -= delta
@@ -328,14 +342,17 @@ func _physics_process(delta: float) -> void:
 	var camera := get_viewport().get_camera_3d()
 	if camera == null:
 		return
-	var head := DOG_POSITION + Vector3.UP * 0.95
-	_dog_sign.visible = camera.global_position.distance_squared_to(head) < 400.0 and not camera.is_position_behind(head)
-	if _dog_sign.visible:
+	_sign_visibility(camera, _dog_sign, DOG_POSITION + Vector3.UP * 0.95)
+	_sign_visibility(camera, _brizno_sign, BRIZNO_POSITION + Vector3.UP * 1.20)
+
+func _sign_visibility(camera: Camera3D, sign_sprite: Sprite3D, head: Vector3) -> void:
+	sign_sprite.visible = camera.global_position.distance_squared_to(head) < 400.0 and not camera.is_position_behind(head)
+	if sign_sprite.visible:
 		var sight := PhysicsRayQueryParameters3D.create(camera.global_position, head)
 		var player := camera.get_parent() as CollisionObject3D
 		if player:
 			sight.exclude = [player.get_rid()]
-		_dog_sign.visible = get_world_3d().direct_space_state.intersect_ray(sight).is_empty()
+		sign_sprite.visible = get_world_3d().direct_space_state.intersect_ray(sight).is_empty()
 
 func pet_dog() -> void:
 	_dog.pet()
@@ -648,6 +665,7 @@ func sync_encounter(state: Dictionary) -> void:
 func apply_settings(options: Dictionary) -> void:
 	_flashes = clampf(options.get("flashes", 1.0), 0, 1)
 	_world_volume = clampf(options.get("volume_world", 1.0), 0, 1)
+	sentinel.set_volume(_world_volume)
 	for source: AudioStreamPlayer3D in _audio_sources.values():
 		source.volume_db = -7 + linear_to_db(maxf(_world_volume, 0.00001))
 

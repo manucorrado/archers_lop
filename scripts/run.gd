@@ -11,6 +11,9 @@ const WORKSHOP_RATE := 1.25
 const WORKSHOP_BATCH := 3
 const WORKSHOP_FLIGHT := 0.8
 const LANDING_COUNT := 4
+const SENTINEL_CAPACITY := 12
+const SENTINEL_INTERVAL := 2.0
+const SENTINEL_RESERVE := 4
 const Paths = preload("res://scripts/upgrade_paths.gd")
 static var TREE := Paths.build_tree()
 const FIRST_GIFTS := ["D01", "D04", "D08"]
@@ -54,6 +57,8 @@ var workshop_piles := [0, 0, 0, 0]
 var workshop_buffer := 0
 var workshop_flights: Array = []
 var batches_launched := 0
+var sentinel_ammo := 0
+var sentinel_wait := SENTINEL_INTERVAL
 var knot_stock := 0
 var workshop_fraction := 0.0
 var elapsed := 0.0
@@ -186,7 +191,8 @@ func pickup_radius() -> float:
 
 
 func production_rate() -> float:
-	var base := WORKSHOP_RATE * (1.0 + 0.2 * rank_of("wheel")) + 0.025 * _family_ranks("wheel_step")
+	var gears := _family_ranks("wheel_step") + rank_of(Paths.SENTINEL_NODE)
+	var base := WORKSHOP_RATE * (1.0 + 0.2 * rank_of("wheel")) + 0.025 * gears
 	return base * (1.3 if has_gift("D03") else 1.0)
 
 
@@ -214,6 +220,7 @@ func _rank_value(id: String, rank: int) -> float:
 		"rate_flat", "damage_step": return rank
 		"rate_step": return 2 * rank
 		"wheel_step": return 0.025 * rank
+		"sentinel": return SENTINEL_CAPACITY * rank
 		"weak": return 1.5 + 0.5 * rank
 		"recurve": return 1.0 if rank == 0 else 2.5
 		"workshop": return WORKSHOP_RATE * rank * (1.0 + 0.2 * rank_of("wheel"))
@@ -298,7 +305,51 @@ func refund(id: String) -> bool:
 	if id == "combo":
 		combo = 1.0
 		combo_grace = 0.0
+	if id == Paths.SENTINEL_NODE:
+		var carried := mini(sentinel_ammo, maxi(0, capacity() - arrows))
+		arrows += carried
+		knot_stock += sentinel_ammo - carried
+		sentinel_ammo = 0
+		sentinel_wait = SENTINEL_INTERVAL
 	return true
+
+
+func sentinel_load_size() -> int:
+	if rank_of(Paths.SENTINEL_NODE) == 0:
+		return 0
+	return mini(8, mini(SENTINEL_CAPACITY - sentinel_ammo, maxi(0, arrows - SENTINEL_RESERVE)))
+
+
+func load_sentinel() -> int:
+	var amount := sentinel_load_size()
+	if amount > 0:
+		arrows -= amount
+		sentinel_ammo += amount
+		mark("first_sentinel_load")
+	return amount
+
+
+func sentinel_target() -> String:
+	if hp <= 0 or core_needs_hit():
+		return ""
+	if split:
+		return "right" if right_hp > 0 else "left"
+	return "body"
+
+
+func tick_sentinel(delta: float) -> String:
+	if sentinel_ammo == 0 or rank_of(Paths.SENTINEL_NODE) == 0:
+		return ""
+	var target := sentinel_target()
+	if target.is_empty():
+		return ""
+	sentinel_wait = maxf(0.0, sentinel_wait - delta)
+	if sentinel_wait > 0:
+		return ""
+	sentinel_wait = SENTINEL_INTERVAL
+	sentinel_ammo -= 1
+	mark("first_sentinel_shot")
+	return target
 
 
 func equip(id: String) -> bool:
@@ -623,6 +674,7 @@ func choose_gift(id: String) -> bool:
 
 func save_state() -> Dictionary:
 	var data := {"session_elapsed_us": session_elapsed_us, "sap_remainder": sap_remainder,
+		"sentinel_ammo": sentinel_ammo, "sentinel_wait": sentinel_wait,
 		"paid_prices": paid_prices, "steady_count": steady_count, "last_volley": last_volley,
 		"session_observations": session_observations, "at_workshop": _at_workshop,
 		"workshop_piles": workshop_piles, "workshop_flights": workshop_flights, "workshop_buffer": workshop_buffer,
@@ -689,6 +741,14 @@ func restore_state(data: Dictionary) -> bool:
 	if data.get("core_phase", 0) not in [0, 1, 2] or not data.get("core_hit", false) is bool or not _valid_workshop_state(data):
 		return false
 	var history = data.get("paid_prices", {})
+	var saved_ammo = data.get("sentinel_ammo", 0)
+	var saved_wait = data.get("sentinel_wait", SENTINEL_INTERVAL)
+	if not saved_ammo is int or saved_ammo < 0 or saved_ammo > SENTINEL_CAPACITY:
+		return false
+	if saved_ammo > 0 and data.ranks.get(Paths.SENTINEL_NODE, 0) == 0:
+		return false
+	if not saved_wait is float or not is_finite(saved_wait) or saved_wait < 0 or saved_wait > SENTINEL_INTERVAL:
+		return false
 	var saved_remainder = data.get("sap_remainder", 0)
 	if not saved_remainder is int or saved_remainder < 0 or saved_remainder >= DAMAGE_PER_SAP:
 		return false
@@ -712,6 +772,8 @@ func restore_state(data: Dictionary) -> bool:
 	for field: String in SAVE_FIELDS:
 		set(field, data[field])
 	sap_remainder = saved_remainder
+	sentinel_ammo = saved_ammo
+	sentinel_wait = saved_wait
 	if rank_of("combo") == 0:
 		combo = 1.0
 		combo_grace = 0.0
@@ -740,6 +802,8 @@ func restore_state(data: Dictionary) -> bool:
 
 func snapshot() -> Dictionary:
 	return {"stage": stage, "hp": hp, "max_hp": max_hp(), "sap": sap, "arrows": arrows,
+		"sentinel_owned": rank_of(Paths.SENTINEL_NODE) > 0, "sentinel_ammo": sentinel_ammo,
+		"sentinel_capacity": SENTINEL_CAPACITY, "sentinel_load_size": sentinel_load_size(),
 		"can_continue_act": at_act_summary() and stage == 5, "first_gift": first_gift, "core_phase": core_phase,
 		"core_needs_hit": core_needs_hit(), "core_hit": core_hit,
 		"capacity": capacity(), "damage": damage(), "damage_rank": damage_rank,

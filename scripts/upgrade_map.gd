@@ -1,11 +1,12 @@
 extends Control
 ## Map sockets and their purchase requirements share a single set of vertices.
 
+const Journal := preload("res://scripts/field_journal.gd")
 const Icons := preload("res://scripts/upgrade_icons.gd")
 const Paths := preload("res://scripts/upgrade_paths.gd")
-const LATENT := Color("#455a4f")
-const OPEN := Color("#92a990")
-const GROWN := Color("#dfb77a")
+const LATENT := Color("#b5b39d")
+const OPEN := Color("#7a866f")
+const GROWN := Color("#38553e")
 const MAP_CENTER := Vector2(493.5, 474)
 const MAP_SPAN := Vector2(822, 761)
 const MIN_ZOOM := 0.75
@@ -13,6 +14,7 @@ const MAX_ZOOM := 5.0
 
 class Socket extends Button:
 	var symbol: Texture2D
+	var stamped_symbol: Texture2D
 	var rank := 0
 	var ranks := 1
 	var met := false
@@ -22,26 +24,26 @@ class Socket extends Button:
 	func _draw() -> void:
 		var c := size * 0.5
 		var radius := c.x - 2
-		var outline := Color("#6c8173")
-		var fill := Color("#263931")
+		var fill := Journal.PAPER
+		var outline := Color("#929a82")
 		if rank > 0:
-			outline = Color("#dbb574")
-			fill = Color("#514539")
+			fill = Journal.INK
+			outline = Journal.INK
 		elif affordable:
-			outline = Color("#d0dfbb")
-			fill = Color("#3b5645")
+			fill = Color("#fffae8")
+			outline = Journal.INK
 		elif met:
-			outline = Color("#91a78c")
-		if inspected or has_focus() or is_hovered():
-			draw_circle(c, radius + 1.5, Color("#e9d5a7"), false, 1.2, true)
+			outline = Journal.MUTED
 		draw_circle(c, radius, fill, true, -1, true)
-		draw_circle(c, radius, outline, false, 1.1, true)
+		draw_circle(c, radius, outline, false, 1.4, true)
+		if inspected or has_focus() or is_hovered():
+			draw_circle(c, radius + 1.5, Color("#956730"), false, 1.6, true)
 		if rank > 0 and ranks > 1 and radius >= 7:
 			draw_arc(c, radius - 2, -PI * 0.5, -PI * 0.5 + TAU * rank / ranks,
-				36, Color("#f5ca80"), 1.6, true)
-		var icon_size := Vector2.ONE * floorf(radius * 1.40)
-		var tint := Color.WHITE if met or rank > 0 else Color("#91a697")
-		draw_texture_rect(symbol, Rect2((c - icon_size * 0.5).round(), icon_size), false, tint)
+				36, Color("#ebc078"), 1.3, true)
+		var icon_size := Vector2.ONE * floorf(radius * 1.50)
+		var tint := Color.WHITE if met or rank > 0 else Color(1, 1, 1, 0.68)
+		draw_texture_rect(stamped_symbol if rank > 0 else symbol, Rect2((c - icon_size * 0.5).round(), icon_size), false, tint)
 
 var buttons: Dictionary = {}
 var parents: Dictionary = {}
@@ -83,12 +85,13 @@ func _zoom_button(caption: String, es: String, en: String, action: Callable) -> 
 	button.accessibility_name = button.tooltip_text
 	button.custom_minimum_size = Vector2(52 if caption.contains("%") else 30, 26)
 	button.add_theme_font_size_override("font_size", 13)
-	button.add_theme_color_override("font_color", Color("#e6e0c6"))
+	for state in ["font_color", "font_focus_color", "font_pressed_color", "font_hover_color"]:
+		button.add_theme_color_override(state, Journal.INK)
 	for state in ["normal", "hover", "pressed"]:
 		var box := StyleBoxFlat.new()
-		box.bg_color = Color("#243b30") if state == "normal" else Color("#3f5844")
+		box.bg_color = Journal.PAPER if state == "normal" else Journal.CANVAS
 		box.set_border_width_all(1)
-		box.border_color = Color("#627365")
+		box.border_color = Journal.RULE
 		button.add_theme_stylebox_override(state, box)
 	button.pressed.connect(action)
 	_toolbar.add_child(button)
@@ -97,8 +100,9 @@ func _zoom_button(caption: String, es: String, en: String, action: Callable) -> 
 func add_socket(id: String) -> Socket:
 	var node := Socket.new()
 	node.symbol = Icons.texture(id)
+	node.stamped_symbol = Icons.texture(id, true)
 	node.flat = true
-	node.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	node.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	node.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	node.focus_mode = Control.FOCUS_ALL
 	for style in ["normal", "hover", "focus", "pressed", "hover_pressed"]:
@@ -125,9 +129,9 @@ func arrange(new_offers: Dictionary) -> void:
 	# On a first visit the whole bow would reduce the five central emblems to a
 	# tiny cluster. Frame the grip once and keep the camera still during purchases.
 	if revealed.size() <= 10:
-		zoom = 2.0
+		zoom = 3.0
 		pan = (MAP_CENTER - Paths.position_of("damage")) * _scale_factor()
-		_zoom_value.text = "200 %"
+		_zoom_value.text = "300 %"
 	_place_buttons()
 
 func sync_visibility() -> void:
@@ -269,8 +273,6 @@ func _edge(from: String, to: String, tint: Color, width: float) -> void:
 	draw_line(_point(Paths.position_of(from)), _point(Paths.position_of(to)), tint, width, true)
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color("#172a24"))
-	draw_rect(Rect2(Vector2.ZERO, size), Color("#46594b"), false, 1.0)
 	for id: String in revealed:
 		var parent: String = parents[id]
 		if not parent.is_empty():

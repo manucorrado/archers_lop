@@ -3,6 +3,7 @@ extends SceneTree
 
 const Game := preload("res://scripts/game.gd")
 const Clearing := preload("res://scripts/clearing.gd")
+const Save := preload("res://scripts/save_data.gd")
 var game: Game
 
 
@@ -36,6 +37,8 @@ func _run() -> void:
 	await _click(_button_named("Volver"))
 	await _click(root.gui_get_focus_owner() as Button)
 	if not _expect(game.view == "play", "The start button enters the clearing"):
+		return
+	if not _expect(game.trail_marker.kind == "wood", "The first waymark points to the target"):
 		return
 	await _frames(12)
 	var floor_y := game.archer.position.y
@@ -229,6 +232,14 @@ func _run() -> void:
 			"Playtest timings are available from the final result"):
 		return
 	await _click(_button_named("Volver al resumen"))
+	await _click(_button_named("Registro de la vuelta"))
+	if not _expect(game.hud.submenu == "run_log" and Save.best_times().has("act1"), "The journal records the first boss split"):
+		return
+	await _click(_button_named("English"))
+	if not _expect(_button_named("Back to results") != null, "The run log switches language with the notebook"):
+		return
+	await _click(_button_named("Español"))
+	await _tap(KEY_ESCAPE)
 	await _click(_button_named("Continuar al blanco 6"))
 	if not _expect(game.view == "play" and game.run.stage == 6 and game.run.first_gift == offer[0],
 			"Continuing enters the second act with the saved reward"):
@@ -296,6 +307,8 @@ func _run() -> void:
 	if not _expect(game.view == "play" and game.run.stage == 1 and game.run.hp == 160
 			and game.run.sap == 0 and game.run.arrows == 24 and not game.run.workshop and game.run.shots == 0,
 			"Replay resets position in the campaign, currency, arrows and purchases"):
+		return
+	if not _expect(Save.best_times().has_all(["act1", "act2", "total"]), "Replay preserves the local records"):
 		return
 	if not await _walk_to(Vector2(10.6, 12.1)):
 		return

@@ -38,6 +38,7 @@ const KEY_NAMES := {
 const DEFAULTS := {
 	"sensitivity": 1.0, "fov": 70.0, "zoom": 1.0, "shake": 0.65, "flashes": 0.65,
 	"reticle_size": 1.0, "damage_opacity": 0.9, "group_damage": true, "toggle_fire": false,
+	"first_steps": true,
 	"volume_bow": 0.85, "volume_world": 0.85, "volume_ui": 0.8,
 }
 

@@ -117,8 +117,9 @@ La **Diana de veta** aparece sobre el nudo desde N2 y recompensa precisión. El 
 
 | Pantalla o estado | Requisito de producto |
 |---|---|
-| HUD | Savia arriba a la izquierda. Nudo e integridad en el borde superior central. Combo y aviso de decaimiento a la derecha. Arco y carcaj abajo. La tolva del centinela muestra su nivel en el mundo y en contexto de interacción. |
-| Árbol | En la demo el dibujo se arma tramo a tramo con 112 nodos y 140 niveles. La rueda acerca o aleja el mapa. Cada nodo indica nivel, costo, próximo efecto y compras previas necesarias. |
+| HUD · Cuaderno de campo | La ficha del blanco y su vida se leen en el margen superior izquierdo. El cuaderno inferior reúne arco, carcaj y savia. La guía opcional del primer recorrido marca el destino en el claro y se retira tras disparar con las primeras flechas recogidas del taller. El depósito de la ballesta muestra su carga en el mundo y al acercarse. |
+| Árbol | El cuaderno se abre en dos páginas. La izquierda dibuja el arco con 112 nodos y 140 niveles y admite zoom con la rueda. La ficha de la derecha muestra nivel, costo, próximo efecto y compras necesarias. |
+| Charlas del claro | Brizno, un mensajero alado, tiene relatos cortos en español e inglés que se habilitan según el estado del claro. Se le habla de cerca, con la misma tecla de interacción que a Pipo. |
 | Dones | Tres opciones legibles con efecto, unidad y sistema beneficiado. Pausa sin cuenta atrás. Confirmar una opción aplica el efecto una vez. |
 | Lectura y confort | Retícula configurable, números de daño agrupables con opacidad hasta cero, temblor y destellos reducibles, sensibilidad, campo de visión, volumen por familia y control reasignable. Cada aviso importante tiene forma o sonido además de color. |
 | Guardado local | Una campaña activa y récords locales por separado. Guardado manual desde pausa, automático en compras, elecciones, cambios de nudo y al salir normalmente. Guardar también dentro de un jefe mediante pausa. Escritura atómica, copia anterior recuperable y versión de esquema. |
@@ -135,7 +136,7 @@ La **Diana de veta** aparece sobre el nudo desde N2 y recompensa precisión. El 
 |---|---|---|
 | Prototipo local · N1–3 | Arco de rama, impactos, compra de daño, primer taller, pilas, recogida y recuperación con la rama. Menús en español e inglés y primer pino editable desde el Inspector de Godot. | ¿Qué se siente al disparar y cuánto tarda el jugador en encontrar su primera producción de flechas? |
 | Corte vertical · N1–5 | Primer acto completo, recurvo, primer fenómeno, un suceso, primer jefe y primera oferta. Un claro con calidad visual representativa. | ¿Se entienden el disparo, la compra, la transformación del claro y la elección sin un tutorial largo? |
-| Demo · blancos 1–10 | Dos actos, dos jefes, dos ofertas, tres arcos, taller, perro y árbol de mejoras con reembolsos | ¿Se llega al décimo blanco con casi todo el árbol comprado? ¿Resulta divertido disparar ráfagas y salir a buscar flechas? |
+| Demo · blancos 1–10 | Dos actos, dos jefes, tres arcos, taller, ballesta abastecible, Pipo, Brizno y árbol de mejoras con reembolsos. El registro guarda marcas por acto y por vuelta. | ¿Se llega al décimo blanco con casi todo el árbol comprado? ¿Se entiende cuándo conviene repartir las flechas entre el carcaj y la ballesta? |
 | Campaña completa · N1–30 | Seis jefes, seis elecciones, cuatro arcos y rama, 77 rangos, 24 dones, seis talleres, doce centinelas, seis sucesos y los seis fenómenos del catálogo | ¿El último acto paga la escalada, cierra la historia mecánica y admite una segunda vuelta más rápida? |
 
 La entrega base es offline y finita. Quedan fuera multijugador, tabla pública, prestigio infinito, editor para jugadores, mundo abierto, móvil y destrucción voxel bloque por bloque. El panel visual de assets es una herramienta interna para que quien desarrolla el juego pueda generar y previsualizar variantes directamente. El primer caso es el pino. El bosque se construye una vez con zócalos fijos y se transforma delante del jugador.

@@ -155,7 +155,13 @@ const COSTS := {
 	"damage_mult": [390, 820, 1460], "rate_flat": [260, 320, 420, 550, 720, 930, 1210, 1560],
 }
 
+# Upgrading this existing bearing also mounts a crossbow. Its saved ownership,
+# price and production bonus survive the move from the earlier workshop tree.
+const SENTINEL_NODE := "wheel_step_05"
+
 static func family(id: String) -> String:
+	if id == SENTINEL_NODE:
+		return "sentinel"
 	var suffix := id.find("_step_")
 	return id.left(suffix + 5) if suffix >= 0 else id
 
