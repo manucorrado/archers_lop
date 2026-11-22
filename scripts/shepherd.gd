@@ -16,6 +16,8 @@ var _head := Node3D.new()
 var _tail := Node3D.new()
 var _time := 0.0
 var _happy := 0.0
+var _delight := 0.0
+var _wag_phase := 0.0
 
 func _ready() -> void:
 	var cube := BoxMesh.new()
@@ -87,8 +89,9 @@ func _process(delta: float) -> void:
 		return
 	_time = fmod(_time + delta, TAU * 40.0)
 	_happy = maxf(0, _happy - delta)
-	var delight := smoothstep(0, 1.2, _happy)
-	_tail.rotation.y = sin(_time * lerpf(2.0, 13.0, delight)) * lerpf(0.11, 0.69, delight)
-	_tail.rotation.x = -0.36 * delight
-	_head.rotation.x = 0.035 * sin(_time * 1.5) - delight * 0.13
-	_head.rotation.z = 0.022 * sin(_time * 0.75) + delight * 0.18
+	_delight = move_toward(_delight, smoothstep(0, 1.2, _happy), 4.5 * delta)
+	_wag_phase = fmod(_wag_phase + delta * lerpf(2.0, 13.0, _delight), TAU)
+	_tail.rotation.y = sin(_wag_phase) * lerpf(0.11, 0.69, _delight)
+	_tail.rotation.x = -0.36 * _delight
+	_head.rotation.x = 0.035 * sin(_time * 1.5) - _delight * 0.13
+	_head.rotation.z = 0.022 * sin(_time * 0.75) + _delight * 0.18

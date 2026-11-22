@@ -13,25 +13,24 @@ func _initialize() -> void:
 		return
 	var run := Run.new()
 	var state := run.snapshot()
-	var target := Vector3(0, 2, -4)
 	var pos := Vector3.ZERO
-	var ok: bool = Guide.objective(state, pos, target).kind == "wood"
+	var ok: bool = Guide.objective(state, pos).is_empty()
 	state.hits = 1
-	ok = ok and Guide.objective(state, pos, target).kind == "dog"
+	ok = ok and Guide.objective(state, pos).kind == "dog"
 	state.near_dog = true
-	ok = ok and Guide.objective(state, pos, target).is_empty()
+	ok = ok and Guide.objective(state, pos).is_empty()
 	state.near_dog = false
 	state.workshop = true
 	state.arrows = 4
-	ok = ok and Guide.objective(state, pos, target).is_empty()
+	ok = ok and Guide.objective(state, pos).is_empty()
 	state.workshop_piles = [3, 3, 0, 0]
 	state.workshop_stock = 6
-	var goal := Guide.objective(state, pos, target)
+	var goal := Guide.objective(state, pos)
 	ok = ok and goal.kind == "supply" and goal.at.z == Guide.Clearing.WORKSHOP_LANDINGS[1].z
 	state.collected = 3
-	ok = ok and Guide.objective(state, pos, target).kind == "wood"
+	ok = ok and Guide.objective(state, pos).is_empty()
 	state.fired_after_collect = true
-	ok = ok and Guide.objective(state, pos, target).is_empty()
+	ok = ok and Guide.objective(state, pos).is_empty()
 	var times := Log.splits({"broke_5": 70.0, "broke_10": 205.0})
 	ok = ok and times == {"act1": 70.0, "act2": 135.0, "total": 205.0}
 	ok = ok and Log.splits({"broke_10": 220.0}) == {"total": 220.0}

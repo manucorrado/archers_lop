@@ -539,7 +539,7 @@ func _sync() -> void:
 	hud.refresh(state)
 	var goal := {}
 	if view == "play" and hud.options.first_steps:
-		goal = FirstSteps.objective(state, archer.position, clearing.target_center("body"))
+		goal = FirstSteps.objective(state, archer.position)
 	trail_marker.update_goal(goal, hud.language)
 
 

@@ -1,11 +1,11 @@
 extends Control
-## Small paper waymarks for the first trip between the trunk, Pipo and the arrow piles.
+## Paper waymarks for finding Pipo and loose arrows.
 
 const Clearing = preload("res://scripts/clearing.gd")
 const Journal = preload("res://scripts/field_journal.gd")
 const NAMES := {
-	"wood": ["Blanco", "Target"], "dog": ["Pipo", "Pipo"],
-	"supply": ["Flechas", "Arrows"], "branch": ["Rama", "Branch"],
+	"dog": ["Pipo", "Pipo"],
+	"supply": ["Flechas", "Arrows"],
 }
 
 var camera: Camera3D
@@ -22,7 +22,7 @@ func _ready() -> void:
 	hide()
 
 
-static func objective(state: Dictionary, player: Vector3, target: Vector3) -> Dictionary:
+static func objective(state: Dictionary, player: Vector3) -> Dictionary:
 	if state.get("fired_after_collect", false) or state.hp <= 0 or state.stage >= 5:
 		return {}
 	if state.get("near_dog", false) or state.get("near_brizno", false) or state.get("near_sentinel", false):
@@ -31,18 +31,18 @@ static func objective(state: Dictionary, player: Vector3, target: Vector3) -> Di
 		if state.knot_stock > 0:
 			return {"kind": "supply", "at": Clearing.KNOT_PICKUP + Vector3.UP * 0.8}
 		if not state.workshop:
-			return {"kind": "branch", "at": target}
+			return {}
 	if state.hits == 0 or state.collected > 0:
-		return {"kind": "wood", "at": target + Vector3.UP * 0.75}
+		return {}
 	var history: Dictionary = state.observations
 	if not state.workshop:
 		var free_damage := not history.has("buy_damage") and int(state.damage_rank) == 0
 		var shop_ready: bool = state.offers.workshop.available and not history.has("buy_workshop")
 		if free_damage or shop_ready:
 			return {"kind": "dog", "at": Clearing.DOG_POSITION + Vector3.UP * 1.95}
-		return {"kind": "wood", "at": target + Vector3.UP * 0.75}
+		return {}
 	if state.arrows >= state.capacity:
-		return {"kind": "wood", "at": target + Vector3.UP * 0.75}
+		return {}
 	var nearest := -1
 	var distance := INF
 	for i in state.workshop_piles.size():
@@ -94,6 +94,10 @@ func _draw() -> void:
 		var limit_y := bounds.end.y - center.y if direction.y >= 0 else center.y - bounds.position.y
 		point = center + direction * minf(limit_x / maxf(0.001, absf(direction.x)), limit_y / maxf(0.001, absf(direction.y)))
 	else:
+		# Pipo already wears an in-world nameplate. The guide only points toward him
+		# from the edge of the screen.
+		if kind == "dog":
+			return
 		direction = Vector2.DOWN
 		if point.distance_squared_to(center) < 48.0 * 48.0:
 			point.y = minf(point.y, center.y - 42)

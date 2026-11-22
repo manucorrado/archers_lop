@@ -178,7 +178,9 @@ func _physics_process(delta: float) -> void:
 	elif not is_on_floor() or velocity.y > 0.0:
 		velocity.y = maxf(velocity.y - GRAVITY * delta, -25.0)
 	else:
-		velocity.y = -0.5
+		# Floor snapping keeps contact while walking. Driving a resting capsule into
+		# the ground makes penetration recovery lift its camera again every few ticks.
+		velocity.y = 0.0
 	_jump_pending = false
 	if _supply_landing is Vector3:
 		var remaining := Vector2(_supply_landing.x - position.x, _supply_landing.z - position.z)

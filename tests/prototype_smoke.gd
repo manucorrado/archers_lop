@@ -38,7 +38,7 @@ func _run() -> void:
 	await _click(root.gui_get_focus_owner() as Button)
 	if not _expect(game.view == "play", "The start button enters the clearing"):
 		return
-	if not _expect(game.trail_marker.kind == "wood", "The first waymark points to the target"):
+	if not _expect(not game.trail_marker.visible, "The shooting target starts without a floating nameplate"):
 		return
 	await _frames(12)
 	var floor_y := game.archer.position.y
