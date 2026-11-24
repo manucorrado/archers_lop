@@ -67,6 +67,16 @@ func _run() -> void:
 
 	var dog: Shepherd = game.clearing._dog
 	dog.set_process(false)
+	var head := dog.get_node("Cabeza") as Node3D
+	for side: float in [-1.0, 1.0]:
+		game.archer.global_position = dog.to_global(Vector3(side * 2.0, 0.0, 1.8))
+		for i in 120:
+			dog._process(1.0 / 60.0)
+		_check(head.rotation.y * side > 0.1 and absf(head.rotation.y) <= 0.31, "The seated dog looks slightly towards the archer on either side")
+	game.archer.global_position = dog.to_global(Vector3(0, 0, -2))
+	for i in 120:
+		dog._process(1.0 / 60.0)
+	_check(absf(head.rotation.y) < 0.01, "The dog relaxes its neck when the archer goes behind it")
 	for i in 3600:
 		dog._process(1.0 / 60.0)
 	var tail := dog.get_node("Cola") as Node3D

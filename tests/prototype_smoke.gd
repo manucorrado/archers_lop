@@ -274,11 +274,12 @@ func _run() -> void:
 	_aim_at("core_0")
 	var arrows_before := game.run.arrows
 	_mouse_left(true)
-	if not await _until(func(): return game.in_flight.size() == 3, 90, "One release launches three independent arrows"):
+	if not await _until(func(): return game.in_flight.size() == 12, 90, "Three paid arrows call a nine-arrow rain"):
 		return
 	_mouse_left(false)
-	if not _expect(game.run.arrows == arrows_before - 3 and game.in_flight[0].end != game.in_flight[1].end
-			and game.in_flight[0].damage == game.in_flight[2].damage, "The fan spends three arrows with three trajectories and equal base damage"):
+	var paid := game.in_flight.filter(func(flight: Dictionary): return not flight.has("source"))
+	if not _expect(game.run.arrows == arrows_before - 3 and paid.size() == 3 and paid[0].end != paid[1].end
+			and paid[0].damage == paid[2].damage, "The fan spends three arrows with three trajectories and equal base damage"):
 		return
 	for phase in 3:
 		if not await _fight_until(func(): return game.run.core_phase > phase or game.view == "gift", "core_%d" % phase):

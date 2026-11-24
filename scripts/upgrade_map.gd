@@ -52,6 +52,7 @@ var revealed: Dictionary = {}
 var language := "es"
 var zoom := 1.0
 var pan := Vector2.ZERO
+var _map_center := MAP_CENTER
 var _nearest: Dictionary = {}
 var _drag_button := 0
 var _last_drag_point := Vector2.ZERO
@@ -129,9 +130,12 @@ func arrange(new_offers: Dictionary) -> void:
 	# On a first visit the whole bow would reduce the five central emblems to a
 	# tiny cluster. Frame the grip once and keep the camera still during purchases.
 	if revealed.size() <= 10:
-		zoom = 3.0
-		pan = (MAP_CENTER - Paths.position_of("damage")) * _scale_factor()
-		_zoom_value.text = "300 %"
+		zoom = 4.0
+		var bounds := Rect2(Paths.position_of("damage"), Vector2.ZERO)
+		for id: String in revealed:
+			bounds = bounds.expand(Paths.position_of(id))
+		_map_center = bounds.get_center()
+		_zoom_value.text = "400 %"
 	_place_buttons()
 
 func sync_visibility() -> void:
@@ -160,7 +164,7 @@ func _scale_factor() -> float:
 	return maxf(0.01, minf((size.x - 44) / MAP_SPAN.x, (size.y - 46) / MAP_SPAN.y)) * zoom
 
 func _point(p: Vector2) -> Vector2:
-	return size * 0.5 + pan + (p - MAP_CENTER) * _scale_factor()
+	return size * 0.5 + pan + (p - _map_center) * _scale_factor()
 
 func _place_buttons() -> void:
 	var factor := _scale_factor()
@@ -189,11 +193,14 @@ func _zoom_at(requested: float, anchor: Vector2) -> void:
 
 func _reset_camera() -> void:
 	zoom = 1.0
+	_map_center = MAP_CENTER
 	pan = Vector2.ZERO
 	_zoom_value.text = "100 %"
 	_place_buttons()
 
 func _ensure_in_view(node: Socket) -> void:
+	if size.x < 60 or size.y < 60:
+		return
 	var margin := node.size / 2 + Vector2(6, 6)
 	var center := node.get_rect().get_center()
 	var delta := center.clamp(margin, size - margin) - center

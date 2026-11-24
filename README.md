@@ -22,7 +22,7 @@ Abrí [ElArqueroDelClaro.exe](build/windows/ElArqueroDelClaro.exe) y elegí **En
 | F cerca del nudo | Golpear con la rama. Con el carcaj vacío, el golpe puede desprender cuatro flechas |
 | Esc | Pausar y acceder al guardado, los ajustes y la opción de empezar de nuevo |
 
-**Primera vuelta.** Empezás con 24 flechas. Buscá a Pipo, el ovejero sentado bajo el pino a la izquierda del taller, y apretá **E**. Pasá el mouse por el centro del árbol y comprá el primer nivel de daño gratis. El arco inicial pasa de 10 a 12 de daño. Cada 8 puntos de vida que le quitás al blanco ganás 1 de savia. Si un impacto le quita 12, cobrás 1 y los otros 4 puntos cuentan para la siguiente.
+**Primera vuelta.** Empezás con 24 flechas. Buscá a Pipo, el ovejero sentado a la izquierda del taller, entre el pino y el sendero. Acercate y apretá **E** para abrir el árbol de mejoras a pantalla completa. Comprá el primer nivel de daño gratis en el centro del mapa. El arco inicial pasa de 10 a 12 de daño. Cada 8 puntos de vida que le quitás al blanco ganás 1 de savia. Si un impacto le quita 12, cobrás 1 y los otros 4 puntos cuentan para la siguiente.
 
 El taller cuesta 17 de savia. Produce 1,25 flechas por segundo y lanza tandas de tres. Seguí el vuelo y acercate al atado para recogerlo. Si el carcaj se llena, el resto queda en el suelo.
 
@@ -34,7 +34,7 @@ La **Ballesta del claro** se compra siguiendo la Rueda de savia y cuatro engrana
 
 En los blancos 6 a 9, acertar con el arco a la diana temporal devuelve hasta tres flechas al carcaj. Al terminar una vuelta nueva, el registro muestra cuánto tardaste desde que entraste hasta que confirmaste la última carta, incluso comprando o hablando con Brizno. También podés consultar qué tenías al entrar al blanco 10 y cuánto daño hizo cada fuente. El total se detiene mientras la ventana queda en segundo plano o el juego está cerrado.
 
-**Probar los sonidos del arco.** En **Ajustes → Sonido**, elegí por separado la suelta de cuerda y el impacto en madera. Usá **Escuchar** junto a cada selector para aislarlo, o **Disparo e impacto** y **Ráfaga** para comparar cómo combinan. Volvé al claro para oír esa combinación al disparar. Las elecciones se guardan. La prueba incluye cuatro grabaciones de Freesound, alternativas sintetizadas y los sonidos originales. [Grabaciones y créditos](assets/audio/freesound/CREDITOS.md)
+**Probar los sonidos del arco.** En **Ajustes → Sonido**, elegí por separado la suelta de cuerda y el impacto. En un perfil nuevo se escuchan **Cuerda y fibra** y **Dardo 1 · golpe sordo**. Probá también **Dardo 3 · golpe corto**. Usá **Escuchar** para aislar cada sonido o **Ráfaga** para oír el par a alta cadencia. Las seis grabaciones de Freesound se incluyen en el ejecutable. [Grabaciones y créditos](assets/audio/freesound/CREDITOS.md)
 
 **Guardar y continuar.** Podés guardar desde pausa. También se guardan las compras, los cambios de blanco y de fase y las recompensas. En el menú de inicio, **Continuar** recupera la partida. Si cerraste mientras elegías la recompensa, vuelven las mismas tres cartas. Si terminaste la versión anterior, en su resumen aparece **Continuar al blanco 6**. Durante la pausa y con el juego cerrado se detienen el reloj de juego activo y el taller.
 

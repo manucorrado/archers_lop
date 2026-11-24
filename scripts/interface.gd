@@ -413,6 +413,9 @@ func _build_overlay() -> void:
 	layer_root.add_child(cover)
 	cover.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay = cover
+	if current_view == "shop" and submenu.is_empty():
+		_build_shop(cover)
+		return
 	var language_btn := _button(cover, _t("English", "Español"), true, _switch_language)
 	_place(language_btn, 1, 0, -145, 15, -20, 54)
 	if cover.side_only:
@@ -423,11 +426,8 @@ func _build_overlay() -> void:
 	cover.add_child(holder)
 	holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var card := _sheet(holder, 26, 18, "folio")
-	var wide := submenu in ["settings", "test_times", "run_log"] or (submenu.is_empty() and current_view in ["gift", "shop"])
+	var wide := submenu in ["settings", "test_times", "run_log"] or (submenu.is_empty() and current_view == "gift")
 	card.custom_minimum_size.x = 880 if wide else 500
-	if submenu.is_empty() and current_view == "shop":
-		card.custom_minimum_size.x = 1088
-		card.add_theme_stylebox_override("panel", Journal.box(Journal.COVER, Color("#958c6e"), 5, 5))
 	var content := _stack(card, 10)
 	if submenu == "settings":
 		_build_settings(content)
@@ -438,8 +438,6 @@ func _build_overlay() -> void:
 		_build_test_times(content)
 	elif submenu == "confirm_new":
 		_build_confirmation(content)
-	elif current_view == "shop":
-		_build_shop(content)
 	elif current_view == "gift":
 		_build_gifts(content)
 	elif current_view == "end":
@@ -503,18 +501,19 @@ func _scroll_column(parent: Control, height: int) -> VBoxContainer:
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	return column
 
-func _build_shop(content: Control) -> void:
-	var spread := _row(content, 0)
-	var left := _sheet(spread, 23, 17, "left")
-	left.custom_minimum_size = Vector2(657, 551)
+func _build_shop(cover: Control) -> void:
+	var spread := _row(cover, 0)
+	spread.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var left := _sheet(spread, 28, 18, "left")
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var chart := _stack(left, 7)
-	_label(chart, _t("CUADERNO DE CAMPO", "FIELD JOURNAL"), 14, MUTED)
+	var heading := _row(chart, 12)
+	var title := _label(heading, _t("Árbol de mejoras", "Upgrade tree"), 35, INK, title_font)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_button(heading, _t("English", "Español"), false, _switch_language)
 	_rule(chart)
-	_label(chart, _t("Árbol de mejoras", "Upgrade tree"), 37, INK, title_font)
 	upgrade_map = UpgradeMap.new()
 	upgrade_map.language = language
-	upgrade_map.custom_minimum_size = Vector2(525, 402)
 	upgrade_map.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	chart.add_child(upgrade_map)
 	var available: Dictionary = values.get("offers", {})
@@ -529,22 +528,22 @@ func _build_shop(content: Control) -> void:
 	upgrade_map.arrange(available)
 	selected_upgrade = upgrade_map.closest_revealed(selected_upgrade)
 
-	var details_panel := _sheet(spread, 24, 17, "right")
-	details_panel.custom_minimum_size.x = 411
+	var details_panel := _sheet(spread, 18, 20, "right")
+	details_panel.custom_minimum_size.x = 286
 	var details := _stack(details_panel, 8)
 	var balance := _row(details, 6)
 	balance.add_child(Pictogram.new("sap", ACCENT))
 	shop_sap = _label(balance, "", 16, MUTED, ui_font)
 	_rule(details)
 	selected_icon = TextureRect.new()
-	selected_icon.custom_minimum_size = Vector2(55, 55)
+	selected_icon.custom_minimum_size = Vector2(42, 42)
 	selected_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	selected_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	selected_icon.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	details.add_child(selected_icon)
 	selected_level = _label(details, "", 15, MUTED, mono_font)
-	selected_title = _label(details, "", 30, INK, title_font)
-	selected_effect = _label(details, "", 19, INK, title_font)
+	selected_title = _label(details, "", 25, INK, title_font)
+	selected_effect = _label(details, "", 17, INK, ui_font)
 	selected_values = _label(details, "", 16, ACCENT)
 	selected_requirement = _label(details, "", 16, MUTED)
 	for caption in [selected_title, selected_effect, selected_values, selected_requirement]:
@@ -987,6 +986,17 @@ func _build_settings(content: Control) -> void:
 		_slider(column, "volume_bow", _t("Arco y rama", "Bow and branch"), 0, 1, 0.05, "%")
 		_slider(column, "volume_world", _t("Claro, impactos y recogidas", "Clearing, hits and pickups"), 0, 1, 0.05, "%")
 		_slider(column, "volume_ui", _t("Compras y menús", "Purchases and menus"), 0, 1, 0.05, "%")
+		var credit := RichTextLabel.new()
+		credit.fit_content = true
+		credit.scroll_active = false
+		credit.bbcode_enabled = true
+		credit.add_theme_font_override("normal_font", ui_font)
+		credit.add_theme_font_size_override("normal_font_size", 15)
+		credit.add_theme_color_override("default_color", MUTED)
+		credit.text = "CosmicEmbers · [url=https://freesound.org/people/CosmicEmbers/sounds/387478/]Dart-Thud-1[/url] · [url=https://freesound.org/people/CosmicEmbers/sounds/387479/]Dart Thud 3[/url] · [url=https://creativecommons.org/licenses/by/3.0/]CC BY 3.0[/url]"
+		credit.text += _t(" · recorte y nivelación", " · trimmed and level-matched")
+		credit.meta_clicked.connect(func(url): OS.shell_open(str(url)))
+		column.add_child(credit)
 	else:
 		_slider(column, "sensitivity", _t("Sensibilidad del mouse", "Mouse sensitivity"), 0.2, 3, 0.1, "%")
 		_toggle(column, "toggle_fire", _t("Un clic inicia o detiene el disparo repetido", "Click to start or stop repeated fire"))

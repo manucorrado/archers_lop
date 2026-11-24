@@ -51,7 +51,7 @@ func _run() -> void:
 			_check(paused and audition.can_process() and audition.playing, "Changing a timbre auditions it while paused")
 			_check(audition.stream == live.stream and audition.volume_db == live.volume_db, "Audition uses the live stream and gain")
 			_check(sound._voices[opposite].stream == other_stream, "Selecting one timbre preserves the other")
-		_check(variants.size() == 5, "Five distinct playable variants for " + cue)
+		_check(variants.size() == (5 if selector == shot else 7), "Every timbre has a distinct playable stream for " + cue)
 	_pick(shot, 1)
 	_pick(impact, 2)
 	var reloaded := Prefs.new()

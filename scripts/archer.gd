@@ -30,6 +30,7 @@ var _drawing_hand := Node3D.new()
 var _string_top: MeshInstance3D
 var _string_bottom: MeshInstance3D
 var _sound := BowAudio.new()
+var _rain := MultiMeshInstance3D.new()
 var _materials: Dictionary = {}
 var _active := false
 var _has_arrows := true
@@ -78,6 +79,13 @@ func _ready() -> void:
 	_view.scale = Vector3.ONE * 0.25
 	_view.add_child(_bow)
 	add_child(_sound)
+	_rain.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_rain.top_level = true
+	_rain.multimesh = MultiMesh.new()
+	_rain.multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	_rain.multimesh.mesh = LONGBOW_ARROW.mesh()
+	add_child(_rain)
+	_rain.global_transform = Transform3D.IDENTITY
 	_build_bow()
 	_pose(0.0)
 
@@ -239,6 +247,24 @@ func play_extra_arrow(end_point: Vector3) -> void:
 func restore_flight(start: Vector3, end: Vector3, total: float, remaining: float) -> void:
 	var progress := clampf(1.0 - remaining / maxf(total, 0.001), 0, 1)
 	_flight(start.lerp(end, progress), end, remaining, Callable())
+
+
+func draw_arrow_rain(flights: Array) -> void:
+	# One instanced mesh for every falling arrow. Saved flight times also drive their positions.
+	var mesh := _rain.multimesh
+	if flights.size() > mesh.instance_count:
+		mesh.instance_count = maxi(32, flights.size() * 2)
+	var visible_count := 0
+	for flight: Dictionary in flights:
+		if flight.get("source") != "rain" or flight.remaining > flight.duration:
+			continue
+		var direction: Vector3 = flight.origin.direction_to(flight.end)
+		var up := Vector3.RIGHT if absf(direction.y) > 0.98 else Vector3.UP
+		var axes := Basis.looking_at(direction, up).scaled(Vector3.ONE * 0.82)
+		var tip: Vector3 = flight.end.lerp(flight.origin, float(flight.remaining) / float(flight.duration))
+		mesh.set_instance_transform(visible_count, Transform3D(axes, tip - direction * 0.82))
+		visible_count += 1
+	mesh.visible_instance_count = visible_count
 
 func _flight(start: Vector3, end_point: Vector3, duration: float, on_landing: Callable) -> void:
 	# The independent projectile survives drawing the last arrow from the quiver.

@@ -18,6 +18,7 @@ var _time := 0.0
 var _happy := 0.0
 var _delight := 0.0
 var _wag_phase := 0.0
+var _look_offset := Vector2.ZERO
 
 func _ready() -> void:
 	var cube := BoxMesh.new()
@@ -93,5 +94,16 @@ func _process(delta: float) -> void:
 	_wag_phase = fmod(_wag_phase + delta * lerpf(2.0, 13.0, _delight), TAU)
 	_tail.rotation.y = sin(_wag_phase) * lerpf(0.11, 0.69, _delight)
 	_tail.rotation.x = -0.36 * _delight
-	_head.rotation.x = 0.035 * sin(_time * 1.5) - _delight * 0.13
+	var camera := get_viewport().get_camera_3d()
+	var desired := Vector2.ZERO
+	if camera:
+		var offset := to_local(camera.global_position) - _head.position
+		var distance := offset.length()
+		# Lose interest gradually at a distance or when the player walks behind him.
+		var interest := (1.0 - smoothstep(3.0, 8.0, distance)) * smoothstep(-0.3, 0.4, offset.normalized().z)
+		desired.x = clampf(atan2(offset.x, offset.z), -0.30, 0.30) * interest
+		desired.y = clampf(atan2(offset.y, Vector2(offset.x, offset.z).length()), -0.10, 0.13) * interest
+	_look_offset = _look_offset.lerp(desired, 1.0 - exp(-3.5 * delta))
+	_head.rotation.y = _look_offset.x
+	_head.rotation.x = 0.035 * sin(_time * 1.5) - _delight * 0.13 - _look_offset.y
 	_head.rotation.z = 0.022 * sin(_time * 0.75) + _delight * 0.18

@@ -10,6 +10,7 @@ const FirstSteps = preload("res://scripts/first_steps.gd")
 const RunLog = preload("res://scripts/run_log.gd")
 const BOWS := ["branch", "recurve", "longbow"]
 const VOLLEY_ANGLES := [0.0, -0.035, 0.035]
+const RAIN_OFFSETS := [Vector2(-1.2, 2.0), Vector2(1.1, 2.6), Vector2(-0.3, 3.4)]
 const SUPPLY_JUMP_REACH := 8.0
 
 var run := Run.new()
@@ -278,10 +279,13 @@ func _shoot() -> void:
 		var endpoint: Vector3 = ray.get("position", archer.camera.global_position + archer.shot_direction(angle) * 50.0)
 		var id := clearing.target_id(ray.get("collider"), endpoint)
 		var duration := archer.flight_duration(endpoint)
-		in_flight.append({"stage": run.stage, "id": id, "origin": archer.arrow_origin(),
+		var arrow := {"stage": run.stage, "id": id, "origin": archer.arrow_origin(),
 			"end": endpoint, "duration": duration, "remaining": duration, "damage": run.volley_damage(),
 			"weak_damage": run.volley_damage(true), "critical": run.volley_critical,
-			"serial": run.event_serial if id.begins_with("seed_") else run.target_serial})
+			"serial": run.event_serial if id.begins_with("seed_") else run.target_serial}
+		in_flight.append(arrow)
+		if run.stage >= 9:
+			_call_arrow_rain(arrow)
 		if index == 0:
 			archer.play_shot(endpoint)
 		else:
@@ -289,15 +293,49 @@ func _shoot() -> void:
 	_sync()
 
 
+func _call_arrow_rain(arrow: Dictionary) -> void:
+	var start: Vector3 = arrow.origin.lerp(arrow.end, 0.55)
+	for i in RAIN_OFFSETS.size():
+		var offset: Vector2 = RAIN_OFFSETS[i]
+		var origin := start + archer.camera.global_basis.x * offset.x + Vector3.UP * offset.y
+		var duration := clampf(origin.distance_to(arrow.end) / 36.0, 0.13, 0.4)
+		in_flight.append({"source": "rain", "stage": arrow.stage, "id": arrow.id, "origin": origin,
+			"end": arrow.end, "damage": arrow.damage, "duration": duration,
+			"remaining": duration + float(arrow.duration) + i * 0.055})
+
+
 func _tick_flights(delta: float) -> void:
-	# El mismo reloj gobierna el impacto al reabrir una partida con la flecha en vuelo.
-	for flight: Dictionary in in_flight.duplicate():
+	var pending := []
+	var rain_hits: Array[Dictionary] = []
+	for flight: Dictionary in in_flight:
 		flight.remaining -= delta
 		if flight.remaining > 0:
-			continue
-		in_flight.erase(flight)
-		if flight.stage == run.stage and run.hp > 0:
-			_land_shot(flight)
+			pending.append(flight)
+		elif flight.stage == run.stage and run.hp > 0:
+			if flight.get("source") == "rain":
+				rain_hits.append(flight)
+			else:
+				_land_shot(flight)
+	in_flight = pending
+	archer.draw_arrow_rain(in_flight)
+	if not rain_hits.is_empty() and run.hp > 0:
+		_land_arrow_rain(rain_hits)
+
+
+func _land_arrow_rain(hits: Array[Dictionary]) -> void:
+	var milestone := _boss_milestone()
+	var balance := run.sap
+	var damage := 0
+	for hit in hits:
+		# Wood damage only. Collecting a bullseye and unlocking a hollow require the player's arrow.
+		damage += run.damage_part(hit.damage, hit.id, false, "bow")
+		if run.hp == 0:
+			break
+	if damage > 0:
+		hud.show_damage(damage)
+		hud.show_sap_earned(run.sap - balance)
+		if run.hp == 0 or milestone != _boss_milestone():
+			_after_damage(milestone, false)
 
 
 func _land_shot(flight: Dictionary) -> void:
@@ -403,6 +441,8 @@ func _next_knot() -> void:
 		2: hud.notify("Apuntá al punto débil para hacer más daño y ganar más savia.",
 			"Aim for the weak spot to deal more damage and earn more sap.")
 		5: hud.notify("Quinto blanco · Tronco partido", "Fifth target · Twin Fork")
+		9: hud.notify("¡Lluvia de flechas! Tres flechas extra siguen cada una de las tuyas.",
+			"Arrow rain! Three extra arrows follow every arrow you fire.")
 		10: hud.notify("Último blanco · Apuntá al hueco encendido. El punto débil cambia de lugar.",
 			"Final target · Aim at the glowing hollow. The weak spot moves.")
 	_sync_piles()
@@ -594,7 +634,9 @@ func _resume_campaign() -> void:
 	var story: Variant = data.get("brizno", {})
 	dialogue.restore(story)
 	for flight: Dictionary in in_flight:
-		archer.restore_flight(flight.origin, flight.end, flight.duration, flight.remaining)
+		if flight.get("source") != "rain":
+			archer.restore_flight(flight.origin, flight.end, flight.duration, flight.remaining)
+	archer.draw_arrow_rain(in_flight)
 	_redraw_world()
 	if not run.gift_offer.is_empty() or run.at_act_summary():
 		_resume_play()

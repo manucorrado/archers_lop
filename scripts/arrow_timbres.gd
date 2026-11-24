@@ -3,8 +3,8 @@ extends RefCounted
 
 const SHOT := "shot_timbre"
 const IMPACT := "impact_timbre"
-const DEFAULT_SHOT := "recorded_dry"
-const DEFAULT_IMPACT := "recorded_deep"
+const DEFAULT_SHOT := "recorded_fiber"
+const DEFAULT_IMPACT := "dart_1"
 const CATALOG := {
 	SHOT: {
 		"recorded_dry": ["Suelta seca · grabación", "Dry release · recording", preload("res://assets/audio/freesound/suelta_seca.wav"), 0.0],
@@ -14,6 +14,8 @@ const CATALOG := {
 		"original": ["Original de la demo", "Demo original", null, -6.0],
 	},
 	IMPACT: {
+		"dart_1": ["Dardo 1 · golpe sordo", "Dart 1 · low thud", preload("res://assets/audio/freesound/dardo_1.wav"), 0.0],
+		"dart_3": ["Dardo 3 · golpe corto", "Dart 3 · short thump", preload("res://assets/audio/freesound/dardo_3.wav"), 0.0],
 		"recorded_dry": ["Golpe seco · grabación", "Dry knock · recording", preload("res://assets/audio/freesound/impacto_seco.wav"), 3.0],
 		"recorded_deep": ["Golpe grave · grabación", "Deep thud · recording", preload("res://assets/audio/freesound/impacto_grave.wav"), -3.5],
 		"wood": ["Madera seca", "Dry timber", null, 0.0],

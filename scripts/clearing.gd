@@ -2,7 +2,7 @@ extends Node3D
 
 const TARGET_POSITION := Vector3(0.0, 1.65, -5.0)
 const WORKSHOP_PICKUP := Vector3(-6.6, 0.0, 0.15)
-const DOG_POSITION := Vector3(-10.1, 0, 2.9)
+const DOG_POSITION := Vector3(-6.85, 0, 6.05)
 const BRIZNO_POSITION := Vector3(6.7, 0, -0.65)
 const ARENA_HALF_WIDTH := 11.70
 const ARENA_HALF_LENGTH := 13.55

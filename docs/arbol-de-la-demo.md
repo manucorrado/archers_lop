@@ -51,10 +51,12 @@ Hay **112 nodos, 140 niveles y 41.970 de savia** en compras. Sin primas, al entr
 
 Entre los blancos 6 y 9, acertar con el arco a la diana que aparece por unos segundos devuelve hasta **tres flechas** directamente al carcaj. La primera aparece al entrar al sexto blanco y dura siete segundos. Cada diana paga una vez, incluso con el disparo triple. Si quedan dos lugares, recuperás dos.
 
+Desde el blanco 9, cada flecha que sale del carcaj llama a otras tres que caen sobre el lugar al que apuntaste. Las tres hacen daño del arco y permiten aprovechar el abanico del nivel 10. Los huecos del jefe se abren con la flecha principal o un golpe de rama en la raíz correspondiente.
+
 Para la prueba privada, observá el primer cambio de táctica después de la carta del quinto blanco y qué hace el jugador cuando se queda sin flechas. En el registro de una partida nueva podés cotejar la duración de la vuelta con el tiempo activo, los niveles comprados y el saldo al entrar al décimo, y el daño efectivo de arco y ballesta.
 
 ## Qué queda para después
 
 El [catálogo editable](catalogo-de-mejoras-potenciales.docx) conserva las 65 fichas de ideas y el orden de trabajo propuesto para las nuevas familias. Quedan para diseñar la frecuencia de blancos opcionales, los ecos de disparos, la quemadura con sus tres especializaciones, los tiros en el aire y los giros de 360°, las mejoras de la ballesta y el arco láser de fin de juego.
 
-Quedan abiertas la elección de una actividad al costado del claro, las tres formas de jugar que ofrecerán las cartas del quinto blanco y cómo se activa el pico de poder jugable antes del cierre. Brizno sigue siendo opcional. Sus nuevos diálogos y su posible vínculo con el prestigio quedan para después del MVP.
+En el quinto blanco se mantienen las cartas de daño, cadencia y capacidad. La astilla adicional al apuntar, las ráfagas y la recarga de emergencia quedan como ideas para una progresión posterior, posiblemente ligada al prestigio. La actividad al costado del claro sigue abierta. Brizno es opcional. Sus nuevos diálogos y su posible vínculo con el prestigio quedan para después del MVP.
