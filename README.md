@@ -1,6 +1,6 @@
 # El arquero del claro
 
-Juego de arquería en primera persona para Windows, con diez blancos y dos jefes. Los impactos te dan savia para mejorar tu arquero. El quinto blanco se parte en dos. Cuando rompés ambas mitades, elegís una recompensa y podés continuar al sexto blanco desde el resumen. El décimo tiene tres puntos débiles que se activan por turno. Podés cambiar entre español e inglés desde los menús.
+Juego de arquería en primera persona para Windows, con veinte blancos. Los impactos te dan savia para mejorar tu arquero. El quinto árbol se parte en dos y el décimo tiene tres puntos débiles que se activan por turno. Desde el décimo, los troncos tienen corteza más oscura. Elegís una carta al romper los blancos 5, 10 y 15. La vuelta termina cuando rompés el 20. Podés cambiar entre español e inglés desde los menús.
 
 ## Jugar en Windows
 
@@ -30,17 +30,17 @@ La mira te indica dónde está Pipo durante toda la partida. Durante los primero
 
 A la derecha del sendero está **Brizno**, el mensajero alado. Al acercarte aparece la opción de hablar. Sus relatos cambian con lo que pasa en el claro y podés seguir una charla al reabrir el juego. Para escribirle más diálogos, editá [sus charlas bilingües](assets/charlas_de_brizno.tres) en el Inspector.
 
-Cada compra revela los nodos vecinos y otro tramo del dibujo. Las mejoras iniciales suman daño o cadencia según la base del arco. En daño 10 salen hasta tres flechas por disparo. Más afuera aparecen los multiplicadores de daño y los disparos adicionales por segundo. La compra **Buena racha** activa el combo y su prima de savia.
+El Atlas de Pipo ocupa toda la pantalla. Pasá el mouse o enfocá un nodo con el teclado para ver su ficha. Cada compra revela los vecinos y otro tramo del dibujo. Al completar todos los niveles se destaca el dibujo del arco y el carcaj. **Buena racha** cuesta 190 de savia y habilita el combo. El décimo nivel de daño cuesta 1.250 y permite soltar hasta tres flechas a la vez. Después del arco largo podés comprar **Lluvia de flechas** por 3.200 para que caigan otras tres por cada flecha que sueltes.
 
 La **Ballesta del claro** se compra siguiendo la Rueda de savia y cuatro engranajes del taller. Con munición en su depósito dispara sola mientras buscás flechas o apuntás con el arco. En cada resumen, **Registro de la vuelta** muestra cuánto duró cada blanco y compara tus tiempos por acto y de la demo completa con tus récords locales. El tiempo se mide hasta el golpe que rompe el blanco. Empezar de nuevo conserva los récords.
 
-En los blancos 6 a 9, acertar con el arco a la diana temporal devuelve hasta tres flechas al carcaj. Al terminar una vuelta nueva, el registro muestra cuánto tardaste desde que entraste hasta que confirmaste la última carta, incluso comprando o hablando con Brizno. También podés consultar qué tenías al entrar al blanco 10 y cuánto daño hizo cada fuente. El total se detiene mientras la ventana queda en segundo plano o el juego está cerrado.
+En los blancos 6 a 9 y 11 a 20, acertar con el arco a la diana temporal devuelve hasta tres flechas al carcaj. Al terminar una vuelta nueva, el registro muestra cuánto tardaste desde que entraste hasta romper el blanco 20, incluso comprando o hablando con Brizno. También podés consultar qué tenías al entrar al blanco 10 y cuánto daño hizo cada fuente. El total se detiene mientras la ventana queda en segundo plano o el juego está cerrado.
 
 **Probar los sonidos del arco.** En **Ajustes → Sonido**, elegí por separado la suelta de cuerda y el impacto. En un perfil nuevo se escuchan **Cuerda y fibra** y **Dardo 1 · golpe sordo**. Probá también **Dardo 3 · golpe corto**. Usá **Escuchar** para aislar cada sonido o **Ráfaga** para oír el par a alta cadencia. Las seis grabaciones de Freesound se incluyen en el ejecutable. [Grabaciones y créditos](assets/audio/freesound/CREDITOS.md)
 
-**Guardar y continuar.** Podés guardar desde pausa. También se guardan las compras, los cambios de blanco y de fase y las recompensas. En el menú de inicio, **Continuar** recupera la partida. Si cerraste mientras elegías la recompensa, vuelven las mismas tres cartas. Si terminaste la versión anterior, en su resumen aparece **Continuar al blanco 6**. Durante la pausa y con el juego cerrado se detienen el reloj de juego activo y el taller.
+**Guardar y continuar.** Podés guardar desde pausa. También se guardan las compras, los cambios de blanco y de fase y las recompensas. En el menú de inicio, **Continuar** recupera la partida. Si cerraste mientras elegías la recompensa, vuelven las mismas tres cartas. Si terminaste la versión de diez blancos, desde su resumen podés continuar al 11. Durante la pausa y con el juego cerrado se detienen el reloj de juego activo y el taller.
 
-[Árbol, precios y opciones para la demo](docs/arbol-de-la-demo.md) · [Catálogo de mejoras potenciales](docs/catalogo-de-mejoras-potenciales.docx)
+[Árbol, precios y opciones para la demo](docs/arbol-de-la-demo.md) · [Catálogo de mejoras potenciales](docs/catalogo-de-mejoras-potenciales.docx) · [Comparar 16 tipografías para el Atlas](docs/atlas-tipografias/index.html)
 
 ## Cambiar un asset desde el editor
 

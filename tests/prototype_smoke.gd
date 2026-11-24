@@ -246,7 +246,7 @@ func _run() -> void:
 			"Continuing enters the second act with the saved reward"):
 		return
 	for stage in range(6, 11):
-		for upgrade in ["rate", "rate_step_01", "rate_step_02", "longbow", "capacity", "pickup", "leap", "wheel", "damage"]:
+		for upgrade in ["rate", "rate_step_01", "rate_step_02", "longbow", "capacity", "pickup", "leap", "wheel", "damage", "rain"]:
 			if upgrade == "rate" and game.run.rank_of("rate") > 0:
 				continue
 			while game.run.offers()[upgrade].available:
@@ -297,11 +297,30 @@ func _run() -> void:
 	await _click(game.hud.gift_buttons[game.run.gift_offer[0]])
 	await _click(game.hud.confirm_gift)
 	await _reopen()
-	if not _expect(game.view == "end" and game.run.stage == 10 and _button_named("Continuar al blanco 6") == null,
-			"The tenth target ends the demo on the saved result"):
+	if not _expect(game.view == "end" and game.run.stage == 10 and _button_named("Continuar al blanco 11") != null,
+			"Reloading the tenth target result offers the third act"):
+		return
+	await _click(_button_named("Continuar al blanco 11"))
+	for stage in range(11, 16):
+		if not await _fight_until(func(): return game.run.stage > stage or game.view == "gift"):
+			return
+	var third := game.run.gift_offer.duplicate()
+	await _reopen()
+	if not _expect(game.view == "gift" and game.run.stage == 15 and third.size() == 3 and game.run.gift_offer == third,
+			"The third set of cards reopens in order after the fifteenth tree"):
+		return
+	await _click(game.hud.gift_buttons["D05"])
+	await _click(game.hud.confirm_gift)
+	await _click(_button_named("Continuar al blanco 16"))
+	for stage in range(16, 21):
+		if not await _fight_until(func(): return game.run.stage > stage or game.view == "end"):
+			return
+	await _reopen()
+	if not _expect(game.view == "end" and game.run.stage == 20 and game.run.has_gift("D05")
+			and not game.run.snapshot().can_continue_act, "The last tree opens the persistent twenty-target result"):
 		return
 	print("Route timing, active seconds: target 10 entered at ", game.run.observations.broke_9,
-			", finished at ", game.run.observations.broke_10)
+			", target 10 broken at ", game.run.observations.broke_10, ", target 20 broken at ", game.run.observations.broke_20)
 	await _click(_button_named("Volver a jugar"))
 	await _click(_button_named("Empezar de nuevo"))
 	await _frames(6)
@@ -310,7 +329,7 @@ func _run() -> void:
 			and game.run.sap == 0 and game.run.arrows == 24 and not game.run.workshop and game.run.shots == 0,
 			"Replay resets position in the campaign, currency, arrows and purchases"):
 		return
-	if not _expect(Save.best_times().has_all(["act1", "act2", "total"]), "Replay preserves the local records"):
+	if not _expect(Save.best_times().has_all(["act1", "act2", "act3", "act4", "total20"]), "Replay preserves the local records"):
 		return
 	if not await _walk_to(Vector2(10.6, 12.1)):
 		return
@@ -323,7 +342,7 @@ func _run() -> void:
 	if not _expect(corner.x > 10.6 and corner.z > 12.1 and corner.x < Clearing.ARENA_HALF_WIDTH
 			and corner.z < Clearing.ARENA_HALF_LENGTH, "The larger clearing opens both old limits and stops at the new fences"):
 		return
-	print("PASS: ten targets, dog shop and refunds, directed jump, longbow, triple shots, supply, both bosses, rewards, save/resume and replay.")
+	print("PASS: twenty targets, dog shop and refunds, directed jump, longbow, triple shots, supply, both bosses, three reward sets, save/resume and replay.")
 	unload_current_scene()
 	# The audio mixer runs on a wall clock even when simulation uses fixed FPS.
 	# Let it retire queued voices from the replay transition before engine shutdown.

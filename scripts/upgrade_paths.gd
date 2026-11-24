@@ -15,6 +15,7 @@ const VERTICES := {
 	"rate_step_02": [687, 213, "rate_step_01"],
 	"longbow": [752, 147, "rate_step_02"],
 	"rate_flat": [783, 102, "longbow"],
+	"rain": [695, 168, "longbow"],
 
 	# Nocked arrow, upper bow limb and arrowhead.
 	"spark": [353, 381, "weak"],
@@ -133,7 +134,7 @@ const VERTICES := {
 
 const SEAMS := [
 	["damage_step_02", "damage_step_06"], ["damage_step_02", "damage_step_07"],
-	["rate_step_03", "rate_step_07"], ["rate_step_06", "rate_flat"], ["rate_step_10", "longbow"],
+	["rate_step_03", "rate_step_07"], ["rate_step_06", "rate_flat"], ["rate_step_10", "rain"],
 	["damage_step_08", "rate_step_11"], ["rate_step_15", "damage_step_16"], ["damage_step_12", "pet"],
 	["wheel_step_03", "wheel_step_06"], ["wheel_step_09", "wheel_step_06"], ["wheel_step_09", "wheel_step_10"],
 	["wheel_step_14", "wheel_step_19"], ["wheel_step_21", "wheel_step_13"], ["wheel_step_20", "rate_step_18"],
@@ -148,9 +149,9 @@ const SEAMS := [
 ]
 
 const COSTS := {
-	"damage": [0,9,9,14,21,31,46,69,103,154], "rate": [14,21,31,46,68,103,154,231,346,346],
+	"damage": [0,9,9,14,21,31,46,69,103,1250], "rate": [14,21,31,46,68,103,154,231,346,346],
 	"weak": [14], "workshop": [17], "refund": [6], "recurve": [37], "longbow": [1670],
-	"spark": [18], "crit": [24], "combo": [19], "steady": [26], "wheel": [21], "capacity": [7,24],
+	"spark": [18], "crit": [24], "combo": [190], "rain": [3200], "steady": [26], "wheel": [21], "capacity": [7,24],
 	"pickup": [11], "pace": [21], "leap": [32], "pet": [28],
 	"damage_mult": [390, 820, 1460], "rate_flat": [260, 320, 420, 550, 720, 930, 1210, 1560],
 }

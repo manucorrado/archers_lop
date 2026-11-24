@@ -4,36 +4,60 @@ extends RefCounted
 const Paths := preload("res://scripts/upgrade_paths.gd")
 
 const SYMBOLS := {
-	"damage": "M3 21 18 6m-5 0 8-3-3 8-1-4-4-1ZM5 17l-3 1 3-5 3-1m-1 5-1 4 4-3 1-4",
-	"rate": "m2 11 7-3-3 4m-3 4 9-4-3 4m1 4L21 6m-5 0 6-3-2 7",
-	"weak": "M22 12a10 9 0 1 1-20 0 10 9 0 0 1 20 0Zm-5 0a5 5 0 1 1-10 0 5 5 0 0 1 10 0Zm-4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z",
-	"workshop": "m2 11 10-8 10 8m-18 0 8-6 8 6v9H4Zm4 9v-6h5v6m3-7h2v3h-2M2 21h20",
-	"refund": "M4 9a8 8 0 1 1 0 7m0-11v5h5m4-1c0 3-3 5-3 7a3 3 0 0 0 6 0c0-2-2-4-3-7Z",
-	"recurve": "M3 21C10 19 17 13 19 6l2-4L3 21Zm4-4 9-10m-3 8 2-2",
-	"longbow": "M2 21C15 21 22 8 21 2L2 21Zm2-2L19 4m-6 7 2 2",
-	"spark": "m14 2-10 12h7l-2 8L21 9h-8l1-7Z",
-	"combo": "M9 14 7 16a3 3 0 0 1-4-4l5-5a3 3 0 0 1 4 0m3 3 2-2a3 3 0 0 0-4-4l-2 2m0 9 3-3m1-1 2-2a3 3 0 0 1 4 4l-5 5a3 3 0 0 1-4 0",
-	"crit": "m12 2 2 6 5-3-2 5 5 2-6 2 2 5-5-2-2 5-2-6-5 2 3-5-5-2 6-2-2-5 5 3 1-5Z",
-	"steady": "M4 8h6l2-5 2 13 2-6h4M3 19h18m-4-3 4 3-4 3",
-	"wheel": "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-7 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM12 3v7m0 4v7M3 12h7m4 0h7M6 6l5 5m2 2 5 5M6 18l5-5m2-2 5-5",
-	"capacity": "m4 18 4-10 8 3-5 10-7-3Zm4-8 6 2M12 9l5-7m-2 8 6-7m-4 9 5-5",
-	"pickup": "M4 20c1-7 5-12 13-14m1-3C7 2 3 8 4 15c8 2 14-3 15-11l-1-1ZM11 14l3 5 5-5m-5 5 6-1",
-	"pace": "M5 3h6l-1 6 2 3 7 2c2 1 2 4 0 5H5l-2-2 2-5V3Zm-1 11 5 1 2-3m-7 7v2h16v-3",
-	"leap": "M3 19c3-9 7-14 15-14m-4-3 6 2-1 6m-8 9 9-3m-7 6 8-3",
-	"pet": "m3 4 5 4 4-1 4 1 5-4-1 8 1 4-4 4-5 2-5-2-4-4 1-4-1-8Zm5 9h1m6 0h1m-6 3 2 2 2-2m-2 2v2",
-	"damage_mult": "m2 21 12-12m-3 0 6-2-2 6M5 4l4 4M9 4 5 8m10 10 5 5m0-5-5 5",
-	"rate_flat": "M2 14 12 4m-5 0h6v6m-9 8 12-12m-4 0h5v5m-2 7h7m-3-4v8",
-	"sentinel": "m3 10 8-6 10 4M3 10l9 1 9-3M6 19 17 6m-6 9 4 5M8 14l-5 6m8-9 2-3",
+	"damage": "M3 21 15 9",
+	"damage_step": "M5 20l6-6",
+	"rate": "M4 5l7 7-7 7 M13 5l7 7-7 7",
+	"rate_step": "M3 9h6 M2 15h5 M12 5l7 7-7 7",
+	"weak": "M21 12a9 9 0 1 1-18 0 9 9 0 1 1 18 0Z",
+	"workshop": "M2 11l10-8 10 8 M5 10v10h14V10 M10 20v-6h4v6",
+	"refund": "M4 11a8 8 0 1 1 2 8 M3 5v7h7",
+	"recurve": "M3 20l3-3q8-1 9-9l4-4 M3 20l16-16",
+	"longbow": "M3 21Q21 20 21 3L3 21Z",
+	"spark": "M14 2 5 13h6l-1 9L20 10h-7l1-8Z",
+	"combo": "M10 14a4 4 0 0 0 6 0l4-4a4 4 0 0 0-6-6l-2 2 M14 10a4 4 0 0 0-6 0l-4 4a4 4 0 0 0 6 6l2-2",
+	"multishot": "M12 21V4 M9 7l3-3 3 3 M12 20 3 9 M3 13V9h4 M12 20 21 9 M17 9h4v4",
+	"rain": "M5 3v11 M2 11l3 4 3-4 M12 7v12 M9 16l3 4 3-4 M19 3v11 M16 11l3 4 3-4",
+	"crit": "M12 2l2.5 6.5L21 6l-3.5 6L22 16l-7-1-3 7-2-7-7 1 4-5-3-5 6 2Z",
+	"steady": "M2 12h5l3-6 4 12 3-6h5",
+	"wheel": "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z M12 4v16 M4 12h16",
+	"wheel_step": "M17 12a5 5 0 1 1-10 0 5 5 0 1 1 10 0Z M12 4v3 M12 17v3 M4 12h3 M17 12h3",
+	"capacity": "m5 10 10 3-4 8-8-3Z M9 10l3-7 M13 11l5-7",
+	"pickup": "M3 20 15 8 M5 16C3 7 11 4 21 3c-1 9-6 16-16 13Z",
+	"pace": "M6 4h6v7l3 2 4 1 2 3v3H4v-5l2-3Z",
+	"leap": "M3 19Q8 4 20 5 M14 2l7 2-2 7",
+	"pet": "M8 14q4-6 8 0l2 4q0 3-4 2l-2-1-3 1q-4 1-3-3Z",
+	"damage_mult": "M3 21l10-10 M16 15l5 5 M21 15l-5 5",
+	"rate_flat": "M2 5l6 7-6 7 M10 6l5 6-5 6 M16 17h6 M19 14v6",
+	"sentinel": "M2 8q9-9 20 0L3 8 M12 4v10 M8 21l4-8 5 8",
 }
+
+# A solid tip, eye or paw pad stays legible when the atlas is zoomed out.
+const FILLS := {
+	"damage": "M10 9 21 3l-5 12Z",
+	"damage_step": "M5 12 20 3l-6 15-2-5Z",
+	"weak": "M15 12a3 3 0 1 1-6 0 3 3 0 1 1 6 0Z",
+	"wheel_step": "M13.7 12a1.7 1.7 0 1 1-3.4 0 1.7 1.7 0 1 1 3.4 0Z",
+	"pet": "M6 9a2 2.4 0 1 1-4 0 2 2.4 0 1 1 4 0Z M11 5.5a2 2.5 0 1 1-4 0 2 2.5 0 1 1 4 0Z M17 5.5a2 2.5 0 1 1-4 0 2 2.5 0 1 1 4 0Z M22 9a2 2.4 0 1 1-4 0 2 2.4 0 1 1 4 0Z",
+	"damage_mult": "M8 9 19 3l-6 11Z",
+}
+
 static var cache: Dictionary = {}
 
+static func for_rank(id: String, rank: int) -> String:
+	if id == "damage" and rank >= 9:
+		return "multishot"
+	return Paths.family(id)
+
 static func texture(id: String, light := false) -> Texture2D:
-	var family := Paths.family(id).trim_suffix("_step")
+	var family := Paths.family(id)
 	var key := family + ("_light" if light else "")
 	if not cache.has(key):
-		var ink := "#fff3d5" if light else "#324a37"
-		var svg := '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"><path fill="none" stroke="%s" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" d="%s"/></svg>' % [ink, SYMBOLS[family]]
+		var ink := "#fff3d5" if light else "#3e352b"
+		var svg := '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24"><path fill="none" stroke="%s" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round" d="%s"/>' % [ink, SYMBOLS[family]]
+		if FILLS.has(family):
+			svg += '<path fill="%s" d="%s"/>' % [ink, FILLS[family]]
 		var image := Image.new()
-		image.load_svg_from_string(svg)
+		image.load_svg_from_string(svg + "</svg>")
+		image.generate_mipmaps()
 		cache[key] = ImageTexture.create_from_image(image)
 	return cache[key]

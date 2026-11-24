@@ -9,7 +9,7 @@ entries = Array[Dictionary]([{
 "es": ["Soy Brizno. Traigo cartas de la otra punta del monte. ¿Me sostenés esta un segundo? Tengo una hoja en el ala.", "Ahí está. Gracias. Esa es para Pipo. Desde que le llegó una con olor a queso, espera al cartero todos los días."],
 "en": ["I'm Brizno. I bring letters from the far side of the woods. Hold this one a second, would you? I've got a leaf stuck in my wing.", "There. Thanks. That one's for Pipo. Ever since he got a letter that smelled of cheese, he waits for the post every day."]
 }, {
-"id": "last_tree", "from": 10,
+"id": "last_tree", "from": 10, "until": 10,
 "es": ["De chico le escribí una carta al árbol más alto del monte. La metí en un hueco como esos.", "Cada primavera me cae una bellota en el techo. Para mí que me está contestando."],
 "en": ["When I was a kit, I wrote to the tallest tree in the woods. I tucked the letter into a hollow like one of those.", "Every spring an acorn lands on my roof. I think that's my answer."]
 }, {

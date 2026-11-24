@@ -20,9 +20,10 @@ func _initialize() -> void:
 	_test_volley_and_cadence()
 	_test_precise_and_steady()
 	_test_second_act()
+	_test_dark_timber_acts()
 	_test_required_core()
 	if failures == 0:
-		print("PASS: two acts, rank purchases and refunds, volley and precision, scattered arrows, save migration, bosses and rewards.")
+		print("PASS: four acts, rank purchases and refunds, volley and precision, scattered arrows, save migration, bosses and rewards.")
 	quit(1 if failures > 0 else 0)
 
 
@@ -42,7 +43,7 @@ func _test_build_and_combo() -> void:
 	_expect(run.buy("damage") and run.damage() == 12, "The first purchase changes the next shot")
 	run.damage_part(100, "body")
 	run.next_knot()
-	run.sap = 150
+	run.sap = 350
 	_expect(not run.buy("recurve") and not run.buy("spark"), "Sap alone cannot skip a parent purchase")
 	_expect(run.buy("workshop"), "Damage opens the workshop")
 	run.damage_part(run.hp, "body")
@@ -98,6 +99,7 @@ func _test_damage_to_sap() -> void:
 	old.combo_grace = 2.4
 	_expect(one.restore_state(old) and one.sap == resumed.sap and one.sap_remainder == 0
 		and one.combo == 1.0 and one.combo_grace == 0, "A legacy profile keeps its wallet and cannot retain a locked streak")
+	one.sap += 190
 	_expect(one.buy("damage") and one.buy("weak") and one.buy("combo") and one.buy("refund"), "A fresh combo purchase starts a streak")
 	one.manual_impact("body", 10, 15, 0)
 	_expect(one.combo > 1 and one.refund("combo") and one.combo == 1.0 and one.combo_grace == 0, "Refunding the combo clears it immediately")
@@ -324,8 +326,8 @@ func _test_tree_costs() -> void:
 	for index in 9:
 		health_before_boss += Run.HEALTH[index]
 	var earned := floori(health_before_boss / 8.0)
-	_expect(earned >= full_price * 0.9 and earned + floori((Run.HEALTH[9] - 1) / 8.0) >= full_price,
-		"Base sap affords at least 90% of ranks by value before N10 and all ranks during its fight")
+	_expect(earned < full_price and (health_before_boss + Run.HEALTH[9] / 4) / Run.DAMAGE_PER_SAP >= full_price,
+		"The last power purchases can be paid from base damage during the first quarter of target ten")
 
 
 func _test_refunds() -> void:
@@ -476,12 +478,61 @@ func _test_second_act() -> void:
 		var check := Run.new()
 		_expect(check.restore_state(run.save_state()) and check.hp == run.hp and check.core_phase == run.core_phase,
 			"Reopening during the second boss restores the correct hollow")
-	_expect(run.hp == 0 and not run.next_knot(), "N10 is the end of this demo")
+	_expect(run.hp == 0 and not run.next_knot(), "N10 waits for the second card before continuing")
 	run.prepare_gifts()
 	_expect(run.gift_offer.size() == 3 and not run.gift_offer.has("D09"), "The second offer excludes the previous reward")
 	var second: String = run.gift_offer[0]
 	_expect(run.choose_gift(second) and run.has_gift("D09") and run.has_gift(second) and run.at_act_summary(),
-		"The second choice preserves both rewards and reaches the final result")
+		"The second choice preserves both rewards and reaches the second act result")
+
+
+func _test_dark_timber_acts() -> void:
+	var old := Run.new()
+	old.stage = 10
+	old.hp = 0
+	old.first_gift = "D04"
+	old.chosen_gift = "D08"
+	old.tenth_entry = {"sap": 1200, "ranks": {}, "paid_prices": {}, "bow": "branch", "gift": "D04"}
+	var checkpoint := old.save_state()
+	checkpoint.erase("later_gifts")
+	var run := Run.new()
+	_expect(run.restore_state(checkpoint) and run.at_act_summary() and run.next_knot(),
+		"An existing ten-target ending continues directly to target 11")
+	_expect(run.has_gift("D04") and run.capacity() == 48 and run.tenth_entry == old.tenth_entry,
+		"Both old cards stay active alongside the historical entry loadout")
+	for target in range(11, 16):
+		run.damage_part(run.hp, "body")
+		if target < 15:
+			_expect(run.next_knot(), "Dark timber advances through its proper health budget")
+	_expect(not run.next_knot(), "Target 15 waits for a reward")
+	run.prepare_gifts()
+	var offered := run.gift_offer.duplicate()
+	checkpoint = run.save_state()
+	for card: String in Run.THIRD_GIFTS:
+		var branch := Run.new()
+		_expect(branch.restore_state(checkpoint) and branch.gift_offer == offered and branch.gift_offer.has(card),
+			"Each third-act card is available in the saved draw and menu order")
+		_expect(branch.choose_gift(card) and not branch.choose_gift(card) and branch.next_knot(), "Choose the third card once")
+		var loaded := Run.new()
+		_expect(loaded.restore_state(branch.save_state()) and loaded.stage == 16 and loaded.has_gift("D04")
+			and loaded.has_gift("D08") and loaded.has_gift(card), "Three accumulated cards persist in act four")
+		_expect(is_equal_approx(loaded.speed_multiplier(), 1.15 if card == "D10" else 1.0), "Light step affects movement")
+		var plain := loaded._arrow_power(false)
+		_expect(is_equal_approx(loaded._arrow_power(true) / plain, 2.0 if card == "D05" else 1.5),
+			"Owl eye raises weak-spot damage")
+		for stage in range(16, 21):
+			var before := loaded.knot_stock
+			loaded.damage_part(loaded.hp, "body")
+			_expect(loaded.knot_stock - before == (16 if card == "D12" else 8), "Double harvest changes actual drops")
+			if stage == 20:
+				break
+			_expect(loaded.next_knot(), "Act four advances normally")
+		loaded.prepare_gifts()
+		_expect(loaded.at_act_summary() and loaded.gift_offer.is_empty() and not loaded.next_knot()
+			and not loaded.snapshot().can_continue_act, "Breaking target 20 is the final result")
+		var final_save := loaded.save_state()
+		_expect(branch.restore_state(final_save) and branch.at_act_summary() and branch.has_gift(card),
+			"The twenty-target summary reopens with the chosen cards")
 
 
 func _test_required_core() -> void:

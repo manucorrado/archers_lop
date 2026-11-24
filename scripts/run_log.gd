@@ -16,6 +16,14 @@ static func splits(marks: Dictionary) -> Dictionary:
 		result["total"] = last
 		if first > 0 and last > first:
 			result["act2"] = last - first
+	var third := float(marks.get("broke_15", -1.0))
+	var end := float(marks.get("broke_20", -1.0))
+	if third > last and last > 0:
+		result["act3"] = third - last
+	if end > 0:
+		result["total20"] = end
+		if third > 0 and end > third:
+			result["act4"] = end - third
 	return result
 
 
@@ -79,29 +87,36 @@ static func build(parent: Control, state: Dictionary, language: String, upgrades
 static func _times(parent: Control, state: Dictionary, es: bool, sans: Font, serif: Font) -> void:
 	var marks: Dictionary = state.get("observations", {})
 	var total_us := int(state.get("experience_us", -1))
-	var final_card := marks.has("second_gift")
-	var total := _clock(total_us / 1000000.0) if final_card and total_us >= 0 else "—"
-	var active := _clock(marks.get("second_gift", -1.0))
-	_line(parent, ("Hasta confirmar la última carta     Total  %s     ·     En juego  %s" if es else
-			"Through final card confirmation     Total  %s     ·     Active play  %s") % [total, active], sans, 18, Journal.INK)
+	var total := _clock(total_us / 1000000.0) if marks.has("broke_20") and total_us >= 0 else "—"
+	var active := _clock(marks.get("broke_20", -1.0))
+	_line(parent, ("Hasta romper el blanco 20     Total  %s     ·     En juego  %s" if es else
+			"Through target 20     Total  %s     ·     Active play  %s") % [total, active], sans, 18, Journal.INK)
 	_line(parent, "El total incluye menús, charlas y pausas con el juego en primer plano." if es else
 		"The total includes menus, conversations and pauses while the game is in focus.", sans, 16, Journal.MUTED)
 	var times := splits(marks)
 	var records := Save.best_times()
-	var table := _table(parent, 3)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size.y = 312
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	parent.add_child(scroll)
+	var sheet := VBoxContainer.new()
+	sheet.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(sheet)
+	var table := _table(sheet, 3)
 	for title in (["Tramo", "Esta vuelta", "Récord local"] if es else ["Section", "This run", "Local best"]):
 		_line(table, title, sans, 16, Journal.MUTED)
-	var ids := ["act1", "act2", "total"]
-	var titles := ["Primer acto", "Segundo acto", "Hasta romper el blanco 10"] if es else ["First act", "Second act", "Through target 10 break"]
+	var ids := ["act1", "act2", "total", "act3", "act4", "total20"]
+	var titles := (["Primer acto", "Segundo acto", "Hasta el blanco 10", "Tercer acto", "Cuarto acto", "Los 20 blancos"]
+			if es else ["First act", "Second act", "Through target 10", "Third act", "Fourth act", "All 20 targets"])
 	for i in ids.size():
 		var id: String = ids[i]
 		_line(table, titles[i], serif, 20, Journal.INK, true)
 		_line(table, _clock(times.get(id, -1.0)), sans, 18, Journal.INK)
 		_line(table, _clock(records.get(id, -1.0)), sans, 18, Journal.ACCENT)
-	parent.add_child(HSeparator.new())
-	var targets := _table(parent, 4)
+	sheet.add_child(HSeparator.new())
+	var targets := _table(sheet, 8)
 	for target in range(1, 6):
-		for number: int in [target, target + 5]:
+		for number: int in [target, target + 5, target + 10, target + 15]:
 			_line(targets, ("Blanco %d" if es else "Target %d") % number, sans, 16, Journal.MUTED, true)
 			var finish := float(marks.get("broke_%d" % number, -1.0))
 			var start := 0.0 if number == 1 else float(marks.get("broke_%d" % (number - 1), -1.0))
@@ -147,7 +162,7 @@ static func _damage(parent: Control, state: Dictionary, es: bool, sans: Font) ->
 static func _entry(parent: Control, state: Dictionary, es: bool, sans: Font, upgrades: Dictionary, gifts: Dictionary) -> void:
 	var entry: Dictionary = state.get("tenth_entry", {})
 	if entry.is_empty():
-		var missing := int(state.get("stage", 1)) == 10
+		var missing := int(state.get("stage", 1)) >= 10
 		var message := ("Esta partida llegó al blanco 10 antes de la actualización." if es else
 			"This save reached target 10 before the update.") if missing else (
 			"Se registra cuando aparece el décimo árbol." if es else "Recorded when the tenth tree appears.")

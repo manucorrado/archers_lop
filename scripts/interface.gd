@@ -18,6 +18,7 @@ const Journal := preload("res://scripts/field_journal.gd")
 const Preferences := preload("res://scripts/play_preferences.gd")
 const Timbres := preload("res://scripts/arrow_timbres.gd")
 const UpgradeMap := preload("res://scripts/upgrade_map.gd")
+const AtlasDetail := preload("res://scripts/atlas_detail.gd")
 const Paths := preload("res://scripts/upgrade_paths.gd")
 const UPGRADES := {
 	"sentinel": ["Ballesta del claro", "Clearing crossbow", "Instalá una ballesta a la derecha del sendero y sumá 0,025 flechas/s al taller. Cargala de a ocho. Conservás cuatro flechas. Dispara al tronco y espera cuando tenés que acertar al punto débil.", "Build a crossbow to the right of the path and add 0.025 arrows/s to the workshop. Load up to eight arrows and keep four. It fires at the trunk and waits when you need to hit a weak spot."],
@@ -39,6 +40,7 @@ const UPGRADES := {
 	"refund": ["Recuperar savia", "Reclaim sap", "Con un clic derecho sobre una mejora comprada, devolvés un nivel y recuperás lo que pagaste.", "Right-click a purchased upgrade to return one level and recover the sap you spent."],
 	"longbow": ["Arco largo", "Longbow", "Desbloqueá un tercer arco. Sus flechas pegan más fuerte que las del arco rápido.", "Unlock a third bow. Its arrows hit harder than the recurve bow’s."],
 	"combo": ["Buena racha", "On a roll", "Desbloqueá el combo. Los aciertos seguidos dan savia extra y los puntos débiles hacen crecer la racha más rápido.", "Unlock the combo. Consecutive hits earn bonus sap and weak points build your streak faster."],
+	"rain": ["Lluvia de flechas", "Arrow rain", "Por cada flecha que soltás, caen tres más sobre el mismo lugar. Solo la primera sale de tu carcaj.", "Every arrow you release calls three more down on the same spot. Only the original comes from your quiver."],
 	"crit": ["Golpe crítico", "Critical hit", "Cada vez que disparás hay un 10 % de probabilidad de que todas las flechas de ese tiro hagan el doble de daño.", "Each shot has a 10% chance to deal double damage with every arrow in that volley."],
 	"steady": ["Tiro sostenido", "Steady fire", "Encadená cuatro disparos sin parar para ganar un 20 % de daño.", "Fire four shots without a break to gain 20% damage."],
 	"leap": ["Salto al atado", "Bundle leap", "Mirá un atado de flechas en el suelo y saltá para impulsarte hacia él.", "Look at a bundle of arrows on the ground and jump to spring toward it."],
@@ -48,8 +50,11 @@ const GIFTS := {
 	"D01": ["Pulso de liebre", "Hare's pulse", "Todos tus arcos disparan un 50% más rápido.", "Every bow fires 50% faster."],
 	"D03": ["Manantial", "Wellspring", "Cada taller produce un 30% más de flechas.", "Each workshop produces 30% more arrows."],
 	"D04": ["Corteza viva", "Living bark", "Tus flechas hacen un 20% más de daño directo.", "Your arrows deal 20% more direct damage."],
+	"D05": ["Ojo de búho", "Owl eye", "Los aciertos del arco en un punto débil suman 0,5 al multiplicador de daño.", "Bow hits on a weak spot add 0.5 to the damage multiplier."],
 	"D08": ["Carcaj profundo", "Deep quiver", "Tenés lugar para 24 flechas más en el carcaj.", "Your quiver holds 24 more arrows."],
 	"D09": ["Hojas imantadas", "Magnetic leaves", "Recogés haces desde 2 metros más lejos.", "Collect bundles from 2 metres farther away."],
+	"D10": ["Paso ligero", "Light step", "Caminás un 15 % más rápido, incluso con el carcaj vacío.", "Walk 15% faster, even with an empty quiver."],
+	"D12": ["Cosecha doble", "Double harvest", "Cada árbol que rompés deja 16 flechas al pie del tronco.", "Each tree you break drops 16 arrows at its base."],
 	"D14": ["Aliento largo", "Long breath", "Tu combo tarda 2 segundos más en empezar a caer.", "Your combo waits 2 more seconds before it starts to fall."],
 }
 
@@ -154,6 +159,8 @@ var options: Dictionary
 var combo_text: Label
 var combo_panel: PanelContainer
 var combo_hint: Label
+var triple_status: Label
+var rain_status: Label
 var lobes_text: Label
 var bow_text: Label
 var event_text: Label
@@ -175,15 +182,8 @@ var start_new: Button
 var overlay_notice: Label
 var offer_controls: Dictionary = {}
 var upgrade_map: UpgradeMap
-var selected_upgrade := "damage"
-var selected_title: Label
-var selected_level: Label
-var selected_effect: Label
-var selected_values: Label
-var selected_requirement: Label
-var selected_icon: TextureRect
-var purchase_upgrade: Button
-var refund_upgrade: Button
+var selected_upgrade := ""
+var upgrade_detail: AtlasDetail
 var equipment_buttons: Dictionary = {}
 var ui_font := Journal.sans()
 var title_font := SystemFont.new()
@@ -315,6 +315,7 @@ func _build_hud() -> void:
 	combo_panel = _sheet(target_col, 0, 0, "inline")
 	combo_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	var combo_row := _row(combo_panel, 10)
+	_power_icon(combo_row, "combo")
 	combo_text = _label(combo_row, "", 16, INK, title_font)
 	combo_hint = _label(combo_row, "", 13, MUTED)
 	sight = Sight.new()
@@ -342,6 +343,8 @@ func _build_hud() -> void:
 	var quiver := _stack(ammo_row, -4)
 	bow_text = _label(quiver, "", 12, MUTED)
 	ammo_text = _label(quiver, "", 30, INK, title_font)
+	triple_status = _power_line(entries, "multishot")
+	rain_status = _power_line(entries, "rain")
 	_rule(entries)
 	var wallet := _row(entries, 7)
 	wallet.add_child(Pictogram.new("sap", ACCENT))
@@ -363,6 +366,20 @@ func _build_hud() -> void:
 	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	toast.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	toast_panel.hide()
+
+func _power_icon(row: HBoxContainer, id: String) -> void:
+	var icon := TextureRect.new()
+	icon.texture = UpgradeMap.Icons.texture(id)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.custom_minimum_size = Vector2(19, 19)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(icon)
+
+func _power_line(entries: VBoxContainer, id: String) -> Label:
+	var line := _row(entries, 5)
+	_power_icon(line, id)
+	return _label(line, "", 14, INK)
 
 func set_view(view: String) -> void:
 	current_view = view
@@ -397,8 +414,8 @@ func _render_view() -> void:
 	overlay = null
 	shop_sap = null
 	shop_notice = null
-	selected_title = null
-	purchase_upgrade = null
+	upgrade_detail = null
+	selected_upgrade = ""
 	overlay_notice = null
 	end_stats = null
 	start_new = null
@@ -530,8 +547,8 @@ func _pause_summary(page: Control) -> void:
 	emblem.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	target.add_child(emblem)
 	var caption := _stack(target, 0)
-	_label(caption, _t("Primer acto", "First act") if stage <= 5 else _t("Segundo acto", "Second act"), 16, MUTED)
-	_label(caption, _t("Blanco %d de 10", "Target %d of 10") % stage, 26, INK, title_font)
+	_label(caption, _act_name(stage), 16, MUTED)
+	_label(caption, _stage_label(stage), 26, INK, title_font)
 	_rule(page)
 	_pause_datum(page, _t("Savia", "Sap"), str(values.get("sap", 0)))
 	_pause_datum(page, _t("Flechas en el carcaj", "Arrows in quiver"), "%d / %d" % [values.get("arrows", 24), values.get("capacity", 24)])
@@ -593,80 +610,47 @@ func _scroll_column(parent: Control, height: int) -> VBoxContainer:
 func _build_shop(cover: Control) -> void:
 	var binding := _sheet(cover, 4, 5, "binding")
 	binding.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var spread := _row(binding, 0)
-	var left := _sheet(spread, 28, 18, "left")
-	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var chart := _stack(left, 7)
-	var heading := _row(chart, 12)
-	var title := _label(heading, _t("Árbol de mejoras", "Upgrade tree"), 35, INK, title_font)
+	var page := _sheet(binding, 30, 9, "inline")
+	var chart := _stack(page, 4)
+	var heading := _row(chart, 20)
+	var title := _label(heading, _t("Árbol de mejoras", "Upgrade tree"), 41, INK, title_font)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var balance := _row(heading, 6)
+	balance.add_child(Pictogram.new("sap", ACCENT))
+	shop_sap = _label(balance, "", 18, INK, ui_font)
+	_entry(heading, _t("English", "Español"), _switch_language)
 	_rule(chart)
 	upgrade_map = UpgradeMap.new()
 	upgrade_map.language = language
+	upgrade_map.animate_completion = minf(float(options.flashes), float(options.shake)) > 0.0
 	upgrade_map.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	chart.add_child(upgrade_map)
+	upgrade_detail = AtlasDetail.new()
+	upgrade_map.add_child(upgrade_detail)
+	upgrade_map.inspection_changed.connect(_select_upgrade)
+	upgrade_map.map_moved.connect(_position_upgrade_detail)
 	var available: Dictionary = values.get("offers", {})
 	for id: String in available:
 		var node := upgrade_map.add_socket(id)
 		node.accessibility_name = _upgrade_name(id)
-		node.mouse_entered.connect(_select_upgrade.bind(id))
-		node.focus_entered.connect(_select_upgrade.bind(id))
 		node.pressed.connect(_try_buy.bind(id))
 		node.gui_input.connect(_socket_input.bind(id))
 		offer_controls[id] = node
 	upgrade_map.arrange(available)
-	selected_upgrade = upgrade_map.closest_revealed(selected_upgrade)
-
-	var details_panel := _sheet(spread, 18, 20, "right")
-	details_panel.custom_minimum_size.x = 286
-	var details := _stack(details_panel, 8)
-	var balance := _row(details, 6)
-	balance.add_child(Pictogram.new("sap", ACCENT))
-	shop_sap = _label(balance, "", 16, MUTED, ui_font)
-	_rule(details)
-	selected_icon = TextureRect.new()
-	selected_icon.custom_minimum_size = Vector2(42, 42)
-	selected_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	selected_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	selected_icon.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	details.add_child(selected_icon)
-	selected_level = _label(details, "", 15, MUTED, mono_font)
-	selected_title = _label(details, "", 25, INK, title_font)
-	selected_effect = _label(details, "", 17, INK, ui_font)
-	selected_values = _label(details, "", 16, ACCENT)
-	selected_requirement = _label(details, "", 16, MUTED)
-	for caption in [selected_title, selected_effect, selected_values, selected_requirement]:
-		caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-
-	var space := Control.new()
-	space.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	details.add_child(space)
-	shop_notice = _label(details, "", 15, MUTED)
-	shop_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	shop_notice.hide()
-	purchase_upgrade = _entry(details, "", func(): _try_buy(selected_upgrade), "lead")
-	refund_upgrade = _entry(details, "", func(): refund_requested.emit(selected_upgrade))
-	refund_upgrade.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_rule(details)
-	var language_foot := _row(details, 0)
-	language_foot.alignment = BoxContainer.ALIGNMENT_END
-	_entry(language_foot, _t("English", "Español"), _switch_language)
-
 	_rule(chart)
 	var equipment := _row(chart, 12)
 	_entry(equipment, _t("Volver al claro", "Return to clearing"), resume_requested.emit, "back")
-	var gap := Control.new()
-	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	equipment.add_child(gap)
+	shop_notice = _label(equipment, "", 15, MUTED)
+	shop_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	shop_notice.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shop_notice.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	for id: String in ["branch", "recurve", "longbow"]:
 		var button := _entry(equipment, _bow_name(id), equip_requested.emit.bind(id))
 		button.add_theme_font_size_override("font_size", 15)
 		button.accessibility_name = _t("Equipar ", "Equip ") + _bow_name(id)
 		button.add_theme_color_override("font_disabled_color", MUTED)
 		equipment_buttons[id] = button
-	if offer_controls.has(selected_upgrade):
-		offer_controls[selected_upgrade].grab_focus()
+	upgrade_map.focus_entry()
 
 func _socket_input(event: InputEvent, id: String) -> void:
 	var right_click: bool = event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed
@@ -674,21 +658,24 @@ func _socket_input(event: InputEvent, id: String) -> void:
 	if not (right_click or delete_key):
 		return
 	offer_controls[id].accept_event()
-	_select_upgrade(id)
 	if values.get("offers", {}).get(id, {}).get("refundable", false):
 		refund_requested.emit(id)
 
 func _try_buy(id: String) -> void:
-	_select_upgrade(id)
 	if values.get("offers", {}).get(id, {}).get("available", false):
 		buy_requested.emit(id)
 
 func _select_upgrade(id: String) -> void:
-	if selected_upgrade != id and is_instance_valid(shop_notice):
-		shop_notice.hide()
 	selected_upgrade = id
-	if is_instance_valid(selected_title) and is_instance_valid(purchase_upgrade):
-		_update_values()
+	if not is_instance_valid(upgrade_detail):
+		return
+	upgrade_detail.visible = not id.is_empty()
+	if upgrade_detail.visible:
+		_update_offer(id, values.offers[id])
+
+func _position_upgrade_detail() -> void:
+	if is_instance_valid(upgrade_detail) and upgrade_detail.visible and offer_controls.has(selected_upgrade):
+		upgrade_detail.place(offer_controls[selected_upgrade].get_rect(), upgrade_map.size)
 
 func _bow_name(id: String) -> String:
 	match id:
@@ -702,8 +689,11 @@ func _upgrade_name(id: String) -> String:
 
 func _build_gifts(content: Control) -> void:
 	_label(content, _t("Elegí una mejora", "Choose a reward"), 37, INK, title_font)
-	var first_boss := int(values.get("stage", 5)) == 5
-	_label(content, _t("Rompiste los dos lados del tronco. Elegí qué mejora llevarte.", "You broke both sides of the split trunk. Choose an upgrade to keep.") if first_boss else _t("Venciste al segundo jefe. Elegí tu recompensa final.", "You defeated the second boss. Choose your final reward."), 18, MUTED)
+	var intro := _t("Rompiste el blanco 15. Elegí una carta para los últimos cinco árboles.", "You broke target 15. Choose a card for the last five trees.")
+	match int(values.get("stage", 5)):
+		5: intro = _t("Rompiste los dos lados del tronco. Elegí qué mejora llevarte.", "You broke both sides of the split trunk. Choose an upgrade to keep.")
+		10: intro = _t("Venciste al segundo jefe. Elegí una carta para el tercer acto.", "You defeated the second boss. Choose a card for the third act.")
+	_label(content, intro, 18, MUTED)
 	var cards := _row(content, 10)
 	for id in values.get("gift_offer", []):
 		if not GIFTS.has(id):
@@ -714,7 +704,7 @@ func _build_gifts(content: Control) -> void:
 		card.custom_minimum_size = Vector2(245, 172)
 		var col := _stack(card, 10)
 		var stamp := TextureRect.new()
-		stamp.texture = UpgradeMap.Icons.texture({"D01":"rate", "D03":"wheel", "D04":"damage", "D08":"capacity", "D09":"pickup", "D14":"combo"}[id])
+		stamp.texture = UpgradeMap.Icons.texture({"D01":"rate", "D03":"wheel", "D04":"damage", "D05":"weak", "D08":"capacity", "D09":"pickup", "D10":"pace", "D12":"capacity", "D14":"combo"}[id])
 		stamp.custom_minimum_size = Vector2(32, 32)
 		stamp.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		stamp.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -749,18 +739,28 @@ func _commit_gift() -> void:
 	confirm_gift.disabled = true
 	gift_requested.emit(selected_gift)
 
+func _act_name(stage: int) -> String:
+	var index := clampi(ceili(stage / 5.0) - 1, 0, 3)
+	return _t(["Primer acto", "Segundo acto", "Tercer acto", "Cuarto acto"][index],
+			["First act", "Second act", "Third act", "Fourth act"][index])
+
+func _stage_label(stage: int) -> String:
+	return _t("Blanco %d de %d", "Target %d of %d") % [stage, values.get("stage_count", 20)]
+
 func _build_end(content: Control) -> void:
-	var first_act := int(values.get("stage", 5)) == 5
-	_label(content, _t("Primer acto completado", "First act complete") if first_act else _t("El claro es tuyo", "The clearing is yours"), 38, INK, title_font)
-	_label(content, _t("Cinco blancos rotos", "Five targets broken") if first_act else _t("Diez blancos rotos", "Ten targets broken"), 18, MUTED)
+	var stage := int(values.get("stage", 5))
+	var can_continue := bool(values.get("can_continue_act", false))
+	var title := _t("%s completado", "%s complete") % _act_name(stage) if can_continue else _t("El claro es tuyo", "The clearing is yours")
+	_label(content, title, 38, INK, title_font)
+	_label(content, _t("%d blancos rotos", "%d targets broken") % stage, 18, MUTED)
 	end_stats = _label(content, "", 16, INK)
 	end_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	end_stats.add_theme_constant_override("line_spacing", 5)
 	_button(content, _t("Registro de la vuelta", "Run log"), false, _open_submenu.bind("run_log"))
 	_button(content, _t("Ver tiempos de la prueba", "View playtest times"), false, _open_submenu.bind("test_times"))
-	var replay := _button(content, _t("Volver a jugar", "Play again"), not first_act, _open_submenu.bind("confirm_new"))
-	if first_act:
-		var proceed := _button(content, _t("Continuar al blanco 6", "Continue to target 6"), true, next_act_requested.emit)
+	var replay := _button(content, _t("Volver a jugar", "Play again"), not can_continue, _open_submenu.bind("confirm_new"))
+	if can_continue:
+		var proceed := _button(content, _t("Continuar al blanco %d", "Continue to target %d") % (stage + 1), true, next_act_requested.emit)
 		content.move_child(proceed, 3)
 		proceed.grab_focus()
 	else:
@@ -851,11 +851,6 @@ func _update_values() -> void:
 			maximum += int(offer.get("max_rank", 0))
 			_update_offer(id, offer)
 		upgrade_map.sync_visibility()
-		var visible_selection := upgrade_map.closest_revealed(selected_upgrade)
-		if visible_selection != selected_upgrade:
-			selected_upgrade = visible_selection
-			offer_controls[selected_upgrade].grab_focus()
-			_update_offer(selected_upgrade, values.offers[selected_upgrade])
 		shop_sap.text = _t("%d savia  ·  %d/%d niveles", "%d sap  ·  %d/%d levels") % [values.get("sap", 0), ranks, maximum]
 		for id: String in equipment_buttons:
 			var equipped := id == str(values.get("bow", "branch"))
@@ -872,8 +867,17 @@ func _update_values() -> void:
 			values.get("collected", 0)]
 		if int(values.get("ranks", {}).get("combo", 0)) > 0 or float(values.get("max_combo", 1.0)) > 1.0:
 			end_stats.text += _t("\nMejor combo     ×%s", "\nBest combo     ×%s") % _number(values.max_combo, 2)
-		end_stats.text += _t("\nRecompensa     %s\n%s", "\nReward     %s\n%s") % [_t(gift[0], gift[1]), _t(gift[2], gift[3])]
-		end_stats.text += "\n" + _reward_result(str(values.get("chosen_gift", "")))
+		if not str(values.chosen_gift).is_empty():
+			end_stats.text += _t("\nRecompensa     %s\n%s", "\nReward     %s\n%s") % [_t(gift[0], gift[1]), _t(gift[2], gift[3])]
+			var result := _reward_result(str(values.chosen_gift))
+			if not result.is_empty():
+				end_stats.text += "\n" + result
+		else:
+			var names := PackedStringArray()
+			for id: String in [values.first_gift] + values.later_gifts:
+				if GIFTS.has(id):
+					names.append(_t(GIFTS[id][0], GIFTS[id][1]))
+			end_stats.text += _t("\nCartas de la vuelta     ", "\nCards this run     ") + ", ".join(names)
 
 func _reward_result(id: String) -> String:
 	match id:
@@ -889,7 +893,7 @@ func _update_hud() -> void:
 	var stage := int(values.get("stage", 1))
 	var ammo := int(values.get("arrows", 24))
 	sap_text.text = str(values.get("sap", 0))
-	stage_text.text = _t("Blanco %d de 10", "Target %d of 10") % stage
+	stage_text.text = _stage_label(stage)
 	hp_text.text = "%d / %d" % [values.get("hp", 160), values.get("max_hp", 160)]
 	hp_bar.max_value = maxi(1, int(values.get("max_hp", 160)))
 	hp_bar.value = values.get("hp", 160)
@@ -902,8 +906,26 @@ func _update_hud() -> void:
 	var combo := float(values.get("combo", 1.0))
 	combo_panel.visible = int(values.get("ranks", {}).get("combo", 0)) > 0
 	combo_text.text = "Combo  ×" + _number(combo, 2)
-	combo_hint.visible = combo > 1.001
-	combo_hint.text = _t("En descenso", "Falling") if float(values.get("combo_grace", 0.0)) <= 0 else _t("En racha", "Streak active")
+	if combo <= 1.001:
+		combo_hint.text = _t("Listo", "Ready")
+	elif float(values.get("combo_grace", 0.0)) <= 0:
+		combo_hint.text = _t("En descenso", "Falling")
+	else:
+		combo_hint.text = _t("En racha", "Streak active")
+	var ranks: Dictionary = values.get("ranks", {})
+	triple_status.get_parent().visible = int(ranks.get("damage", 0)) >= 10
+	var recent := int(values.get("recent_volley", 0))
+	if recent > 0:
+		triple_status.text = _t("Disparo triple · %d/3 en el tiro", "Triple shot · %d/3 fired") % recent
+	else:
+		triple_status.text = _t("Disparo triple · %d/3 listas", "Triple shot · %d/3 ready") % mini(ammo, 3)
+	rain_status.get_parent().visible = int(ranks.get("rain", 0)) > 0
+	if values.get("rain_falling", false):
+		rain_status.text = _t("Lluvia de flechas · cayendo", "Arrow rain · falling")
+	elif ammo == 0:
+		rain_status.text = _t("Lluvia · sin munición", "Arrow rain · out of arrows")
+	else:
+		rain_status.text = _t("Lluvia de flechas · lista", "Arrow rain · ready")
 	event_text.visible = str(values.get("event", "")) == "seed_rain"
 	if event_text.visible:
 		event_text.text = _t("Lluvia de semillas · %d s", "Seed rain · %d s") % ceili(values.get("event_remaining", 0.0))
@@ -981,6 +1003,7 @@ func _effect_values(id: String, offer: Dictionary) -> String:
 			name_tag = _t("Producción", "Production")
 			suffix = _t(" flechas/s", " arrows/s")
 		"sentinel": name_tag = _t("Capacidad del depósito", "Crossbow capacity")
+		"rain": name_tag = _t("Flechas extra por flecha", "Extra arrows per arrow")
 		"capacity": name_tag = _t("Capacidad", "Capacity")
 		"weak":
 			name_tag = _t("Punto débil", "Weak point")
@@ -1007,16 +1030,19 @@ func _update_offer(id: String, offer: Dictionary) -> void:
 		status = _t("Bloqueada", "Locked")
 	var node: Button = offer_controls[id]
 	node.accessibility_name = name_tag + ". " + level + ". " + status
-	upgrade_map.update_socket(id, offer, id == selected_upgrade)
+	upgrade_map.update_socket(id, offer)
 	if id != selected_upgrade:
 		return
-	selected_icon.texture = UpgradeMap.Icons.texture(id)
-	selected_level.text = level.to_upper()
-	selected_title.text = name_tag
+	var details := upgrade_detail
+	var group := UpgradeMap.group_for(id)
+	details.set_pigment(UpgradeMap.PIGMENTS[group])
+	details.category.text = upgrade_map.group_name(group).to_upper()
+	details.level.text = level.to_upper()
+	details.title.text = _t("%s · Disparo triple", "%s · Triple shot") % name_tag if id == "damage" and rank >= 9 else name_tag
 	var item: Array = UPGRADES[Paths.family(id)]
-	selected_effect.text = _t(item[2], item[3])
-	selected_values.text = _effect_values(id, offer)
-	selected_values.visible = not selected_values.text.is_empty()
+	details.effect.text = _t(item[2], item[3])
+	details.numbers.text = _effect_values(id, offer)
+	details.numbers.visible = not details.numbers.text.is_empty()
 
 	var lines := PackedStringArray()
 	if not bool(offer.maxed):
@@ -1030,19 +1056,16 @@ func _update_offer(id: String, offer: Dictionary) -> void:
 		var missing := cost - int(values.get("sap", 0))
 		if missing > 0:
 			lines.append(_t("Te faltan %d de savia.", "Need %d more sap.") % missing)
-	selected_requirement.text = "\n".join(lines)
-	selected_requirement.visible = not lines.is_empty()
-	purchase_upgrade.disabled = not bool(offer.available)
-	if bool(offer.maxed):
-		purchase_upgrade.text = _t("Completa", "Complete")
-	elif cost == 0:
-		purchase_upgrade.text = _t("Obtener gratis", "Claim for free")
-	else:
-		purchase_upgrade.text = _t("Comprar · %d savia", "Buy · %d sap") % cost
-	refund_upgrade.visible = bool(offer.get("refundable", false))
-	if refund_upgrade.visible:
-		refund_upgrade.text = _t("Devolver · %d savia", "Refund · %d sap") % int(offer.refund_cost)
-		refund_upgrade.tooltip_text = _t("Clic derecho sobre el nodo o Supr", "Right-click the node or press Delete")
+	details.requirement.text = "\n".join(lines)
+	details.requirement.visible = not lines.is_empty()
+	var action := status
+	if bool(offer.available):
+		action = _t("Clic o Enter para comprar · ", "Click or Enter to buy · ") + status
+	if bool(offer.get("refundable", false)):
+		action += _t("\nClic derecho o Supr · Devolver %d de savia", "\nRight-click or Delete · Refund %d sap") % int(offer.refund_cost)
+	details.actions.text = action
+	_position_upgrade_detail()
+	_position_upgrade_detail.call_deferred()
 
 
 func _build_settings(left: Control, right: Control) -> void:
@@ -1274,7 +1297,10 @@ func notify(es: String, en: String) -> void:
 	notice_es = es
 	notice_en = en
 	toast_remaining = 2.4
-	if is_instance_valid(overlay_notice) and current_view != "play":
+	if current_view == "shop" and is_instance_valid(shop_notice):
+		shop_notice.text = _t(es, en)
+		shop_notice.show()
+	elif is_instance_valid(overlay_notice) and current_view != "play":
 		overlay_notice.text = _t(es, en)
 		overlay_notice.show()
 	elif is_instance_valid(toast):

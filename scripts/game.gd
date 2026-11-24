@@ -284,7 +284,7 @@ func _shoot() -> void:
 			"weak_damage": run.volley_damage(true), "critical": run.volley_critical,
 			"serial": run.event_serial if id.begins_with("seed_") else run.target_serial}
 		in_flight.append(arrow)
-		if run.stage >= 9:
+		if run.rank_of("rain") > 0:
 			_call_arrow_rain(arrow)
 		if index == 0:
 			archer.play_shot(endpoint)
@@ -428,7 +428,12 @@ func _after_damage(previous_milestone: int, personal_hit := true) -> void:
 
 
 func _next_knot() -> void:
-	if run.stage in [5, 10]:
+	if run.stage == Run.HEALTH.size():
+		archer.play_cue("win")
+		_set_view("end")
+		checkpoint_due = true
+		return
+	if run.stage in Run.GIFT_STAGES:
 		run.prepare_gifts()
 		archer.play_cue("win")
 		_set_view("gift")
@@ -441,16 +446,16 @@ func _next_knot() -> void:
 		2: hud.notify("Apuntá al punto débil para hacer más daño y ganar más savia.",
 			"Aim for the weak spot to deal more damage and earn more sap.")
 		5: hud.notify("Quinto blanco · Tronco partido", "Fifth target · Twin Fork")
-		9: hud.notify("¡Lluvia de flechas! Tres flechas extra siguen cada una de las tuyas.",
-			"Arrow rain! Three extra arrows follow every arrow you fire.")
-		10: hud.notify("Último blanco · Apuntá al hueco encendido. El punto débil cambia de lugar.",
-			"Final target · Aim at the glowing hollow. The weak spot moves.")
+		10: hud.notify("Décimo blanco · Apuntá al hueco encendido. El punto débil cambia de lugar.",
+			"Tenth target · Aim at the glowing hollow. The weak spot moves.")
+		15: hud.notify("Blanco 15 · Al romperlo, elegís otra carta.", "Target 15 · Break it to choose another card.")
+		20: hud.notify("Último blanco del claro", "Final target in the clearing")
 	_sync_piles()
 	checkpoint_due = true
 
 
 func _continue_act() -> void:
-	if view != "end" or run.stage != 5 or not run.at_act_summary():
+	if view != "end" or run.stage >= Run.HEALTH.size() or not run.at_act_summary():
 		return
 	run.sample_session(Time.get_ticks_usec())
 	var previous := run.save_state()
@@ -461,8 +466,11 @@ func _continue_act() -> void:
 		return
 	_redraw_world()
 	_set_view("play")
-	hud.notify("Segundo acto · Acertale a la diana temporal con el arco para recuperar hasta 3 flechas.",
-		"Second act · Hit a timed bullseye with your bow to recover up to 3 arrows.")
+	match run.stage:
+		6: hud.notify("Segundo acto · Acertale a la diana temporal con el arco para recuperar hasta 3 flechas.",
+			"Second act · Hit a timed bullseye with your bow to recover up to 3 arrows.")
+		11: hud.notify("Tercer acto · Blanco 11", "Third act · Target 11")
+		16: hud.notify("Cuarto acto · Blanco 16", "Fourth act · Target 16")
 
 
 func _collect_nearby() -> bool:
@@ -550,6 +558,18 @@ func _change_upgrade(id: String, refund: bool) -> void:
 	archer.set_bow(run.bow)
 	archer.play_cue("buy")
 	_sync()
+	if not refund:
+		match id:
+			"combo":
+				hud.notify("Combo desbloqueado · Encadená aciertos para ganar savia extra.",
+					"Combo unlocked · Chain hits to earn extra sap.")
+			"rain":
+				hud.notify("Lluvia de flechas desbloqueada · Cada flecha llama tres más desde arriba.",
+					"Arrow rain unlocked · Each arrow calls three more from above.")
+			"damage":
+				if run.volley_size() == 3:
+					hud.notify("Disparo triple desbloqueado · Soltá hasta tres flechas del carcaj por tiro.",
+						"Triple shot unlocked · Release up to three quiver arrows per shot.")
 
 
 func _choose_gift(id: String) -> void:
@@ -585,6 +605,7 @@ func _sync() -> void:
 	archer.set_has_arrows(run.arrows > 0)
 	archer.set_speed_multiplier(run.speed_multiplier())
 	var state := run.snapshot()
+	state.rain_falling = in_flight.any(func(arrow: Dictionary) -> bool: return arrow.get("source") == "rain")
 	state.near_dog = clearing.is_near_dog(archer.position)
 	state.near_brizno = clearing.is_near_brizno(archer.position)
 	state.has_save = has_save

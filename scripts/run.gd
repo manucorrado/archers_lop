@@ -1,10 +1,11 @@
 extends RefCounted
-## Reglas y estado de los dos primeros actos.
+## Reglas y estado de los cuatro actos del claro.
 
-const HEALTH := [160, 821, 2079, 5057, 19430, 20446, 41932, 74796, 144178, 357311]
+## round(1.52^(n−1) × reference DPS × reference seconds), from mejoras-y-economia.md.
+const HEALTH := [160, 821, 2079, 5057, 19430, 20446, 41932, 74796, 144178, 357311,
+	343971, 682439, 1241118, 2224036, 5675221, 5405481, 10656062, 19868582, 35171092, 83825374]
 const DAMAGE_PER_SAP := 8
-const POWER := [1.0, 1.52, 2.3104, 3.511808, 5.33794816, 8.1136812032, 12.332795428864,
-	18.74584905187328, 28.49369055884739, 43.31040964944803]
+static var POWER := _stage_powers()
 const SHOT_INTERVAL := 1.0
 const PICKUP_RADIUS := 1.5
 const WORKSHOP_RATE := 1.25
@@ -18,6 +19,8 @@ const Paths = preload("res://scripts/upgrade_paths.gd")
 static var TREE := Paths.build_tree()
 const FIRST_GIFTS := ["D01", "D04", "D08"]
 const LATER_GIFTS := ["D09", "D14"]
+const THIRD_GIFTS := ["D05", "D10", "D12"]
+const GIFT_STAGES := [5, 10, 15]
 const SAVE_FIELDS := [
 	"stage", "hp", "sap", "arrows", "ranks", "bow", "elapsed", "shots", "hits",
 	"collected", "workshop_stock", "workshop_fraction", "knot_stock", "seed_drops",
@@ -36,6 +39,7 @@ var ranks: Dictionary = {}
 var paid_prices: Dictionary = {}
 var bow := "branch"
 var last_volley := -10.0
+var last_volley_size := 0
 var steady_count := 0
 var volley_critical := false
 var damage_rank: int:
@@ -90,6 +94,7 @@ var seed_drops: Dictionary = {}
 var gift_offer: Array = []
 var chosen_gift := ""
 var first_gift := ""
+var later_gifts: Array = []
 var core_phase := 0
 var core_hit := false
 var observations: Dictionary = {}
@@ -104,6 +109,13 @@ var _session_focused := true
 var _at_workshop := false
 
 
+static func _stage_powers() -> Array[float]:
+	var powers: Array[float] = []
+	for exponent in HEALTH.size():
+		powers.append(pow(1.52, exponent))
+	return powers
+
+
 func sample_session(monotonic_us: int) -> void:
 	# The monotonic origin belongs to this process. Only its accumulated intervals
 	# go on disk. Earlier checkpoints without this clock have no observed total.
@@ -111,7 +123,7 @@ func sample_session(monotonic_us: int) -> void:
 		var interval := maxi(0, monotonic_us - _previous_sample_us)
 		if session_elapsed_us >= 0 and not at_act_summary():
 			session_elapsed_us += interval
-		if experience_us >= 0 and not (stage == 10 and at_act_summary()):
+		if experience_us >= 0 and not (stage == HEALTH.size() and hp == 0):
 			experience_us += interval
 	_previous_sample_us = monotonic_us
 
@@ -133,11 +145,11 @@ func rank_of(id: String) -> int:
 
 
 func at_act_summary() -> bool:
-	return hp == 0 and stage in [5, 10] and not chosen_gift.is_empty()
+	return hp == 0 and (stage == HEALTH.size() or (stage in GIFT_STAGES and not chosen_gift.is_empty()))
 
 
 func has_gift(id: String) -> bool:
-	return chosen_gift == id or first_gift == id
+	return chosen_gift == id or first_gift == id or id in later_gifts
 
 
 func max_hp() -> int:
@@ -156,7 +168,7 @@ func _arrow_power(weak_spot: bool) -> float:
 	if has_gift("D04"):
 		base *= 1.2
 	if weak_spot:
-		base *= 1.5 + 0.5 * rank_of("weak")
+		base *= 1.5 + 0.5 * rank_of("weak") + (0.5 if has_gift("D05") else 0.0)
 	return base
 
 
@@ -172,6 +184,7 @@ func begin_volley() -> void:
 	var continuous := elapsed - last_volley <= maxf(0.35, shot_interval() * 1.55)
 	steady_count = mini(4, steady_count + 1) if continuous else 1
 	last_volley = elapsed
+	last_volley_size = mini(arrows, volley_size())
 	volley_critical = rank_of("crit") > 0 and _draw(0.0, 1.0) < 0.1
 
 
@@ -220,7 +233,7 @@ func _family_ranks(family: String) -> int:
 
 
 func speed_multiplier() -> float:
-	return 1.0 + (0.06 * rank_of("pace") if arrows >= 4 else 0.0)
+	return (1.0 + (0.06 * rank_of("pace") if arrows >= 4 else 0.0)) * (1.15 if has_gift("D10") else 1.0)
 
 
 func combo_delay() -> float:
@@ -236,7 +249,7 @@ func _rank_value(id: String, rank: int) -> float:
 		"rate_step": return 2 * rank
 		"wheel_step": return 0.025 * rank
 		"sentinel": return SENTINEL_CAPACITY * rank
-		"weak": return 1.5 + 0.5 * rank
+		"weak": return 1.5 + 0.5 * rank + (0.5 if has_gift("D05") else 0.0)
 		"recurve": return 1.0 if rank == 0 else 2.5
 		"workshop": return WORKSHOP_RATE * rank * (1.0 + 0.2 * rank_of("wheel"))
 		"capacity": return 24 + 16 * rank
@@ -246,6 +259,7 @@ func _rank_value(id: String, rank: int) -> float:
 		"spark": return 20 * rank
 		"longbow": return 22 * rank
 		"combo": return 2.5 + rank
+		"rain": return 3 * rank
 		"crit": return 10 * rank
 		"steady": return 20 * rank
 		"refund", "pet", "leap": return rank
@@ -465,7 +479,7 @@ func damage_part(amount: int, id: String, manual := false, source := "other") ->
 		core_hit = false
 		mark("core_phase_" + str(core_phase))
 	if hp == 0:
-		knot_stock += 8
+		knot_stock += 16 if has_gift("D12") else 8
 		mark("broke_" + str(stage))
 	return effective
 
@@ -529,14 +543,16 @@ func manual_impact(id: String, shot_damage: int, weak_damage: int, serial: int) 
 
 
 func next_knot() -> bool:
-	if hp > 0 or stage >= HEALTH.size() or (stage == 5 and chosen_gift.is_empty()):
+	if hp > 0 or stage >= HEALTH.size() or (stage in GIFT_STAGES and chosen_gift.is_empty()):
 		return false
 	if stage == 5:
 		first_gift = chosen_gift
-		chosen_gift = ""
 		split = false
 		left_hp = 0
 		right_hp = 0
+	elif stage in GIFT_STAGES:
+		later_gifts.append(chosen_gift)
+	chosen_gift = ""
 	stage += 1
 	hp = max_hp()
 	if stage == 10:
@@ -607,6 +623,8 @@ func _opportunities(delta: float) -> void:
 
 
 func tick(delta: float) -> void:
+	if stage == HEALTH.size() and hp == 0:
+		return
 	elapsed += delta
 	if workshop or not workshop_flights.is_empty():
 		_tick_workshop(delta)
@@ -679,7 +697,7 @@ func collect_seeds(id: String) -> int:
 
 
 func prepare_gifts() -> void:
-	if stage not in [5, 10] or hp > 0 or not gift_offer.is_empty() or not chosen_gift.is_empty():
+	if stage not in GIFT_STAGES or hp > 0 or not gift_offer.is_empty() or not chosen_gift.is_empty():
 		return
 	var pool := FIRST_GIFTS.duplicate()
 	if stage == 10:
@@ -689,6 +707,8 @@ func prepare_gifts() -> void:
 		if workshop:
 			pool.append("D03")
 		pool.erase(first_gift)
+	elif stage == 15:
+		pool = THIRD_GIFTS.duplicate()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = run_seed + stage
 	while gift_offer.size() < 3:
@@ -700,12 +720,16 @@ func choose_gift(id: String) -> bool:
 		return false
 	chosen_gift = id
 	gift_offer.clear()
-	mark("chosen_gift" if stage == 5 else "second_gift")
+	match stage:
+		5: mark("chosen_gift")
+		10: mark("second_gift")
+		15: mark("third_gift")
 	return true
 
 
 func save_state() -> Dictionary:
 	var data := {"session_elapsed_us": session_elapsed_us, "sap_remainder": sap_remainder,
+		"purchased_rain_rule": true, "last_volley_size": last_volley_size,
 		"experience_us": experience_us, "damage_by_source": damage_by_source,
 		"damage_history_complete": damage_history_complete, "tenth_entry": tenth_entry,
 		"sentinel_ammo": sentinel_ammo, "sentinel_wait": sentinel_wait,
@@ -713,7 +737,7 @@ func save_state() -> Dictionary:
 		"session_observations": session_observations, "at_workshop": _at_workshop,
 		"workshop_piles": workshop_piles, "workshop_flights": workshop_flights, "workshop_buffer": workshop_buffer,
 		"batches_launched": batches_launched, "core_phase": core_phase, "core_hit": core_hit, "first_gift": first_gift,
-		"supply_hints": supply_hints.checkpoint()}
+		"supply_hints": supply_hints.checkpoint(), "later_gifts": later_gifts}
 	for field: String in SAVE_FIELDS:
 		data[field] = get(field)
 	return data.duplicate(true)
@@ -791,7 +815,7 @@ func _valid_observed_run(data: Dictionary) -> bool:
 		return false
 	if entry.is_empty():
 		return true
-	if data.stage != 10 or not entry.has_all(["sap", "ranks", "paid_prices", "bow", "gift"]):
+	if data.stage < 10 or not entry.has_all(["sap", "ranks", "paid_prices", "bow", "gift"]):
 		return false
 	if not entry.sap is int or entry.sap < 0 or entry.bow not in ["branch", "recurve", "longbow"] or not entry.gift is String:
 		return false
@@ -808,6 +832,12 @@ func restore_state(data: Dictionary) -> bool:
 		return false
 	if data.hp < 0 or data.hp > HEALTH[int(data.stage) - 1]:
 		return false
+	var kept = data.get("later_gifts", [])
+	if not kept is Array or kept.size() > 2 or not data.get("first_gift", "") is String or not data.get("session_observations", {}) is Dictionary:
+		return false
+	for id in kept:
+		if not id is String or (id not in FIRST_GIFTS and id not in LATER_GIFTS and id not in THIRD_GIFTS and id != "D03"):
+			return false
 	if data.get("core_phase", 0) not in [0, 1, 2] or not data.get("core_hit", false) is bool or not _valid_workshop_state(data):
 		return false
 	var history = data.get("paid_prices", {})
@@ -824,6 +854,9 @@ func restore_state(data: Dictionary) -> bool:
 		return false
 	var saved_streak = data.get("steady_count", 0)
 	var saved_last_volley = data.get("last_volley", -10.0)
+	var saved_volley_size = data.get("last_volley_size", 0)
+	if not saved_volley_size is int or saved_volley_size < 0 or saved_volley_size > 3:
+		return false
 	if not history is Dictionary or not saved_streak is int or saved_streak < 0 or saved_streak > 4:
 		return false
 	if not saved_last_volley is float or not is_finite(saved_last_volley):
@@ -831,7 +864,10 @@ func restore_state(data: Dictionary) -> bool:
 	if not _valid_holdings(data.ranks, history) or not _valid_observed_run(data):
 		return false
 	for field: String in SAVE_FIELDS:
-		set(field, data[field])
+		if data[field] is Array or data[field] is Dictionary:
+			set(field, data[field].duplicate(true))
+		else:
+			set(field, data[field])
 	sap_remainder = saved_remainder
 	sentinel_ammo = saved_ammo
 	sentinel_wait = saved_wait
@@ -839,12 +875,25 @@ func restore_state(data: Dictionary) -> bool:
 		combo = 1.0
 		combo_grace = 0.0
 	paid_prices = history.duplicate(true)
+	if not data.has("purchased_rain_rule"):
+		# Earlier campaigns earned rain at target nine. Its original refund value was zero.
+		if stage >= 9 and rank_of("rain") == 0:
+			ranks = ranks.duplicate()
+			ranks.rain = 1
+			paid_prices.rain = [0]
+		if rank_of("combo") > 0 and not paid_prices.has("combo"):
+			paid_prices.combo = [19]
+		if damage_rank == 10 and not paid_prices.has("damage"):
+			var old_prices := _paid_history("damage")
+			old_prices[9] = 154
+			paid_prices.damage = old_prices
 	# The five-target build charged four sap for the root; the following build made it free.
 	if not data.has("paid_prices") and damage_rank > 0 and _had_paid_root(data):
 		var damage_prices := _paid_history("damage")
 		damage_prices[0] = 4
 		paid_prices.damage = damage_prices
 	last_volley = saved_last_volley
+	last_volley_size = saved_volley_size
 	steady_count = saved_streak
 	volley_critical = false
 	workshop_piles = data.get("workshop_piles", [workshop_stock, 0, 0, 0]).duplicate()
@@ -853,6 +902,7 @@ func restore_state(data: Dictionary) -> bool:
 	workshop_buffer = data.get("workshop_buffer", 0)
 	batches_launched = data.get("batches_launched", 0)
 	first_gift = data.get("first_gift", "")
+	later_gifts = kept.duplicate()
 	core_phase = data.get("core_phase", 0)
 	core_hit = data.get("core_hit", false)
 	session_elapsed_us = int(data.get("session_elapsed_us", -1))
@@ -861,7 +911,7 @@ func restore_state(data: Dictionary) -> bool:
 		damage_by_source[source] = data.get("damage_by_source", {}).get(source, 0)
 	damage_history_complete = data.has("damage_by_source") and data.get("damage_history_complete", false)
 	tenth_entry = data.get("tenth_entry", {}).duplicate(true)
-	session_observations = data.get("session_observations", {})
+	session_observations = data.get("session_observations", {}).duplicate()
 	_previous_sample_us = -1
 	_at_workshop = bool(data.get("at_workshop", true))
 	return true
@@ -869,9 +919,11 @@ func restore_state(data: Dictionary) -> bool:
 
 func snapshot() -> Dictionary:
 	return {"stage": stage, "hp": hp, "max_hp": max_hp(), "sap": sap, "arrows": arrows,
+		"recent_volley": last_volley_size if elapsed - last_volley < 0.9 else 0,
 		"sentinel_owned": rank_of(Paths.SENTINEL_NODE) > 0, "sentinel_ammo": sentinel_ammo,
 		"sentinel_capacity": SENTINEL_CAPACITY, "sentinel_load_size": sentinel_load_size(),
-		"can_continue_act": at_act_summary() and stage == 5, "first_gift": first_gift, "core_phase": core_phase,
+		"stage_count": HEALTH.size(), "can_continue_act": at_act_summary() and stage < HEALTH.size(),
+		"first_gift": first_gift, "later_gifts": later_gifts.duplicate(), "core_phase": core_phase,
 		"core_needs_hit": core_needs_hit(), "core_hit": core_hit,
 		"capacity": capacity(), "damage": damage(), "damage_rank": damage_rank,
 		"shot_rate": 1.0 / shot_interval(), "production_rate": production_rate() if workshop else 0.0,

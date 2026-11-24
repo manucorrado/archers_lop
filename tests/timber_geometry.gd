@@ -21,11 +21,13 @@ func _expect(condition: bool, message: String) -> void:
 func _run() -> void:
 	root.add_child(clearing)
 	var origin := Vector3(0, 0, Clearing.TARGET_POSITION.z)
-	for stage in [1, 5, 10]:
+	for stage in [1, 5, 9, 10, 15, 20]:
 		clearing.sync_encounter({"stage": stage, "hp": 100, "max_hp": 100})
 		await physics_frame
 		await physics_frame
 		var size := clearing._growth()
+		_expect((clearing._crack.wood_tint != Color.WHITE) == (stage >= 10),
+			"The end grain changes to dark timber at target 10")
 		for side in [-1.0, 1.0]:
 			var corner := origin + Vector3(side * 0.99, 0, -0.90) * size
 			_expect(_ray(corner + Vector3.UP * 3.3 * size.y, corner + Vector3.UP * 0.8 * size.y) == "",

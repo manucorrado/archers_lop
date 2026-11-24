@@ -37,7 +37,7 @@ func choose(heard: Dictionary, stage: int, workshop: bool, split: bool) -> Strin
 	var repeat := ""
 	var fewest := 2147483647
 	for entry: Dictionary in readable_stories().values():
-		if stage < entry.get("from", 1) or stage > entry.get("until", 10):
+		if stage < entry.get("from", 1) or (entry.has("until") and stage > entry.until):
 			continue
 		if (entry.get("workshop", false) and not workshop) or (entry.get("split", false) and not split):
 			continue

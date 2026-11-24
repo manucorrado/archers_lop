@@ -1,6 +1,6 @@
 # Árbol de mejoras de la demo
 
-La demo recorre diez blancos y dos jefes. Para la primera prueba privada apuntamos a una primera vuelta de **alrededor de 20 minutos**, contando las compras, los diálogos y la elección final. La prueba puede justificar una vuelta más larga. Algunos blancos pueden caer en segundos si la combinación de mejoras ya es potente. La demo representa aproximadamente el **5–15 %** del contenido previsto.
+La partida recorre veinte blancos. Elegís cartas en el 5, el 10 y el 15. El resumen final aparece cuando rompés el 20. La madera se oscurece desde el blanco 10. Para la prueba privada queda por medir cuánto agrega esta segunda mitad al tiempo de compras, diálogos y combate.
 
 ## Qué podés comprar
 
@@ -8,14 +8,15 @@ Pipo se sienta bajo el pino a la izquierda del taller. Acercate y apretá **E**.
 
 | Mejora | Necesitás tener | Precio por nivel en savia | Qué cambia |
 |---|---|---|---|
-| Daño por flecha | Desde el inicio | 0, 9, 9, 14, 21, 31, 46, 69, 103, 154 | Cada nivel suma el 20 % del daño base del arco. El arco de rama gana 2 por nivel. En el décimo salen hasta tres flechas en abanico con el daño completo de cada una. |
+| Daño por flecha | Desde el inicio | 0, 9, 9, 14, 21, 31, 46, 69, 103, 1.250 | Cada nivel suma el 20 % del daño base del arco. El arco de rama gana 2 por nivel. En el décimo salen hasta tres flechas en abanico con el daño completo de cada una. |
 | Velocidad de ataque | Daño | 14, 21, 31, 46, 68, 103, 154, 231, 346, 346 | Cada nivel suma el 12 % de la cadencia base del arco equipado. |
 | Arco rápido | Velocidad | 37 | Base de 11 de daño y 2,5 disparos por segundo. Con los diez niveles iniciales de velocidad llega a 5,5. |
 | Arco largo | Arco rápido y los dos nodos de Suelta ágil que le siguen en la cuerda | 1.670 | Tercer arco. Base de 22 de daño y 2 disparos por segundo. Favorece el daño por flecha y comparte el mismo carcaj. |
 | Ojo de veta | Daño | 14 | Acertar al punto débil pasa de ×1,5 a ×2 de daño. |
 | Chispa de copa | Ojo de veta | 18 | Cada ocho aciertos, una descarga de 20 de daño base. |
 | Golpe crítico | La primera Punta reforzada después de Chispa de copa | 24 | Cada disparo tiene un 10 % de probabilidad de duplicar el daño de las flechas de esa suelta. |
-| Buena racha | Ojo de veta | 19 | Desbloquea el combo y su prima de savia. Un acierto común suma 0,05 y uno preciso suma 0,5. |
+| Buena racha | Ojo de veta | 190 | Desbloquea el combo y su prima de savia. Un acierto común suma 0,05 y uno preciso suma 0,5. |
+| Lluvia de flechas | Arco largo | 3.200 | Cada flecha que sale del carcaj llama otras tres al mismo lugar. Funciona con cualquiera de los arcos. |
 | Tiro sostenido | Buena racha | 26 | A partir de la cuarta suelta seguida, cada flecha hace un 20 % más de daño mientras mantengas el ritmo. |
 | Taller de flechas | Daño | 17 | El taller de la izquierda produce 1,25 flechas por segundo y lanza atados de tres a cuatro lugares del claro. |
 | Rueda de savia | Taller | 21 | El taller pasa a producir 1,5 flechas por segundo. |
@@ -47,11 +48,13 @@ Al devolver un nivel conservás las otras compras. Para comprar otro nivel vuelv
 
 Cada **8 puntos de vida que pierde un blanco** entran **1 de savia**. Importa cuánto daño recibió realmente. Si a una mitad le quedan 3 de vida y le pegás por 50, esos 3 puntos se acumulan para el próximo cobro. El sobrante pasa al siguiente blanco y se guarda al salir. Con Buena racha, los impactos manuales ganan además una prima que llega hasta un 50 % de su ingreso base cuando el combo alcanza ×6.
 
-Hay **112 nodos, 140 niveles y 41.970 de savia** en compras. Sin primas, al entrar al décimo blanco habrás ganado **38.612 de savia**, el **92,0 %** del costo total. Las 3.358 restantes se alcanzan al quitarle 26.861 puntos de vida al jefe, un 7,5 % de su vida. Son ingresos acumulados de la vuelta. El saldo visible depende de cuánto hayas gastado.
+Hay **113 nodos, 141 niveles y 46.437 de savia** en compras. Sin primas, al entrar al décimo blanco habrás ganado **38.612 de savia**, el **83,1 %** del costo total. El daño al jefe alcanza para financiar las últimas compras durante su primer cuarto de vida. El saldo visible depende de cuánto hayas gastado.
 
-Entre los blancos 6 y 9, acertar con el arco a la diana que aparece por unos segundos devuelve hasta **tres flechas** directamente al carcaj. La primera aparece al entrar al sexto blanco y dura siete segundos. Cada diana paga una vez, incluso con el disparo triple. Si quedan dos lugares, recuperás dos.
+En los blancos 6 a 9 y 11 a 20, acertar con el arco a la diana que aparece por unos segundos devuelve hasta **tres flechas** directamente al carcaj. La primera aparece al entrar al sexto blanco y dura siete segundos. Cada diana paga una vez, incluso con el disparo triple. Si quedan dos lugares, recuperás dos.
 
-Desde el blanco 9, cada flecha que sale del carcaj llama a otras tres que caen sobre el lugar al que apuntaste. Las tres hacen daño del arco y permiten aprovechar el abanico del nivel 10. Los huecos del jefe se abren con la flecha principal o un golpe de rama en la raíz correspondiente.
+El combo aparece junto a la vida del blanco e indica cuándo empieza a bajar. Junto al carcaj podés ver cuántas flechas soltó el disparo triple y cuándo cae la lluvia. Con las dos mejoras y tres flechas en el carcaj, una suelta produce tres flechas en abanico y nueve adicionales desde arriba. Los huecos del jefe se abren con un acierto directo o un golpe de rama en la raíz correspondiente.
+
+Al romper el blanco 15, elegís entre **Ojo de búho** (+0,5 al multiplicador del punto débil), **Paso ligero** (+15 % de velocidad al caminar) y **Cosecha doble** (16 flechas al pie de cada árbol roto).
 
 Para la prueba privada, observá el primer cambio de táctica después de la carta del quinto blanco y qué hace el jugador cuando se queda sin flechas. En el registro de una partida nueva podés cotejar la duración de la vuelta con el tiempo activo, los niveles comprados y el saldo al entrar al décimo, y el daño efectivo de arco y ballesta.
 

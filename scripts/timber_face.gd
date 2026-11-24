@@ -10,10 +10,12 @@ const BARK := Color("#67503c")
 const DEPTH := Color("#624530")
 const SEAM := Color("#483728")
 var plates: Array[MeshInstance3D] = []
+var wood_tint := Color.WHITE
 
 
 func _ready() -> void:
 	var material := StandardMaterial3D.new()
+	material.albedo_color = wood_tint
 	material.vertex_color_use_as_albedo = true
 	material.vertex_color_is_srgb = true
 	material.roughness = 1.0

@@ -4,9 +4,13 @@ extends Control
 const Journal := preload("res://scripts/field_journal.gd")
 const Icons := preload("res://scripts/upgrade_icons.gd")
 const Paths := preload("res://scripts/upgrade_paths.gd")
-const LATENT := Color("#b5b39d")
-const OPEN := Color("#7a866f")
-const GROWN := Color("#38553e")
+signal inspection_changed(id: String)
+signal map_moved
+const PIGMENTS := {"damage": Color("#974a35"), "speed": Color("#3d6453"),
+	"supply": Color("#88641c"), "utility": Color("#526481")}
+const FAMILY_NAMES := {"damage": ["Daño", "Damage"], "speed": ["Cadencia", "Fire rate"],
+	"supply": ["Suministro", "Supply"], "utility": ["Utilidad", "Utility"]}
+const SILHOUETTE := Color("#65482c")
 const MAP_CENTER := Vector2(493.5, 474)
 const MAP_SPAN := Vector2(822, 761)
 const MIN_ZOOM := 0.75
@@ -20,24 +24,22 @@ class Socket extends Button:
 	var met := false
 	var affordable := false
 	var inspected := false
+	var family := "damage"
 
 	func _draw() -> void:
 		var c := size * 0.5
 		var radius := c.x - 2
-		var fill := Journal.PAPER
-		var outline := Color("#929a82")
-		if rank > 0:
-			fill = Journal.INK
-			outline = Journal.INK
-		elif affordable:
-			fill = Color("#fffae8")
-			outline = Journal.INK
-		elif met:
-			outline = Journal.MUTED
-		draw_circle(c, radius, fill, true, -1, true)
-		draw_circle(c, radius, outline, false, 1.4, true)
-		if inspected or has_focus() or is_hovered():
-			draw_circle(c, radius + 1.5, Color("#956730"), false, 1.6, true)
+		var pigment: Color = PIGMENTS[family]
+		var fill := pigment if rank > 0 else Color("#fff7e3") if affordable else Journal.CANVAS
+		var outline := pigment if met or rank > 0 else pigment.lerp(Journal.PAPER, 0.35)
+		var points := PackedVector2Array()
+		var corners := 4 if family == "damage" else 6 if family == "speed" else 8 if family == "supply" else 32
+		var offset := PI / 8 if family == "supply" else -PI / 2
+		for i in corners:
+			points.append(c + Vector2.from_angle(offset + TAU * i / corners) * radius)
+		draw_colored_polygon(points, fill)
+		points.append(points[0])
+		draw_polyline(points, Color("#31291e") if inspected else outline, 2.5 if inspected else 1.5, true)
 		if rank > 0 and ranks > 1 and radius >= 7:
 			draw_arc(c, radius - 2, -PI * 0.5, -PI * 0.5 + TAU * rank / ranks,
 				36, Color("#ebc078"), 1.3, true)
@@ -58,6 +60,33 @@ var _drag_button := 0
 var _last_drag_point := Vector2.ZERO
 var _zoom_value: Button
 var _toolbar := HBoxContainer.new()
+var _legend := HBoxContainer.new()
+var _collection := Button.new()
+var _family_filter := ""
+var _inspected := ""
+var _keyboard_inspection := false
+var _complete := false
+var _has_snapshot := false
+var _show_drawing := false
+var _ink := 0.0
+var _reveal: Tween
+var animate_completion := true
+
+static func group_for(id: String) -> String:
+	match Paths.family(id).trim_suffix("_step"):
+		"rate", "rate_flat", "recurve", "longbow", "steady", "rain": return "speed"
+		"workshop", "wheel", "capacity", "pickup", "sentinel": return "supply"
+		"refund", "leap", "pace", "pet": return "utility"
+		_: return "damage"
+
+func group_name(group: String) -> String:
+	return FAMILY_NAMES[group][0 if language == "es" else 1]
+
+func focus_entry() -> void:
+	if _complete:
+		_collection.grab_focus()
+	elif buttons.has("damage"):
+		buttons.damage.grab_focus()
 
 func _ready() -> void:
 	clip_contents = true
@@ -76,8 +105,48 @@ func _ready() -> void:
 	_zoom_button("−", "Alejar", "Zoom out", func(): _zoom_at(zoom / 1.25, size / 2))
 	_zoom_value = _zoom_button("100 %", "Centrar mapa (Inicio)", "Fit map (Home)", _reset_camera)
 	_zoom_button("+", "Acercar", "Zoom in", func(): _zoom_at(zoom * 1.25, size / 2))
-	tooltip_text = ("Rueda: zoom · Arrastrá el fondo para mover el mapa"
-		if language == "es" else "Scroll to zoom · Drag the background to pan")
+	add_child(_legend)
+	_legend.z_index = 1
+	_legend.position = Vector2(3, 6)
+	_legend.add_theme_constant_override("separation", 12)
+	for group: String in FAMILY_NAMES:
+		var tab := Button.new()
+		var marks := {"damage": "◆", "speed": "⬢", "supply": "▣", "utility": "●"}
+		tab.text = marks[group] + "  " + group_name(group)
+		tab.name = group
+		tab.toggle_mode = true
+		Journal.style_entry(tab, Journal.serif(), "link")
+		for state in ["font_color", "font_pressed_color", "font_focus_color", "font_hover_color"]:
+			tab.add_theme_color_override(state, PIGMENTS[group])
+		tab.pressed.connect(_highlight_family.bind(group))
+		_legend.add_child(tab)
+	add_child(_collection)
+	_collection.position = _legend.position
+	_collection.z_index = 1
+	Journal.style_entry(_collection, Journal.serif(), "action")
+	_collection.pressed.connect(func(): _drawing(not _show_drawing, false))
+	_collection.hide()
+	var hint := Label.new()
+	hint.text = "Rueda para acercar · Arrastrá para mover" if language == "es" else "Wheel to zoom · Drag to pan"
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hint.add_theme_font_override("font", Journal.sans())
+	hint.add_theme_font_size_override("font_size", 13)
+	hint.add_theme_color_override("font_color", Journal.MUTED)
+	hint.z_index = 1
+	add_child(hint)
+	hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 5)
+
+func _highlight_family(group: String) -> void:
+	_family_filter = "" if _family_filter == group else group
+	for tab: Button in _legend.get_children():
+		tab.set_pressed_no_signal(str(tab.name) == _family_filter)
+	_tint_sockets()
+	queue_redraw()
+
+func _tint_sockets() -> void:
+	for socket: Socket in buttons.values():
+		var alpha := 0.28 if not _family_filter.is_empty() and socket.family != _family_filter else 1.0
+		socket.modulate.a = alpha * (1.0 - _ink)
 
 func _zoom_button(caption: String, es: String, en: String, action: Callable) -> Button:
 	var button := Button.new()
@@ -93,18 +162,17 @@ func _zoom_button(caption: String, es: String, en: String, action: Callable) -> 
 
 func add_socket(id: String) -> Socket:
 	var node := Socket.new()
-	node.symbol = Icons.texture(id)
-	node.stamped_symbol = Icons.texture(id, true)
+	node.family = group_for(id)
 	node.flat = true
 	node.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	node.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	node.focus_mode = Control.FOCUS_ALL
 	for style in ["normal", "hover", "focus", "pressed", "hover_pressed"]:
 		node.add_theme_stylebox_override(style, StyleBoxEmpty.new())
-	node.mouse_entered.connect(node.queue_redraw)
-	node.mouse_exited.connect(node.queue_redraw)
-	node.focus_entered.connect(_focus_socket.bind(node))
-	node.focus_exited.connect(node.queue_redraw)
+	node.mouse_entered.connect(_mouse_inspect.bind(id))
+	node.mouse_exited.connect(_mouse_left.bind(id))
+	node.focus_entered.connect(_focus_socket.bind(node, id))
+	node.focus_exited.connect(_blur.bind(id))
 	buttons[id] = node
 	add_child(node)
 	return node
@@ -120,15 +188,14 @@ func arrange(new_offers: Dictionary) -> void:
 				distance = minf(distance, location.distance_to(Paths.position_of(other)))
 		_nearest[id] = distance
 	sync_visibility()
-	# On a first visit the whole bow would reduce the five central emblems to a
-	# tiny cluster. Frame the grip once and keep the camera still during purchases.
-	if revealed.size() <= 10:
-		zoom = 4.0
+	# Frame only the known branches on arrival and hold the camera through purchases.
+	if not _complete and not revealed.is_empty():
 		var bounds := Rect2(Paths.position_of("damage"), Vector2.ZERO)
 		for id: String in revealed:
 			bounds = bounds.expand(Paths.position_of(id))
 		_map_center = bounds.get_center()
-		_zoom_value.text = "400 %"
+		zoom = clampf(minf(MAP_SPAN.x / (bounds.size.x + 76), MAP_SPAN.y / (bounds.size.y + 76)), 1.0, 4.0)
+		_zoom_value.text = "%d %%" % roundi(zoom * 100)
 	_place_buttons()
 
 func sync_visibility() -> void:
@@ -144,8 +211,45 @@ func sync_visibility() -> void:
 			while not path.is_empty():
 				revealed[path] = true
 				path = parents[path]
+	var all_owned := not offers.is_empty()
 	for id: String in buttons:
-		buttons[id].visible = revealed.has(id)
+		all_owned = all_owned and int(offers[id].rank) == int(offers[id].max_rank)
+		buttons[id].visible = revealed.has(id) and (not _show_drawing or _ink < 1.0)
+	if all_owned != _complete:
+		_complete = all_owned
+		_collection.visible = all_owned
+		_legend.visible = not all_owned
+		_drawing(all_owned, all_owned and _has_snapshot and animate_completion)
+	_has_snapshot = true
+	queue_redraw()
+
+func _drawing(enabled: bool, animate: bool) -> void:
+	if _reveal:
+		_reveal.kill()
+	_show_drawing = enabled
+	_set_inspection("")
+	_collection.text = ("Ver mejoras" if language == "es" else "Inspect upgrades") if enabled else ("Ver arco y carcaj" if language == "es" else "View bow and quiver")
+	for id: String in buttons:
+		var socket: Socket = buttons[id]
+		socket.mouse_filter = Control.MOUSE_FILTER_IGNORE if enabled else Control.MOUSE_FILTER_STOP
+		socket.focus_mode = Control.FOCUS_NONE if enabled else Control.FOCUS_ALL
+		socket.visible = revealed.has(id)
+	if enabled:
+		_reset_camera()
+		if _has_snapshot:
+			_collection.grab_focus()
+	if animate:
+		_reveal = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		_reveal.tween_method(_reveal_ink, _ink, 1.0, 0.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	else:
+		_reveal_ink(1.0 if enabled else 0.0)
+
+func _reveal_ink(amount: float) -> void:
+	_ink = amount
+	if _ink >= 1.0:
+		for socket: Socket in buttons.values():
+			socket.hide()
+	_tint_sockets()
 	queue_redraw()
 
 func closest_revealed(id: String) -> String:
@@ -170,6 +274,7 @@ func _place_buttons() -> void:
 		node.size = Vector2.ONE * floorf(diameter)
 		node.position = (_point(Paths.position_of(id)) - node.size * 0.5).round()
 		node.queue_redraw()
+	map_moved.emit()
 	queue_redraw()
 
 func _limit_pan() -> void:
@@ -197,28 +302,56 @@ func _ensure_in_view(node: Socket) -> void:
 	var margin := node.size / 2 + Vector2(6, 6)
 	var center := node.get_rect().get_center()
 	var delta := center.clamp(margin, size - margin) - center
-	if _toolbar.get_rect().grow(margin.y).has_point(center + delta):
-		delta.y = _toolbar.get_rect().end.y + margin.y - center.y
+	for bar: Control in [_toolbar, _legend, _collection]:
+		if bar.visible and bar.get_rect().grow(margin.y).has_point(center + delta):
+			delta.y = bar.get_rect().end.y + margin.y - center.y
 	if delta.length_squared() > 0.01:
 		pan += delta
 		_limit_pan()
 		_place_buttons()
 
-func _focus_socket(node: Socket) -> void:
+func _focus_socket(node: Socket, id: String) -> void:
 	_ensure_in_view(node)
-	node.queue_redraw()
+	if _keyboard_inspection:
+		_set_inspection(id)
+
+func _set_inspection(id: String) -> void:
+	if _inspected == id:
+		return
+	if buttons.has(_inspected):
+		buttons[_inspected].inspected = false
+		buttons[_inspected].queue_redraw()
+	_inspected = id
+	if buttons.has(id):
+		buttons[id].inspected = true
+		buttons[id].queue_redraw()
+	inspection_changed.emit(id)
+
+func _mouse_inspect(id: String) -> void:
+	if not _show_drawing and not _keyboard_inspection and _drag_button == 0:
+		_set_inspection(id)
+
+func _mouse_left(id: String) -> void:
+	if not _keyboard_inspection and _inspected == id:
+		_set_inspection("")
+
+func _blur(id: String) -> void:
+	if _keyboard_inspection and id == _inspected:
+		_set_inspection("")
 
 func _input(event: InputEvent) -> void:
 	if not is_visible_in_tree():
 		_drag_button = 0
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
+		_keyboard_inspection = true
 		var focus := get_viewport().gui_get_focus_owner()
 		if focus == null or not is_ancestor_of(focus):
 			return
 		var anchor := get_local_mouse_position()
 		if focus is Socket:
 			anchor = focus.get_rect().get_center()
+			_set_inspection(str(buttons.find_key(focus)))
 		match event.keycode:
 			KEY_PLUS, KEY_EQUAL, KEY_KP_ADD: _zoom_at(zoom * 1.25, anchor)
 			KEY_MINUS, KEY_KP_SUBTRACT: _zoom_at(zoom / 1.25, anchor)
@@ -226,6 +359,10 @@ func _input(event: InputEvent) -> void:
 			_: return
 		get_viewport().set_input_as_handled()
 	elif event is InputEventMouse:
+		if _keyboard_inspection:
+			_keyboard_inspection = false
+			var under_mouse := get_viewport().gui_get_hovered_control()
+			_set_inspection(str(buttons.find_key(under_mouse)) if under_mouse is Socket else "")
 		var local := make_input_local(event) as InputEventMouse
 		if event is InputEventMouseMotion:
 			if _drag_button != 0:
@@ -241,8 +378,11 @@ func _input(event: InputEvent) -> void:
 			_drag_button = 0
 			get_viewport().set_input_as_handled()
 			return
-		if not event.pressed or not Rect2(Vector2.ZERO, size).has_point(local.position) or _toolbar.get_rect().has_point(local.position):
+		if not event.pressed or not Rect2(Vector2.ZERO, size).has_point(local.position):
 			return
+		for bar: Control in [_toolbar, _legend, _collection]:
+			if bar.visible and bar.get_rect().has_point(local.position):
+				return
 		if event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 			var direction := 1.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -1.0
 			_zoom_at(zoom * pow(1.22, direction * maxf(0.1, event.factor)), local.position)
@@ -255,30 +395,44 @@ func _input(event: InputEvent) -> void:
 
 func _empty_at(point: Vector2) -> bool:
 	for id: String in revealed:
-		if buttons[id].get_rect().has_point(point):
+		if buttons[id].visible and buttons[id].get_rect().has_point(point):
 			return false
 	return true
 
-func update_socket(id: String, offer: Dictionary, inspected: bool) -> void:
+func update_socket(id: String, offer: Dictionary) -> void:
 	offers[id] = offer
 	var socket: Socket = buttons[id]
 	socket.rank = int(offer.rank)
+	var stencil := Icons.for_rank(id, socket.rank)
+	socket.symbol = Icons.texture(stencil)
+	socket.stamped_symbol = Icons.texture(stencil, true)
 	socket.ranks = int(offer.max_rank)
 	socket.met = bool(offer.requirement_met)
 	socket.affordable = bool(offer.available)
-	socket.inspected = inspected
 	socket.queue_redraw()
 
 func _edge(from: String, to: String, tint: Color, width: float) -> void:
 	draw_line(_point(Paths.position_of(from)), _point(Paths.position_of(to)), tint, width, true)
 
 func _draw() -> void:
+	var fold := floorf(size.x / 2)
+	for i in 10:
+		draw_rect(Rect2(fold - 10 + i, 0, 1, size.y), Color(0.47, 0.37, 0.24, 0.014 * (i + 1)))
+	draw_line(Vector2(fold, 0), Vector2(fold, size.y), Color("#a48b6066"), 1)
+	var dot := Color("#aa967a3c")
+	for y in range(12, int(size.y), 22):
+		for x in range(12, int(size.x), 22):
+			draw_rect(Rect2(x, y, 1, 1), dot)
 	for id: String in revealed:
 		var parent: String = parents[id]
 		if not parent.is_empty():
 			var offer: Dictionary = offers[id]
-			var tone := GROWN if int(offer.rank) > 0 else OPEN if bool(offer.requirement_met) else LATENT
-			_edge(parent, id, tone, 1.8)
+			var group := group_for(id)
+			var tone: Color = PIGMENTS[group]
+			tone = tone.lerp(Journal.PAPER, 0.17 if int(offer.rank) > 0 else 0.50)
+			if not _family_filter.is_empty() and group != _family_filter:
+				tone = tone.lerp(Journal.PAPER, 0.70)
+			_edge(parent, id, tone.lerp(SILHOUETTE, _ink), lerpf(1.6, 3.3, _ink))
 	for pair: Array in Paths.SEAMS:
 		if int(offers.get(pair[0], {}).get("rank", 0)) > 0 and int(offers.get(pair[1], {}).get("rank", 0)) > 0:
-			_edge(pair[0], pair[1], GROWN, 1.3)
+			_edge(pair[0], pair[1], SILHOUETTE.lerp(Journal.PAPER, (1.0 - _ink) * 0.6), lerpf(1.2, 2.8, _ink))

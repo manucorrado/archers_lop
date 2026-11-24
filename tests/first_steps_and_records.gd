@@ -50,6 +50,9 @@ func _initialize() -> void:
 	ok = ok and Save.store_campaign({"profile": "demo"}) and Save.update_best_times(times)
 	ok = ok and Save.update_best_times({"act1": 75.0, "act2": 120.0, "total": 210.0})
 	ok = ok and Save.best_times() == {"act1": 70.0, "act2": 120.0, "total": 205.0}
+	times = Log.splits({"broke_5": 82.0, "broke_10": 220.0, "broke_15": 312.0, "broke_20": 480.0})
+	ok = ok and times.act3 == 92.0 and times.act4 == 168.0 and times.total20 == 480.0
+	ok = ok and Save.update_best_times(times) and Save.best_times().total20 == 480.0 and Save.best_times().total == 205.0
 	ok = ok and Save.load_campaign() == {"profile": "demo"}
 	if ok:
 		print("PASS: early and stale supply bearings, cooldowns, pickup, save migration, split timing and local records.")

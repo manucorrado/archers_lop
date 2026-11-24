@@ -21,6 +21,7 @@ const CORE_ROOTS: Array[Vector3] = [
 ]
 const KIT = preload("res://assets/kit_claro.tres")
 const TimberFace = preload("res://scripts/timber_face.gd")
+const DARK_TIMBER_STAIN := 0.28
 const TimberTrunk = preload("res://scripts/timber_trunk.gd")
 const CUE_AUDIO := preload("res://scripts/bow_audio.gd")
 
@@ -340,6 +341,10 @@ func set_stage(stage: int) -> void:
 		for facing in [-1.0, 1.0]:
 			blocks.beam(Vector3(facing * 0.47, 1.53, 0), Vector3(facing * 0.95, 2.98, -0.08), 0.54, 0.53, WOOD)
 			blocks.box(Vector3(facing * 0.95, 2.96, -0.08), Vector3(0.50, 0.11, 0.51), CUT)
+	# Stain the existing timber blocks so bark relief, growth rings and hit surfaces stay aligned.
+	if stage >= 10:
+		for i in blocks.tones.size():
+			blocks.tones[i] = blocks.tones[i].darkened(DARK_TIMBER_STAIN)
 	# Fresh shoots mark each stage along the jagged crown rather than covering the rings.
 	for i in range(mini(stage + 1, 6)):
 		var sprout := Vector3(-0.8 + i * 0.30, 2.40 + 0.08 * (i % 2), -0.5)
@@ -348,6 +353,8 @@ func set_stage(stage: int) -> void:
 	_knot_geometry = blocks.bake(_knot, _cube, "Madera y veta")
 	_knot_geometry.scale = growth
 	_crack = TimberFace.new()
+	if stage >= 10:
+		_crack.wood_tint = Color.WHITE.darkened(DARK_TIMBER_STAIN)
 	_crack.name = "Corte de madera"
 	_crack.position = Vector3(0, 1.45, 0.986)
 	_crack.scale = Vector3(0.68, 0.81, 1)

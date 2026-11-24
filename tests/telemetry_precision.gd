@@ -130,7 +130,13 @@ func _clocks() -> void:
 	restored.sample_session(86010000000)
 	restored.choose_gift(restored.gift_offer[0])
 	restored.sample_session(86099000000)
-	_check(restored.experience_us == 25000000 and restored.observations.second_gift == 2, "Final card locks both endpoints")
+	_check(restored.experience_us == 114000000 and restored.observations.second_gift == 2, "The second act now continues the experience clock")
+	restored.stage = 20
+	restored.hp = 1
+	restored.damage_part(1, "body")
+	restored.sample_session(86100000000)
+	restored.tick(2)
+	_check(restored.experience_us == 114000000 and restored.elapsed == restored.observations.broke_20, "Breaking target 20 locks both endpoints")
 	var legacy := restored.save_state()
 	legacy.erase("experience_us")
 	_check(restored.restore_state(legacy) and restored.experience_us == -1, "Legacy focus history remains unavailable")
