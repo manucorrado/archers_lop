@@ -11,7 +11,12 @@ New-Item -ItemType Directory -Path $qaRoot | Out-Null
 try {
     $env:APPDATA = $qaRoot
     $env:ARCHER_QA_DIR = $qaRoot
-    foreach ($suite in 'save_recovery', 'act_rules', 'upgrade_map', 'first_steps_and_records', 'sentinel', 'narrative', 'timber_geometry', 'ground_contact', 'prototype_smoke') {
+    $importLog = Join-Path $qaRoot 'import.log'
+    & $engine --headless --path $project --log-file $importLog --import
+    if ($LASTEXITCODE -ne 0 -or (Select-String -LiteralPath $importLog -Pattern 'SCRIPT ERROR:|ERROR:' -Quiet)) {
+        throw 'Falló la importación de los recursos del juego.'
+    }
+    foreach ($suite in 'save_recovery', 'act_rules', 'upgrade_map', 'first_steps_and_records', 'sentinel', 'narrative', 'timber_geometry', 'ground_contact', 'telemetry_precision', 'audio_options', 'prototype_smoke') {
         $env:APPDATA = Join-Path $qaRoot $suite
         New-Item -ItemType Directory -Path $env:APPDATA | Out-Null
         $log = Join-Path $qaRoot ($suite + '.log')

@@ -1,5 +1,6 @@
 extends Node
 
+const Timbres := preload("res://scripts/arrow_timbres.gd")
 # Small original sounds generated once. All voices may overlap the bowstring.
 const MIX_RATE := 22050
 const LENGTHS := {
@@ -9,6 +10,11 @@ const LENGTHS := {
 }
 var _voices: Dictionary = {}
 var _options := {}
+var _preview_voices := {}
+var _original := {}
+var _generated := {}
+var _preview_generation := 0
+var _impact_frame := -1
 
 
 func _ready() -> void:
@@ -20,6 +26,18 @@ func _ready() -> void:
 		voice.max_polyphony = 2
 		add_child(voice)
 		_voices[cue] = voice
+	_original = {Timbres.SHOT: _voices.shot.stream, Timbres.IMPACT: _voices.hit.stream}
+	var impact := AudioStreamPlayer.new()
+	add_child(impact)
+	_voices["arrow_impact"] = impact
+	for cue: String in ["shot", "arrow_impact"]:
+		_voices[cue].max_polyphony = 3
+		var preview_voice := AudioStreamPlayer.new()
+		preview_voice.max_polyphony = 3
+		preview_voice.process_mode = Node.PROCESS_MODE_ALWAYS
+		add_child(preview_voice)
+		_preview_voices[cue] = preview_voice
+	get_window().focus_exited.connect(stop_preview)
 	apply_settings(_options)
 
 func apply_settings(options: Dictionary) -> void:
@@ -33,13 +51,63 @@ func apply_settings(options: Dictionary) -> void:
 		var mix := clampf(options.get(group, 1.0), 0, 1)
 		var voice := _voices[cue] as AudioStreamPlayer
 		var base_db := -7.0 if cue == "pickup" else -10.0
+		if cue in _preview_voices:
+			var setting := Timbres.SHOT if cue == "shot" else Timbres.IMPACT
+			var id := Timbres.selected(setting, options.get(setting))
+			var entry: Array = Timbres.CATALOG[setting][id]
+			var stream: AudioStream = entry[2]
+			if stream == null:
+				if id == "original":
+					stream = _original[setting]
+				else:
+					if not _generated.has(id):
+						_generated[id] = Timbres.synthesize(setting, id)
+					stream = _generated[id]
+			if voice.stream != stream:
+				voice.stream = stream
+			if _preview_voices[cue].stream != stream:
+				_preview_voices[cue].stream = stream
+			base_db += float(entry[3])
 		voice.volume_db = base_db + linear_to_db(maxf(mix, 0.00001))
+		if cue in _preview_voices:
+			_preview_voices[cue].volume_db = voice.volume_db
 
 
 func play(cue: String) -> void:
+	if cue == "arrow_impact":
+		# Several arrows can land together. One wood transient per physics tick
+		# keeps multishot from tripling the gain of an identical sample.
+		if _impact_frame == Engine.get_physics_frames():
+			return
+		_impact_frame = Engine.get_physics_frames()
 	var voice: AudioStreamPlayer = _voices.get(cue)
 	if voice != null:
 		voice.play()
+
+func stop_preview() -> void:
+	_preview_generation += 1
+	for voice: AudioStreamPlayer in _preview_voices.values():
+		voice.stop()
+
+func preview(pattern: String) -> void:
+	stop_preview()
+	if pattern in _preview_voices:
+		_preview_voices[pattern].play()
+		return
+	if pattern not in ["pair", "burst"]:
+		return
+	var ticket := _preview_generation
+	var count := 6 if pattern == "burst" else 1
+	for i in count:
+		_preview_voices.shot.play()
+		await get_tree().create_timer(0.08, true, false, true).timeout
+		if ticket != _preview_generation:
+			return
+		_preview_voices.arrow_impact.play()
+		if i + 1 < count:
+			await get_tree().create_timer(0.05, true, false, true).timeout
+			if ticket != _preview_generation:
+				return
 
 
 func _note(time: float, start: float, pitch: float, decay: float) -> float:

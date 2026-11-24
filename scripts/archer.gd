@@ -272,6 +272,9 @@ func play_branch() -> void:
 func play_cue(cue: String) -> void:
 	_sound.play(cue)
 
+func preview_sound(pattern: String) -> void:
+	_sound.preview(pattern)
+
 
 func _material(tint: String) -> StandardMaterial3D:
 	if not _materials.has(tint):

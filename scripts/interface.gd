@@ -12,9 +12,11 @@ signal save_requested
 signal gift_requested(id: String)
 signal equip_requested(id: String)
 signal settings_changed(options: Dictionary)
+signal audio_preview_requested(pattern: String)
 
 const Journal := preload("res://scripts/field_journal.gd")
 const Preferences := preload("res://scripts/play_preferences.gd")
+const Timbres := preload("res://scripts/arrow_timbres.gd")
 const UpgradeMap := preload("res://scripts/upgrade_map.gd")
 const Paths := preload("res://scripts/upgrade_paths.gd")
 const UPGRADES := {
@@ -249,6 +251,12 @@ func _label(parent: Control, caption: String, pixels: int, color: Color, font: F
 func _button(parent: Control, caption: String, primary: bool, action: Callable) -> Button:
 	var button := Button.new()
 	button.text = caption
+	_style_button(button, primary)
+	parent.add_child(button)
+	button.pressed.connect(action)
+	return button
+
+func _style_button(button: Button, primary: bool) -> void:
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	button.custom_minimum_size.y = 40
 	button.add_theme_font_override("font", ui_font)
@@ -264,9 +272,6 @@ func _button(parent: Control, caption: String, primary: bool, action: Callable) 
 	var focus := Journal.box(Color.TRANSPARENT, Color("#b1803c"), 0, 0)
 	focus.set_border_width_all(2)
 	button.add_theme_stylebox_override("focus", focus)
-	parent.add_child(button)
-	button.pressed.connect(action)
-	return button
 
 func _place(item: Control, anchor_x: float, anchor_y: float, left: float, top: float, right: float, bottom: float) -> void:
 	item.set_anchor(SIDE_LEFT, anchor_x)
@@ -377,6 +382,7 @@ func _open_submenu(name_: String) -> void:
 	_render_view()
 
 func _render_view() -> void:
+	audio_preview_requested.emit("stop")
 	if is_instance_valid(overlay):
 		overlay.hide()
 		layer_root.remove_child(overlay)
@@ -426,7 +432,7 @@ func _build_overlay() -> void:
 	if submenu == "settings":
 		_build_settings(content)
 	elif submenu == "run_log":
-		preload("res://scripts/run_log.gd").build(content, values, language)
+		preload("res://scripts/run_log.gd").build(content, values, language, UPGRADES, GIFTS)
 		_button(content, _t("Volver al resumen", "Back to results"), true, _open_submenu.bind("")).grab_focus()
 	elif submenu == "test_times":
 		_build_test_times(content)
@@ -670,8 +676,8 @@ func _build_end(content: Control) -> void:
 func _build_test_times(content: Control) -> void:
 	_label(content, _t("Tiempos de la prueba", "Playtest times"), 33, INK, title_font)
 	var explanation := _label(content, _t(
-		"El tiempo observado cuenta desde que empezaste a jugar e incluye los menús y las pausas. Ambos relojes se detienen al cerrar el juego.",
-		"Observed time starts when you enter the clearing and includes menus and pauses. Both clocks stop when you close the game."
+		"El tiempo observado incluye los menús y las pausas desde que entrás al claro. Ambos relojes se detienen si cambiás de ventana, minimizás o cerrás el juego.",
+		"Observed time includes menus and pauses after you enter the clearing. Both clocks stop when you switch windows, minimize or close the game."
 	), 17, MUTED)
 	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var table := GridContainer.new()
@@ -970,6 +976,14 @@ func _build_settings(content: Control) -> void:
 		_slider(column, "damage_opacity", _t("Visibilidad de los números de daño", "Damage number opacity"), 0, 1, 0.05, "%")
 		_toggle(column, "group_damage", _t("Agrupar el daño de impactos seguidos", "Group damage from successive hits"))
 	elif settings_tab == "audio":
+		_timbre_picker(column, Timbres.SHOT, _t("Suelta de cuerda", "String release"), "shot")
+		_timbre_picker(column, Timbres.IMPACT, _t("Impacto en madera", "Wood impact"), "arrow_impact")
+		var auditions := _row(column, 8)
+		var prompt := _label(auditions, _t("Probar la combinación", "Try the combination"), 17, INK)
+		prompt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_button(auditions, _t("Disparo e impacto", "Shot and impact"), false, audio_preview_requested.emit.bind("pair")).name = "PreviewPair"
+		_button(auditions, _t("Ráfaga", "Burst"), false, audio_preview_requested.emit.bind("burst")).name = "PreviewBurst"
+		_rule(column)
 		_slider(column, "volume_bow", _t("Arco y rama", "Bow and branch"), 0, 1, 0.05, "%")
 		_slider(column, "volume_world", _t("Claro, impactos y recogidas", "Clearing, hits and pickups"), 0, 1, 0.05, "%")
 		_slider(column, "volume_ui", _t("Compras y menús", "Purchases and menus"), 0, 1, 0.05, "%")
@@ -995,6 +1009,41 @@ func _change_tab(tab: String) -> void:
 	listening = ""
 	settings_notice = ""
 	_render_view()
+
+func _timbre_picker(parent: Control, setting: String, title: String, cue: String) -> void:
+	var row := _row(parent, 8)
+	var label := _label(row, title, 17, INK)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var picker := OptionButton.new()
+	picker.name = setting.to_pascal_case()
+	picker.accessibility_name = title
+	picker.custom_minimum_size.x = 275
+	_style_button(picker, false)
+	picker.add_theme_constant_override("modulate_arrow", 1)
+	var popup := picker.get_popup()
+	popup.add_theme_stylebox_override("panel", Journal.box(PAPER, RULE, 6, 6))
+	popup.add_theme_stylebox_override("hover", Journal.box(Journal.CANVAS, RULE, 6, 2))
+	popup.add_theme_color_override("font_color", INK)
+	popup.add_theme_color_override("font_hover_color", INK)
+	popup.add_theme_font_override("font", ui_font)
+	popup.add_theme_font_size_override("font_size", 17)
+	popup.add_theme_constant_override("v_separation", 8)
+	for id: String in Timbres.CATALOG[setting]:
+		var entry: Array = Timbres.CATALOG[setting][id]
+		var index := picker.item_count
+		picker.add_item(_t(entry[0], entry[1]))
+		picker.set_item_metadata(index, id)
+		if id == options[setting]:
+			picker.select(index)
+	row.add_child(picker)
+	picker.item_selected.connect(func(index: int):
+		options[setting] = picker.get_item_metadata(index)
+		_change_options()
+		audio_preview_requested.emit(cue)
+	)
+	var listen := _button(row, _t("Escuchar", "Listen"), false, audio_preview_requested.emit.bind(cue))
+	listen.accessibility_name = _t("Escuchar · ", "Listen · ") + title
+	listen.name = "Listen" + setting.to_pascal_case()
 
 func _slider(parent: Control, id: String, title: String, minimum: float, maximum: float, step_size: float, unit: String) -> void:
 	var row := _row(parent, 12)

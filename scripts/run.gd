@@ -94,16 +94,30 @@ var core_hit := false
 var observations: Dictionary = {}
 var session_observations: Dictionary = {}
 var session_elapsed_us := 0
+var experience_us := 0
+var damage_by_source := {"bow": 0, "sentinel": 0, "branch": 0, "spark": 0, "other": 0}
+var damage_history_complete := true
+var tenth_entry: Dictionary = {}
 var _previous_sample_us := -1
+var _session_focused := true
 var _at_workshop := false
 
 
 func sample_session(monotonic_us: int) -> void:
 	# The monotonic origin belongs to this process. Only its accumulated intervals
 	# go on disk. Earlier checkpoints without this clock have no observed total.
-	if session_elapsed_us >= 0 and _previous_sample_us >= 0 and not at_act_summary():
-		session_elapsed_us += maxi(0, monotonic_us - _previous_sample_us)
+	if _session_focused and _previous_sample_us >= 0:
+		var interval := maxi(0, monotonic_us - _previous_sample_us)
+		if session_elapsed_us >= 0 and not at_act_summary():
+			session_elapsed_us += interval
+		if experience_us >= 0 and not (stage == 10 and at_act_summary()):
+			experience_us += interval
 	_previous_sample_us = monotonic_us
+
+
+func set_session_focus(focused: bool, monotonic_us: int) -> void:
+	sample_session(monotonic_us)
+	_session_focused = focused
 
 
 func mark(event: String) -> void:
@@ -404,7 +418,7 @@ func core_needs_hit() -> bool:
 func strike_part(amount: int, id: String) -> int:
 	if stage == 10 and (id == "core_%d" % core_phase or id == "root_%d" % core_phase):
 		core_hit = true
-	return damage_part(amount, id)
+	return damage_part(amount, id, false, "branch")
 
 
 func _add_combo(opportunity: bool) -> void:
@@ -415,7 +429,7 @@ func _add_combo(opportunity: bool) -> void:
 	combo_grace = combo_delay()
 
 
-func damage_part(amount: int, id: String, manual := false) -> int:
+func damage_part(amount: int, id: String, manual := false, source := "other") -> int:
 	var remaining := vulnerability(id)
 	if stage == 10 and not core_hit:
 		# Any wood can be damaged. Each layer keeps one point until its hollow was
@@ -430,6 +444,7 @@ func damage_part(amount: int, id: String, manual := false) -> int:
 	sap += sap_remainder / DAMAGE_PER_SAP
 	sap_remainder %= DAMAGE_PER_SAP
 	hp -= effective
+	damage_by_source[source] += effective
 	if split:
 		if id == "left":
 			left_hp -= effective
@@ -459,7 +474,8 @@ func apply_damage(amount: int) -> void:
 
 
 func manual_impact(id: String, shot_damage: int, weak_damage: int, serial: int) -> Dictionary:
-	var result := {"hit": false, "weak_spot": false, "direct": 0, "spark": 0, "spark_target": ""}
+	var result := {"hit": false, "weak_spot": false, "direct": 0, "spark": 0,
+		"spark_target": "", "arrows_returned": 0}
 	var diana := id == "target" and target_active and serial == target_serial
 	var hollow := stage == 10 and id == "core_%d" % core_phase
 	var weak_spot := diana or hollow
@@ -483,13 +499,17 @@ func manual_impact(id: String, shot_damage: int, weak_damage: int, serial: int) 
 		target_active = false
 		target_clock = _draw(15.0, 25.0)
 		mark("first_target_hit")
+		if stage >= 6:
+			var recovered := mini(3, maxi(0, capacity() - arrows))
+			arrows += recovered
+			result.arrows_returned = recovered
 	_add_combo(weak_spot or seed_hit)
 	hits += 1
 	mark("first_hit")
 	result.hit = true
 	result.weak_spot = weak_spot
 	if not seed_hit:
-		result.direct = damage_part(weak_damage if weak_spot else shot_damage, id, true)
+		result.direct = damage_part(weak_damage if weak_spot else shot_damage, id, true, "bow")
 	if rank_of("spark") > 0:
 		spark_hits += 1
 		if spark_hits >= 8:
@@ -500,7 +520,7 @@ func manual_impact(id: String, shot_damage: int, weak_damage: int, serial: int) 
 					spark_target = id
 				else:
 					spark_target = "left" if left_hp > 0 else "right"
-			result.spark = damage_part(roundi(20.0 * POWER[stage - 1]), spark_target)
+			result.spark = damage_part(roundi(20.0 * POWER[stage - 1]), spark_target, false, "spark")
 			if result.spark > 0:
 				result.spark_target = spark_target
 				mark("first_spark")
@@ -518,8 +538,14 @@ func next_knot() -> bool:
 		right_hp = 0
 	stage += 1
 	hp = max_hp()
+	if stage == 10:
+		tenth_entry = {"ranks": ranks.duplicate(), "paid_prices": paid_prices.duplicate(true),
+			"sap": sap, "bow": bow, "gift": first_gift}
 	target_active = false
-	target_clock = 1.5 if not seen_target else _draw(15.0, 25.0)
+	if stage == 6:
+		_offer_target()
+	else:
+		target_clock = 1.5 if not seen_target else _draw(15.0, 25.0)
 	if stage in [5, 10]:
 		seeds.clear()
 		event_remaining = 0.0
@@ -674,6 +700,8 @@ func choose_gift(id: String) -> bool:
 
 func save_state() -> Dictionary:
 	var data := {"session_elapsed_us": session_elapsed_us, "sap_remainder": sap_remainder,
+		"experience_us": experience_us, "damage_by_source": damage_by_source,
+		"damage_history_complete": damage_history_complete, "tenth_entry": tenth_entry,
 		"sentinel_ammo": sentinel_ammo, "sentinel_wait": sentinel_wait,
 		"paid_prices": paid_prices, "steady_count": steady_count, "last_volley": last_volley,
 		"session_observations": session_observations, "at_workshop": _at_workshop,
@@ -728,6 +756,41 @@ func _had_paid_root(data: Dictionary) -> bool:
 	return false
 
 
+func _valid_holdings(owned: Dictionary, history: Dictionary) -> bool:
+	for id in owned:
+		var rank = owned[id]
+		if not TREE.has(id) or not rank is int or rank < 0 or rank > TREE[id].costs.size():
+			return false
+	for id in history:
+		var prices = history[id]
+		if not owned.has(id) or not prices is Array or prices.size() != owned[id]:
+			return false
+		for price in prices:
+			if not price is int or price < 0:
+				return false
+	return true
+
+
+func _valid_observed_run(data: Dictionary) -> bool:
+	var duration = data.get("experience_us", -1)
+	var totals = data.get("damage_by_source", {})
+	if not duration is int or duration < -1 or not totals is Dictionary or not data.get("damage_history_complete", false) is bool:
+		return false
+	for source in totals:
+		if not damage_by_source.has(source) or not totals[source] is int or totals[source] < 0:
+			return false
+	var entry = data.get("tenth_entry", {})
+	if not entry is Dictionary:
+		return false
+	if entry.is_empty():
+		return true
+	if data.stage != 10 or not entry.has_all(["sap", "ranks", "paid_prices", "bow", "gift"]):
+		return false
+	if not entry.sap is int or entry.sap < 0 or entry.bow not in ["branch", "recurve", "longbow"] or not entry.gift is String:
+		return false
+	return entry.ranks is Dictionary and entry.paid_prices is Dictionary and _valid_holdings(entry.ranks, entry.paid_prices)
+
+
 func restore_state(data: Dictionary) -> bool:
 	if not data.has_all(SAVE_FIELDS):
 		return false
@@ -758,17 +821,8 @@ func restore_state(data: Dictionary) -> bool:
 		return false
 	if not saved_last_volley is float or not is_finite(saved_last_volley):
 		return false
-	for id in data.ranks:
-		var rank = data.ranks[id]
-		if not TREE.has(id) or not rank is int or rank < 0 or rank > TREE[id].costs.size():
-			return false
-	for id in history:
-		var prices = history[id]
-		if not data.ranks.has(id) or not prices is Array or prices.size() != data.ranks[id]:
-			return false
-		for price in prices:
-			if not price is int or price < 0:
-				return false
+	if not _valid_holdings(data.ranks, history) or not _valid_observed_run(data):
+		return false
 	for field: String in SAVE_FIELDS:
 		set(field, data[field])
 	sap_remainder = saved_remainder
@@ -794,6 +848,11 @@ func restore_state(data: Dictionary) -> bool:
 	core_phase = data.get("core_phase", 0)
 	core_hit = data.get("core_hit", false)
 	session_elapsed_us = int(data.get("session_elapsed_us", -1))
+	experience_us = data.get("experience_us", -1)
+	for source: String in damage_by_source:
+		damage_by_source[source] = data.get("damage_by_source", {}).get(source, 0)
+	damage_history_complete = data.has("damage_by_source") and data.get("damage_history_complete", false)
+	tenth_entry = data.get("tenth_entry", {}).duplicate(true)
 	session_observations = data.get("session_observations", {})
 	_previous_sample_us = -1
 	_at_workshop = bool(data.get("at_workshop", true))
@@ -820,4 +879,6 @@ func snapshot() -> Dictionary:
 		"seeds": seeds, "seed_drops": seed_drops, "event": "seed_rain" if event_remaining > 0 else "",
 		"event_remaining": event_remaining, "gift_offer": gift_offer, "chosen_gift": chosen_gift,
 		"fired_after_collect": fired_after_collect, "observations": observations,
-		"session_observations": session_observations}
+		"session_observations": session_observations, "experience_us": experience_us,
+		"damage_by_source": damage_by_source, "damage_history_complete": damage_history_complete,
+		"tenth_entry": tenth_entry}

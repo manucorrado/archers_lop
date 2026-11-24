@@ -2,6 +2,7 @@ extends RefCounted
 ## Each binding stores a physical key (positive) or a mouse button (negative).
 
 const FILE := "user://interface.cfg"
+const Timbres := preload("res://scripts/arrow_timbres.gd")
 const DEFAULT_BINDINGS := {
 	"move_forward": KEY_W, "move_back": KEY_S, "move_left": KEY_A, "move_right": KEY_D,
 	"shoot": -MOUSE_BUTTON_LEFT, "aim": -MOUSE_BUTTON_RIGHT, "strike": KEY_F,
@@ -40,6 +41,7 @@ const DEFAULTS := {
 	"reticle_size": 1.0, "damage_opacity": 0.9, "group_damage": true, "toggle_fire": false,
 	"first_steps": true,
 	"volume_bow": 0.85, "volume_world": 0.85, "volume_ui": 0.8,
+	Timbres.SHOT: Timbres.DEFAULT_SHOT, Timbres.IMPACT: Timbres.DEFAULT_IMPACT,
 }
 
 var language := "es"
@@ -57,6 +59,8 @@ func load_settings() -> void:
 			options[id] = saved
 		elif typeof(DEFAULTS[id]) == TYPE_FLOAT and typeof(saved) in [TYPE_FLOAT, TYPE_INT]:
 			options[id] = clampf(saved, 55.0, 105.0) if id == "fov" else clampf(saved, 0.0, 3.0)
+		elif id in Timbres.CATALOG:
+			options[id] = Timbres.selected(id, saved)
 	var saved_bindings := {}
 	for id in DEFAULT_BINDINGS:
 		if not config.has_section_key("bindings", id):

@@ -32,7 +32,11 @@ Cada compra revela los nodos vecinos y otro tramo del dibujo. Las mejoras inicia
 
 La **Ballesta del claro** se compra siguiendo la Rueda de savia y cuatro engranajes del taller. Con munición en su depósito dispara sola mientras buscás flechas o apuntás con el arco. En cada resumen, **Registro de la vuelta** muestra cuánto duró cada blanco y compara tus tiempos por acto y de la demo completa con tus récords locales. El tiempo se mide hasta el golpe que rompe el blanco. Empezar de nuevo conserva los récords.
 
-**Guardar y continuar.** Podés guardar desde pausa. También se guardan las compras, los cambios de blanco y de fase y las recompensas. En el menú de inicio, **Continuar** recupera la partida. Si cerraste mientras elegías la recompensa, vuelven las mismas tres cartas. Si terminaste la versión anterior, en su resumen aparece **Continuar al blanco 6**. Durante la pausa y con el juego cerrado se detienen el reloj y el taller.
+En los blancos 6 a 9, acertar con el arco a la diana temporal devuelve hasta tres flechas al carcaj. Al terminar una vuelta nueva, el registro muestra cuánto tardaste desde que entraste hasta que confirmaste la última carta, incluso comprando o hablando con Brizno. También podés consultar qué tenías al entrar al blanco 10 y cuánto daño hizo cada fuente. El total se detiene mientras la ventana queda en segundo plano o el juego está cerrado.
+
+**Probar los sonidos del arco.** En **Ajustes → Sonido**, elegí por separado la suelta de cuerda y el impacto en madera. Usá **Escuchar** junto a cada selector para aislarlo, o **Disparo e impacto** y **Ráfaga** para comparar cómo combinan. Volvé al claro para oír esa combinación al disparar. Las elecciones se guardan. La prueba incluye cuatro grabaciones de Freesound, alternativas sintetizadas y los sonidos originales. [Grabaciones y créditos](assets/audio/freesound/CREDITOS.md)
+
+**Guardar y continuar.** Podés guardar desde pausa. También se guardan las compras, los cambios de blanco y de fase y las recompensas. En el menú de inicio, **Continuar** recupera la partida. Si cerraste mientras elegías la recompensa, vuelven las mismas tres cartas. Si terminaste la versión anterior, en su resumen aparece **Continuar al blanco 6**. Durante la pausa y con el juego cerrado se detienen el reloj de juego activo y el taller.
 
 [Árbol, precios y opciones para la demo](docs/arbol-de-la-demo.md) · [Catálogo de mejoras potenciales](docs/catalogo-de-mejoras-potenciales.docx)
 

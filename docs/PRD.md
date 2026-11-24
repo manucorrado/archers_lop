@@ -4,7 +4,7 @@
 
 Nombre de trabajo. Juego incremental activo de arquería, en primera persona, para una persona. La campaña transcurre en un claro de bosque construido con piezas voxel.
 
-La demo jugable llega al décimo blanco y apunta a una primera vuelta de 15–20 minutos. La estimación del 5–15 % se refiere al contenido del juego completo. La cantidad de actos sigue abierta. Los actos posteriores al segundo, los centinelas y el final propuesto en este documento son hipótesis de campaña. La lista vigente de compras, requisitos y efectos está en el [árbol de la demo](arbol-de-la-demo.md).
+La demo llega al décimo blanco. La primera referencia de ritmo es una vuelta de alrededor de 20 minutos desde que entrás al claro hasta que confirmás la última carta, con margen para extenderla tras la prueba privada. La estimación del 5–15 % se refiere al contenido. En el juego completo apuntamos a **2–4 horas para alcanzar el 100 %**, que incluye los encuentros y las mejoras únicas. Se puede llegar antes al desenlace. El prestigio y los récords se miden aparte. La cantidad de actos sigue abierta. Las reglas jugables vigentes están en el [árbol de la demo](arbol-de-la-demo.md).
 
 | Para trabajar en… | Documento |
 |---|---|
@@ -85,12 +85,12 @@ El arco de rama premia elegir el punto de impacto. El recurvo sostiene una caden
 
 Un **nudo** es un objetivo de madera formado por módulos. Probar con una altura inicial de 1,5 m y una final de 35–40 m, con la misma piedra de un metro como referencia en ambos extremos. Su huella se conserva dentro del área central y gana altura y volumen por etapas. Los puntos interactivos aparecen sobre caras visibles desde el corredor de tiro. La línea de tiro, el acceso a las pilas y la ubicación de los talleres siguen siendo reconocibles al final. El paso de nudo no recarga la escena ni borra las existencias.
 
-Los primeros diez blancos tienen un objetivo de 15–20 minutos activos. Las filas posteriores ilustran una posible campaña de unas 100 min. En la demo, cada requisito de compra se cumple invirtiendo en el árbol. Los posibles desbloqueos por hitos quedan para una decisión posterior.
+Medimos por separado la vuelta completa y los tiempos activos hasta romper cada blanco. Las filas posteriores al segundo acto ilustran una posible ruta hasta el desenlace. La duración hasta conseguir el 100 % se valida aparte. En la demo cada requisito de compra se cumple invirtiendo en el árbol. La posible actividad nueva al costado del claro queda abierta.
 
 | Acto | Tiempo de referencia | Cambio dominante | Jefe y regla propuesta |
 |---|---|---|---|
 | I · N1–5 | 0–10 min | Disparo manual, primera compra, taller, chispa y recurvo | **Horqueta gemela (5).** A media integridad se abren dos lóbulos con reservas visibles. Al romper uno, las flechas restantes deben dirigirse al otro. |
-| II · N6–10 | Fin de la demo hacia los 15–20 min | Ahorrar para un arco más potente o invertir en la cadencia y el suministro. | **Segundo jefe (10).** Tiene tres puntos débiles sucesivos. El tronco recibe daño ordinario y cada fase requiere acertar al punto activo o golpear la raíz correspondiente. |
+| II · N6–10 | Fin de la demo hacia los 20 min de la primera vuelta, por validar | Ahorrar para un arco más potente o invertir en la cadencia y el suministro. | **Segundo jefe (10).** Tiene tres puntos débiles sucesivos. El tronco recibe daño ordinario y cada fase requiere acertar al punto activo o golpear la raíz correspondiente. |
 | III · N11–15 | 25–45 min | El abanico y las oportunidades laterales cambian qué blancos conviene agrupar. | **Semillero fugitivo (15).** Suelta brotes por carriles cortos. Acertarles transfiere daño al tronco. Los que salen del claro solo cierran esa oportunidad. |
 | IV · N16–20 | 45–65 min | Alimentar varios puestos aumenta el daño mientras el jugador se mueve. | **Corona acorazada (20).** Tres placas reciben el fuego sostenido de los puestos. El arquero puede quebrar a mano un broche lateral para exponer antes la veta de esa placa. |
 | V · N21–25 | 65–85 min | Repetidor, altas necesidades de flechas y efectos de área. | **Tronco de los dos cauces (25).** Dos raíces laterales envían pulsos que dan una cubierta temporal al nudo. Cortar el pulso a tiempo abre la veta. Las cubiertas caducan, tienen tope y jamás devuelven integridad perdida. |
@@ -147,7 +147,7 @@ La entrega base es offline y finita. Quedan fuera multijugador, tabla pública, 
 |---|---|
 | Entrada en frío con cinco personas del público objetivo | Al menos cuatro aciertan en 15 s y compran un primer rango en 90 s sin indicaciones verbales. Registrar dónde se detuvo la quinta. |
 | Economía y decisiones en N7–10 | Anotar cuántos niveles se podrían comprar con la savia obtenida antes del jefe y qué priorizó cada jugador. Comprobar si se distingue cuándo conviene ahorrar para el arco largo o mejorar el que ya se tiene. |
-| Ritmo de la campaña | Registrar tiempo por acto, segundos sin flechas, compras y daño por origen. Buscar primera vuelta de 60–120 min y demostrar al menos una ruta de menos de 90 min sin fallos de progreso. Si un acto se alarga, distinguir espera de munición, vida excesiva y compras inasequibles. |
+| Ritmo de la campaña | Registrar por separado la llegada al desenlace y al 100 %. Para el 100 % apuntamos a 2–4 horas. Si un acto se alarga, revisar los tiempos por blanco, la espera de munición, las compras y el daño por origen. |
 | Lectura tardía | En una captura jugable de N29–30 con doce centinelas y efecto global, al menos cuatro de cinco localizan la nueva veta en 2 s. Repetir con números y destellos desactivados. |
 | Persistencia y final | Reanudar antes y después de una compra, una rotura, una oferta y la mitad del jefe 30. El saldo, las cartas y el tiempo cuadran. Completar con arco, con centinela y con fenómeno da exactamente un resultado por vuelta. |
 | Rendimiento | Objetivo de 60 FPS a 1080p en el PC de referencia que se acuerde. Medir tiempo de cuadro p95 en la escena tardía cargada. Representar más flechas en un haz no debe crear una entidad por flecha almacenada. |

@@ -1,6 +1,6 @@
 # Árbol de mejoras de la demo
 
-La demo recorre diez blancos y dos jefes. Apunta a una primera vuelta de **15–20 minutos** y representa aproximadamente el **5–15 %** del contenido previsto. La duración se afina con jugadores. La cantidad de actos del juego completo sigue abierta.
+La demo recorre diez blancos y dos jefes. Para la primera prueba privada apuntamos a una primera vuelta de **alrededor de 20 minutos**, contando las compras, los diálogos y la elección final. La prueba puede justificar una vuelta más larga. Algunos blancos pueden caer en segundos si la combinación de mejoras ya es potente. La demo representa aproximadamente el **5–15 %** del contenido previsto.
 
 ## Qué podés comprar
 
@@ -49,8 +49,12 @@ Cada **8 puntos de vida que pierde un blanco** entran **1 de savia**. Importa cu
 
 Hay **112 nodos, 140 niveles y 41.970 de savia** en compras. Sin primas, al entrar al décimo blanco habrás ganado **38.612 de savia**, el **92,0 %** del costo total. Las 3.358 restantes se alcanzan al quitarle 26.861 puntos de vida al jefe, un 7,5 % de su vida. Son ingresos acumulados de la vuelta. El saldo visible depende de cuánto hayas gastado.
 
-En una prueba nueva, anotá el minuto en que encontraste al perro, el momento en que cambiaste de arco y cuántos niveles tenías al llegar al décimo blanco. Anotá también si compraste algo que te hizo cambiar de decisión en combate, por ejemplo salir del puesto de tiro para saltar hacia un atado. El resumen permite cotejar los tiempos de esa partida.
+Entre los blancos 6 y 9, acertar con el arco a la diana que aparece por unos segundos devuelve hasta **tres flechas** directamente al carcaj. La primera aparece al entrar al sexto blanco y dura siete segundos. Cada diana paga una vez, incluso con el disparo triple. Si quedan dos lugares, recuperás dos.
+
+Para la prueba privada, observá el primer cambio de táctica después de la carta del quinto blanco y qué hace el jugador cuando se queda sin flechas. En el registro de una partida nueva podés cotejar la duración de la vuelta con el tiempo activo, los niveles comprados y el saldo al entrar al décimo, y el daño efectivo de arco y ballesta.
 
 ## Qué queda para después
 
 El [catálogo editable](catalogo-de-mejoras-potenciales.docx) conserva las 65 fichas de ideas y el orden de trabajo propuesto para las nuevas familias. Quedan para diseñar la frecuencia de blancos opcionales, los ecos de disparos, la quemadura con sus tres especializaciones, los tiros en el aire y los giros de 360°, las mejoras de la ballesta y el arco láser de fin de juego.
+
+Quedan abiertas la elección de una actividad al costado del claro, las tres formas de jugar que ofrecerán las cartas del quinto blanco y cómo se activa el pico de poder jugable antes del cierre. Brizno sigue siendo opcional. Sus nuevos diálogos y su posible vínculo con el prestigio quedan para después del MVP.

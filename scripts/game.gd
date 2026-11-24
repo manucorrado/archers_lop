@@ -60,9 +60,11 @@ func _ready() -> void:
 	hud.gift_requested.connect(_choose_gift)
 	hud.equip_requested.connect(_equip)
 	hud.settings_changed.connect(_apply_settings)
+	hud.audio_preview_requested.connect(archer.preview_sound)
 	get_tree().auto_accept_quit = false
 	get_window().close_requested.connect(_quit)
 	get_window().focus_exited.connect(_focus_lost)
+	get_window().focus_entered.connect(_focus_returned)
 	_apply_settings(hud.options)
 	has_save = SaveData.has_campaign()
 	hud.set_can_continue(has_save)
@@ -119,8 +121,15 @@ func _set_view(next: String) -> void:
 
 
 func _focus_lost() -> void:
+	if campaign_started:
+		run.set_session_focus(false, Time.get_ticks_usec())
 	if view == "play":
 		_set_view("pause")
+
+
+func _focus_returned() -> void:
+	if campaign_started:
+		run.set_session_focus(true, Time.get_ticks_usec())
 
 
 func _input(event: InputEvent) -> void:
@@ -295,7 +304,7 @@ func _land_shot(flight: Dictionary) -> void:
 	var milestone := _boss_milestone()
 	var balance := run.sap
 	if flight.get("source", "") == "sentinel":
-		var effective := run.damage_part(flight.damage, flight.id)
+		var effective := run.damage_part(flight.damage, flight.id, false, "sentinel")
 		if effective > 0:
 			hud.show_sap_earned(run.sap - balance)
 			hud.show_damage(effective, "sentinel")
@@ -315,7 +324,10 @@ func _land_shot(flight: Dictionary) -> void:
 	if outcome.spark > 0:
 		clearing.play_spark(clearing.target_center(outcome.spark_target))
 		hud.show_damage(outcome.spark, "spark")
-	_after_damage(milestone)
+	if outcome.arrows_returned > 0:
+		hud.notify("Diana · +%d al carcaj" % outcome.arrows_returned, "Bullseye · +%d to quiver" % outcome.arrows_returned)
+	archer.play_cue("hit" if flight.id.begins_with("seed_") else "arrow_impact")
+	_after_damage(milestone, false)
 
 
 func _strike() -> void:
@@ -409,8 +421,8 @@ func _continue_act() -> void:
 		return
 	_redraw_world()
 	_set_view("play")
-	hud.notify("Segundo acto · Conservás tu recompensa y tus compras.",
-		"Second act · Your reward and upgrades carry over.")
+	hud.notify("Segundo acto · Acertale a la diana temporal con el arco para recuperar hasta 3 flechas.",
+		"Second act · Hit a timed bullseye with your bow to recover up to 3 arrows.")
 
 
 func _collect_nearby() -> bool:
