@@ -185,7 +185,7 @@ var selected_icon: TextureRect
 var purchase_upgrade: Button
 var refund_upgrade: Button
 var equipment_buttons: Dictionary = {}
-var ui_font := SystemFont.new()
+var ui_font := Journal.sans()
 var title_font := SystemFont.new()
 var mono_font := SystemFont.new()
 var toast_remaining := 0.0
@@ -195,7 +195,6 @@ var notice_en := ""
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	ui_font.font_names = PackedStringArray(["Source Sans 3", "Segoe UI", "Arial"])
 	title_font = Journal.serif()
 	mono_font.font_names = PackedStringArray(["IBM Plex Mono", "Consolas", "Courier New"])
 	preferences.load_settings()
@@ -272,6 +271,14 @@ func _style_button(button: Button, primary: bool) -> void:
 	var focus := Journal.box(Color.TRANSPARENT, Color("#b1803c"), 0, 0)
 	focus.set_border_width_all(2)
 	button.add_theme_stylebox_override("focus", focus)
+
+func _entry(parent: Control, caption: String, action: Callable, kind := "link") -> Button:
+	var button := Journal.Entry.new()
+	button.text = caption
+	Journal.style_entry(button, title_font if kind in ["lead", "action"] else ui_font, kind)
+	parent.add_child(button)
+	button.pressed.connect(action)
+	return button
 
 func _place(item: Control, anchor_x: float, anchor_y: float, left: float, top: float, right: float, bottom: float) -> void:
 	item.set_anchor(SIDE_LEFT, anchor_x)
@@ -416,8 +423,12 @@ func _build_overlay() -> void:
 	if current_view == "shop" and submenu.is_empty():
 		_build_shop(cover)
 		return
-	var language_btn := _button(cover, _t("English", "Español"), true, _switch_language)
-	_place(language_btn, 1, 0, -145, 15, -20, 54)
+	if submenu == "settings" or current_view == "pause":
+		_build_book(cover)
+		return
+	var language_note := _sheet(cover, 7, 1, "right")
+	_place(language_note, 1, 0, -124, 15, -20, 51)
+	_entry(language_note, _t("English", "Español"), _switch_language)
 	if cover.side_only:
 		_build_start(cover)
 		return
@@ -426,12 +437,10 @@ func _build_overlay() -> void:
 	cover.add_child(holder)
 	holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var card := _sheet(holder, 26, 18, "folio")
-	var wide := submenu in ["settings", "test_times", "run_log"] or (submenu.is_empty() and current_view == "gift")
+	var wide := submenu in ["test_times", "run_log"] or (submenu.is_empty() and current_view == "gift")
 	card.custom_minimum_size.x = 880 if wide else 500
 	var content := _stack(card, 10)
-	if submenu == "settings":
-		_build_settings(content)
-	elif submenu == "run_log":
+	if submenu == "run_log":
 		preload("res://scripts/run_log.gd").build(content, values, language, UPGRADES, GIFTS)
 		_button(content, _t("Volver al resumen", "Back to results"), true, _open_submenu.bind("")).grab_focus()
 	elif submenu == "test_times":
@@ -442,18 +451,98 @@ func _build_overlay() -> void:
 		_build_gifts(content)
 	elif current_view == "end":
 		_build_end(content)
-	else:
-		_label(content, _t("Pausa", "Paused"), 41, INK, title_font)
-		var back := _button(content, _t("Volver al claro", "Resume"), true, resume_requested.emit)
-		_button(content, _t("Guardar partida", "Save game"), false, save_requested.emit)
-		_button(content, _t("Ajustes", "Settings"), false, _open_submenu.bind("settings"))
-		_button(content, _t("Nueva partida", "New game"), false, _open_submenu.bind("confirm_new"))
-		_button(content, _t("Guardar y salir", "Save and quit"), false, quit_requested.emit)
-		back.grab_focus()
 	overlay_notice = _label(content, "", 16, ACCENT)
 	overlay_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	overlay_notice.hide()
-	language_btn.move_to_front()
+	language_note.move_to_front()
+
+func _build_book(cover: Control) -> void:
+	var holder := CenterContainer.new()
+	cover.add_child(holder)
+	holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var book := _stack(holder, 0)
+	book.custom_minimum_size.x = 1050
+	var settings := submenu == "settings"
+	if settings:
+		var tabs := _row(book, 4)
+		tabs.alignment = BoxContainer.ALIGNMENT_END
+		var names := {"comfort": _t("Vista y lectura", "View and readability"), "controls": _t("Controles", "Controls"), "audio": _t("Sonido", "Audio")}
+		for tab: String in names:
+			var button := _entry(tabs, names[tab], _change_tab.bind(tab), "current_tab" if settings_tab == tab else "tab")
+			if settings_tab == tab:
+				button.grab_focus()
+	var binding := _sheet(book, 5, 6, "binding")
+	binding.custom_minimum_size.y = 494
+	var pages := _row(binding, 0)
+	var left := _book_page(pages, true)
+	var right := _book_page(pages, false)
+	if settings:
+		_build_settings(left, right)
+	else:
+		_pause_summary(left)
+		if submenu == "confirm_new":
+			_build_confirmation(right)
+		else:
+			_label(right, _t("Pausa", "Paused"), 41, INK, title_font)
+			var resume := _entry(right, _t("Volver al claro", "Resume"), resume_requested.emit, "lead")
+			_entry(right, _t("Guardar partida", "Save game"), save_requested.emit, "action")
+			_entry(right, _t("Ajustes", "Settings"), _open_submenu.bind("settings"), "action")
+			_entry(right, _t("Nueva partida", "New game"), _open_submenu.bind("confirm_new"), "action")
+			_entry(right, _t("Guardar y salir", "Save and quit"), quit_requested.emit, "action")
+			resume.grab_focus()
+		overlay_notice = _label(left, "", 15, ACCENT)
+		overlay_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		overlay_notice.hide()
+	for page: Control in [left, right]:
+		var space := Control.new()
+		space.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		space.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		page.add_child(space)
+		_rule(page)
+	var left_foot := _row(left, 0)
+	left_foot.custom_minimum_size.y = 32
+	if settings:
+		var label := _t("Volver a pausa", "Back to pause") if current_view == "pause" else _t("Volver", "Back")
+		_entry(left_foot, label, _open_submenu.bind(""), "back")
+	var right_foot := _row(right, 0)
+	right_foot.alignment = BoxContainer.ALIGNMENT_END
+	_entry(right_foot, _t("English", "Español"), _switch_language)
+
+func _book_page(pages: Control, verso: bool) -> VBoxContainer:
+	var page := _sheet(pages, 32, 18, "left" if verso else "right")
+	page.name = "Verso" if verso else "Recto"
+	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var content := _stack(page, 6)
+	var run := _t("El arquero del claro", "Archer of the Clearing") if verso else _t("Cuaderno de campo", "Field journal")
+	if not verso and submenu == "settings":
+		run = _t("Ajustes del cuaderno", "Journal settings")
+	var header := _label(content, run, 15, MUTED, title_font)
+	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if verso else HORIZONTAL_ALIGNMENT_RIGHT
+	_rule(content)
+	return content
+
+func _pause_summary(page: Control) -> void:
+	_label(page, _t("Tu vuelta", "Your run"), 41, INK, title_font)
+	var stage := int(values.get("stage", 1))
+	var target := _row(page, 14)
+	var emblem := Pictogram.new("grain", ACCENT)
+	emblem.custom_minimum_size = Vector2(38, 38)
+	emblem.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	target.add_child(emblem)
+	var caption := _stack(target, 0)
+	_label(caption, _t("Primer acto", "First act") if stage <= 5 else _t("Segundo acto", "Second act"), 16, MUTED)
+	_label(caption, _t("Blanco %d de 10", "Target %d of 10") % stage, 26, INK, title_font)
+	_rule(page)
+	_pause_datum(page, _t("Savia", "Sap"), str(values.get("sap", 0)))
+	_pause_datum(page, _t("Flechas en el carcaj", "Arrows in quiver"), "%d / %d" % [values.get("arrows", 24), values.get("capacity", 24)])
+	_pause_datum(page, _t("Arco equipado", "Equipped bow"), _bow_name(str(values.get("bow", "branch"))))
+
+func _pause_datum(page: Control, title: String, value: String) -> void:
+	var line := _row(page, 8)
+	line.custom_minimum_size.y = 34
+	_label(line, title, 18, MUTED).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_label(line, value, 20, INK, title_font)
+	_rule(page)
 
 func _build_start(parent: Control) -> void:
 	var leaf := _sheet(parent, 36, 29, "folio")
@@ -488,8 +577,8 @@ func _build_confirmation(content: Control) -> void:
 		"This will replace your clearing, upgrades and gift. Your settings will carry over."
 	), 18, MUTED)
 	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_button(content, _t("Conservar partida", "Keep this run"), true, _open_submenu.bind("")).grab_focus()
-	_button(content, _t("Empezar de nuevo", "Start over"), false, restart_requested.emit)
+	_entry(content, _t("Conservar partida", "Keep this run"), _open_submenu.bind(""), "lead").grab_focus()
+	_entry(content, _t("Empezar de nuevo", "Start over"), restart_requested.emit, "action")
 
 func _scroll_column(parent: Control, height: int) -> VBoxContainer:
 	var scroll := ScrollContainer.new()
@@ -502,15 +591,15 @@ func _scroll_column(parent: Control, height: int) -> VBoxContainer:
 	return column
 
 func _build_shop(cover: Control) -> void:
-	var spread := _row(cover, 0)
-	spread.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var binding := _sheet(cover, 4, 5, "binding")
+	binding.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var spread := _row(binding, 0)
 	var left := _sheet(spread, 28, 18, "left")
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var chart := _stack(left, 7)
 	var heading := _row(chart, 12)
 	var title := _label(heading, _t("Árbol de mejoras", "Upgrade tree"), 35, INK, title_font)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_button(heading, _t("English", "Español"), false, _switch_language)
 	_rule(chart)
 	upgrade_map = UpgradeMap.new()
 	upgrade_map.language = language
@@ -555,16 +644,23 @@ func _build_shop(cover: Control) -> void:
 	shop_notice = _label(details, "", 15, MUTED)
 	shop_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	shop_notice.hide()
-	purchase_upgrade = _button(details, "", true, func(): _try_buy(selected_upgrade))
-	refund_upgrade = _button(details, "", false, func(): refund_requested.emit(selected_upgrade))
-	refund_upgrade.add_theme_font_size_override("font_size", 16)
+	purchase_upgrade = _entry(details, "", func(): _try_buy(selected_upgrade), "lead")
+	refund_upgrade = _entry(details, "", func(): refund_requested.emit(selected_upgrade))
+	refund_upgrade.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_rule(details)
+	var language_foot := _row(details, 0)
+	language_foot.alignment = BoxContainer.ALIGNMENT_END
+	_entry(language_foot, _t("English", "Español"), _switch_language)
 
 	_rule(chart)
-	var equipment := _row(chart, 5)
-	var back := _button(equipment, _t("Volver al claro", "Return to clearing"), false, resume_requested.emit)
-	back.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var equipment := _row(chart, 12)
+	_entry(equipment, _t("Volver al claro", "Return to clearing"), resume_requested.emit, "back")
+	var gap := Control.new()
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment.add_child(gap)
 	for id: String in ["branch", "recurve", "longbow"]:
-		var button := _button(equipment, _bow_name(id), false, equip_requested.emit.bind(id))
+		var button := _entry(equipment, _bow_name(id), equip_requested.emit.bind(id))
 		button.add_theme_font_size_override("font_size", 15)
 		button.accessibility_name = _t("Equipar ", "Equip ") + _bow_name(id)
 		button.add_theme_color_override("font_disabled_color", MUTED)
@@ -821,10 +917,7 @@ func _guide() -> String:
 	if values.get("near_sentinel", false):
 		return _t("%s · Cargar ballesta · %d/%d flechas", "%s · Load crossbow · %d/%d arrows") % [preferences.binding_name("shop"), values.get("sentinel_ammo", 0), values.get("sentinel_capacity", 12)]
 	if values.get("near_dog", false):
-		var interact := preferences.binding_name("shop")
-		if int(values.get("offers", {}).get("pet", {}).get("rank", 0)) > 0:
-			return _t("%s · Mejoras     %s · Acariciar a Pipo", "%s · Upgrades     %s · Pet Pipo") % [interact, preferences.binding_name("pet_dog")]
-		return _t("%s · Abrir mejoras con Pipo", "%s · Open upgrades with Pipo") % interact
+		return ""
 	if values.get("split", false) and int(values.get("hp", 0)) > 0:
 		if int(values.get("left_hp", 0)) == 0:
 			return _t("Rompé la mitad derecha.", "Break the right half.")
@@ -837,7 +930,7 @@ func _guide() -> String:
 				return _t("%s · Golpeá la raíz del hueco encendido.", "%s · Strike the root below the glowing hollow.") % preferences.binding_name("strike")
 			return _t("¡Ahí! Pegale al hueco encendido para romper esta parte.", "Hit the glowing hollow to break this section.")
 		return _t("Seguí la marca encendida. Cambia de lugar con los impactos.", "Follow the glowing mark. It moves as you damage the trunk.")
-	if not options.get("first_steps", true) or values.get("fired_after_collect", false):
+	if not options.get("first_steps", true) or values.get("fired_after_collect", false) or not values.get("learning_supplies", true):
 		return ""
 	var shoot := preferences.binding_name("shoot")
 	if int(values.get("hits", 0)) == 0 and int(values.get("arrows", 24)) > 0:
@@ -859,7 +952,7 @@ func _guide() -> String:
 	if not history.has("buy_workshop") and values.get("offers", {}).get("workshop", {}).get("available", false):
 		return _t("Volvé con Pipo para comprar el taller de flechas.", "Go back to Pipo to buy the arrow workshop.")
 	if not history.has("buy_damage") and int(values.get("damage_rank", 0)) == 0 and values.get("offers", {}).get("damage", {}).get("available", false):
-		return _t("Buscá a Pipo bajo el pino de la izquierda. Tiene tu primera mejora gratis.", "Find Pipo under the pine on the left for your free first upgrade.")
+		return _t("Seguí la huella de Pipo. Tiene tu primera mejora gratis.", "Follow the paw print to Pipo for your free first upgrade.")
 	return ""
 
 func _number(number: float, precision: int = 1) -> String:
@@ -952,40 +1045,36 @@ func _update_offer(id: String, offer: Dictionary) -> void:
 		refund_upgrade.tooltip_text = _t("Clic derecho sobre el nodo o Supr", "Right-click the node or press Delete")
 
 
-func _build_settings(content: Control) -> void:
-	_label(content, _t("Ajustes", "Settings"), 35, INK, title_font)
-	var tabs := _row(content, 8)
-	var tab_names := {
-		"comfort": _t("Vista y lectura", "View and readability"),
-		"controls": _t("Controles", "Controls"),
-		"audio": _t("Sonido", "Audio"),
-	}
-	for tab in tab_names:
-		var button := _button(tabs, tab_names[tab], tab == settings_tab, _change_tab.bind(tab))
-		if settings_tab == tab:
-			button.grab_focus()
-	var column := _scroll_column(content, 328)
+func _build_settings(left: Control, right: Control) -> void:
+	var left_title := _t("Vista", "View")
+	var right_title := _t("Lectura", "Readability")
+	if settings_tab == "audio":
+		left_title = _t("Arco e impacto", "Bow and impact")
+		right_title = _t("Volumen", "Volume")
+	elif settings_tab == "controls":
+		left_title = _t("Movimiento", "Movement")
+		right_title = _t("Acciones", "Actions")
+	_label(left, left_title, 37, INK, title_font)
+	_label(right, right_title, 37, INK, title_font)
+	var column := _scroll_column(left, 288)
+	var facing := _scroll_column(right, 288)
 	if settings_tab == "comfort":
-		_toggle(column, "first_steps", _t("Guía de los primeros pasos", "First steps guide"))
 		_slider(column, "fov", _t("Campo de visión", "Field of view"), 55, 105, 1, "°")
 		_slider(column, "zoom", _t("Acercamiento al apuntar", "Aiming zoom"), 0, 1, 0.05, "%")
 		_slider(column, "shake", _t("Balanceo y vibración", "Sway and shake"), 0, 1, 0.05, "%")
 		_slider(column, "flashes", _t("Intensidad de los destellos", "Flash intensity"), 0, 1, 0.05, "%")
-		_slider(column, "reticle_size", _t("Tamaño de la mira", "Crosshair size"), 0.5, 2, 0.1, "%")
-		_slider(column, "damage_opacity", _t("Visibilidad de los números de daño", "Damage number opacity"), 0, 1, 0.05, "%")
-		_toggle(column, "group_damage", _t("Agrupar el daño de impactos seguidos", "Group damage from successive hits"))
+		_toggle(facing, "first_steps", _t("Guía de los primeros pasos", "First steps guide"))
+		_slider(facing, "reticle_size", _t("Tamaño de la mira", "Crosshair size"), 0.5, 2, 0.1, "%")
+		_slider(facing, "damage_opacity", _t("Visibilidad de los números de daño", "Damage number opacity"), 0, 1, 0.05, "%")
+		_toggle(facing, "group_damage", _t("Agrupar el daño de impactos seguidos", "Group damage from successive hits"))
 	elif settings_tab == "audio":
 		_timbre_picker(column, Timbres.SHOT, _t("Suelta de cuerda", "String release"), "shot")
 		_timbre_picker(column, Timbres.IMPACT, _t("Impacto en madera", "Wood impact"), "arrow_impact")
-		var auditions := _row(column, 8)
-		var prompt := _label(auditions, _t("Probar la combinación", "Try the combination"), 17, INK)
-		prompt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_button(auditions, _t("Disparo e impacto", "Shot and impact"), false, audio_preview_requested.emit.bind("pair")).name = "PreviewPair"
-		_button(auditions, _t("Ráfaga", "Burst"), false, audio_preview_requested.emit.bind("burst")).name = "PreviewBurst"
-		_rule(column)
-		_slider(column, "volume_bow", _t("Arco y rama", "Bow and branch"), 0, 1, 0.05, "%")
-		_slider(column, "volume_world", _t("Claro, impactos y recogidas", "Clearing, hits and pickups"), 0, 1, 0.05, "%")
-		_slider(column, "volume_ui", _t("Compras y menús", "Purchases and menus"), 0, 1, 0.05, "%")
+		_entry(column, _t("Escuchar disparo e impacto", "Hear shot and impact"), audio_preview_requested.emit.bind("pair"), "action").name = "PreviewPair"
+		_entry(column, _t("Escuchar ráfaga", "Hear a burst"), audio_preview_requested.emit.bind("burst"), "action").name = "PreviewBurst"
+		_slider(facing, "volume_bow", _t("Arco y rama", "Bow and branch"), 0, 1, 0.05, "%")
+		_slider(facing, "volume_world", _t("Claro, impactos y recogidas", "Clearing, hits and pickups"), 0, 1, 0.05, "%")
+		_slider(facing, "volume_ui", _t("Compras y menús", "Purchases and menus"), 0, 1, 0.05, "%")
 		var credit := RichTextLabel.new()
 		credit.fit_content = true
 		credit.scroll_active = false
@@ -996,23 +1085,23 @@ func _build_settings(content: Control) -> void:
 		credit.text = "CosmicEmbers · [url=https://freesound.org/people/CosmicEmbers/sounds/387478/]Dart-Thud-1[/url] · [url=https://freesound.org/people/CosmicEmbers/sounds/387479/]Dart Thud 3[/url] · [url=https://creativecommons.org/licenses/by/3.0/]CC BY 3.0[/url]"
 		credit.text += _t(" · recorte y nivelación", " · trimmed and level-matched")
 		credit.meta_clicked.connect(func(url): OS.shell_open(str(url)))
-		column.add_child(credit)
+		facing.add_child(credit)
 	else:
 		_slider(column, "sensitivity", _t("Sensibilidad del mouse", "Mouse sensitivity"), 0.2, 3, 0.1, "%")
-		_toggle(column, "toggle_fire", _t("Un clic inicia o detiene el disparo repetido", "Click to start or stop repeated fire"))
-		for action in preferences.bindings:
-			var row := _row(column, 12)
+		_toggle(facing, "toggle_fire", _t("Un clic inicia o detiene el disparo repetido", "Click to start or stop repeated fire"))
+		for action: String in preferences.bindings:
+			var movement := str(action).begins_with("move_") or action == "jump"
+			var row := _row(column if movement else facing, 8)
 			var labels: Array = Preferences.ACTION_NAMES[action]
 			var name_label := _label(row, _t(labels[0], labels[1]), 17, INK)
 			name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			var key_button := _button(row, preferences.binding_name(action), false, _listen.bind(action))
-			key_button.custom_minimum_size.x = 190
+			var key_button := _entry(row, preferences.binding_name(action), _listen.bind(action))
 			binding_buttons[action] = key_button
-		_button(column, _t("Restablecer teclas y botones", "Reset key and mouse bindings"), false, _reset_bindings)
-	var status := _label(content, settings_notice, 15, ACCENT)
+		_entry(column, _t("Restablecer teclas y botones", "Reset key and mouse bindings"), _reset_bindings, "action")
+	var status := _label(left, settings_notice, 15, ACCENT)
 	status.name = "PreferencesNotice"
+	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status.visible = not settings_notice.is_empty()
-	_button(content, _t("Volver", "Back"), true, _open_submenu.bind(""))
 
 func _change_tab(tab: String) -> void:
 	settings_tab = tab
@@ -1021,14 +1110,14 @@ func _change_tab(tab: String) -> void:
 	_render_view()
 
 func _timbre_picker(parent: Control, setting: String, title: String, cue: String) -> void:
+	_label(parent, title, 17, INK)
 	var row := _row(parent, 8)
-	var label := _label(row, title, 17, INK)
-	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var picker := OptionButton.new()
 	picker.name = setting.to_pascal_case()
 	picker.accessibility_name = title
-	picker.custom_minimum_size.x = 275
-	_style_button(picker, false)
+	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	Journal.style_entry(picker, ui_font, "action")
+	picker.add_theme_font_size_override("font_size", 17)
 	picker.add_theme_constant_override("modulate_arrow", 1)
 	var popup := picker.get_popup()
 	popup.add_theme_stylebox_override("panel", Journal.box(PAPER, RULE, 6, 6))
@@ -1051,13 +1140,12 @@ func _timbre_picker(parent: Control, setting: String, title: String, cue: String
 		_change_options()
 		audio_preview_requested.emit(cue)
 	)
-	var listen := _button(row, _t("Escuchar", "Listen"), false, audio_preview_requested.emit.bind(cue))
+	var listen := _entry(row, _t("Escuchar", "Listen"), audio_preview_requested.emit.bind(cue))
 	listen.accessibility_name = _t("Escuchar · ", "Listen · ") + title
 	listen.name = "Listen" + setting.to_pascal_case()
 
 func _slider(parent: Control, id: String, title: String, minimum: float, maximum: float, step_size: float, unit: String) -> void:
 	var row := _row(parent, 12)
-	row.custom_minimum_size.y = 35
 	var caption := _label(row, title, 17, INK)
 	caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var slider := HSlider.new()
@@ -1067,12 +1155,17 @@ func _slider(parent: Control, id: String, title: String, minimum: float, maximum
 	slider.max_value = maximum
 	slider.step = step_size
 	slider.value = options[id]
-	slider.custom_minimum_size.x = 220
-	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	slider.custom_minimum_size.y = 20
 	slider.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	slider.add_theme_stylebox_override("slider", Journal.box(Color("#a29f81"), RULE, 0, 3))
-	slider.add_theme_stylebox_override("grabber_area", Journal.box(MUTED, MUTED, 0, 3))
-	row.add_child(slider)
+	slider.add_theme_stylebox_override("slider", Journal.box(Color("#cbbfa6"), Color("#cbbfa6"), 0, 2))
+	slider.add_theme_stylebox_override("grabber_area", Journal.box(ACCENT, ACCENT, 0, 2))
+	slider.add_theme_stylebox_override("grabber_area_highlight", Journal.box(INK, INK, 0, 2))
+	slider.add_theme_icon_override("grabber", Journal.slider_knob(5))
+	slider.add_theme_icon_override("grabber_highlight", Journal.slider_knob(7))
+	var focus := Journal.box(Color.TRANSPARENT, ACCENT, 0, 0)
+	focus.set_border_width_all(1)
+	slider.add_theme_stylebox_override("focus", focus)
+	parent.add_child(slider)
 	var value := _label(row, _setting_value(slider.value, unit), 16, ACCENT, mono_font)
 	value.custom_minimum_size.x = 70
 	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -1090,10 +1183,13 @@ func _toggle(parent: Control, id: String, caption: String) -> void:
 	check.text = caption
 	check.accessibility_name = caption
 	check.name = id.to_pascal_case()
-	check.custom_minimum_size.y = 40
+	Journal.style_entry(check, ui_font, "link")
+	check.custom_minimum_size.y = 37
 	check.button_pressed = options.get(id, true)
 	check.add_theme_font_override("font", ui_font)
 	check.add_theme_font_size_override("font_size", 17)
+	check.add_theme_icon_override("checked", Journal.check_mark(true))
+	check.add_theme_icon_override("unchecked", Journal.check_mark(false))
 	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
 		check.add_theme_color_override(state, INK)
 	check.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND

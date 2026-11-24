@@ -35,13 +35,10 @@ const STONE := Color("#788176")
 const Blocks = preload("res://scripts/voxel_blocks.gd")
 const DOG = preload("res://assets/ovejero.tscn")
 const BRIZNO := preload("res://assets/brizno.tscn")
-const Journal := preload("res://scripts/field_journal.gd")
 
 var _cube := BoxMesh.new()
 var sentinel := preload("res://scripts/sentinel.gd").new()
 var _dog = DOG.instantiate()
-var _dog_sign := Sprite3D.new()
-var _sign_check := 0.0
 var _rng := RandomNumberGenerator.new()
 var _knot := StaticBody3D.new()
 var _knot_geometry: Node3D
@@ -86,7 +83,6 @@ func _ready() -> void:
 	_dog.position = DOG_POSITION
 	add_child(_dog)
 	_dog.look_at(Vector3.ZERO, Vector3.UP, true)
-	_add_dog_nameplate()
 	var courier := BRIZNO.instantiate() as Node3D
 	courier.position = BRIZNO_POSITION
 	courier.rotation.y = -0.86
@@ -300,54 +296,6 @@ func is_near_dog(feet: Vector3) -> bool:
 
 func is_near_brizno(feet: Vector3) -> bool:
 	return feet.distance_squared_to(BRIZNO_POSITION) <= 2.0 * 2.0
-
-func _add_dog_nameplate() -> void:
-	var surface := SubViewport.new()
-	surface.size = Vector2i(116, 44)
-	surface.transparent_bg = true
-	surface.render_target_update_mode = SubViewport.UPDATE_ONCE
-	add_child(surface)
-	var box := Journal.sheet(7, 1)
-	box.size = Vector2(surface.size)
-	surface.add_child(box)
-	var nameplate := Label.new()
-	nameplate.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	nameplate.text = "Pipo"
-	nameplate.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	nameplate.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	var face := Journal.serif()
-	face.font_italic = true
-	nameplate.add_theme_font_override("font", face)
-	nameplate.add_theme_font_size_override("font_size", 30)
-	nameplate.add_theme_color_override("font_color", Journal.INK)
-	box.add_child(nameplate)
-	_dog_sign.name = "Pipo"
-	_dog_sign.texture = surface.get_texture()
-	_dog_sign.fixed_size = true
-	_dog_sign.pixel_size = 0.00085
-	_dog_sign.visibility_range_end = 20.0
-	_dog_sign.no_depth_test = true
-	_dog_sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_dog_sign.position = DOG_POSITION + Vector3.UP * 1.48
-	_dog_sign.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(_dog_sign)
-
-func _physics_process(delta: float) -> void:
-	_sign_check -= delta
-	if _sign_check > 0.0:
-		return
-	_sign_check = 0.12
-	var camera := get_viewport().get_camera_3d()
-	if camera == null:
-		return
-	var head := DOG_POSITION + Vector3.UP * 0.95
-	_dog_sign.visible = camera.global_position.distance_squared_to(head) < 400.0 and not camera.is_position_behind(head)
-	if _dog_sign.visible:
-		var sight := PhysicsRayQueryParameters3D.create(camera.global_position, head)
-		var player := camera.get_parent() as CollisionObject3D
-		if player:
-			sight.exclude = [player.get_rid()]
-		_dog_sign.visible = get_world_3d().direct_space_state.intersect_ray(sight).is_empty()
 
 func pet_dog() -> void:
 	_dog.pet()
@@ -618,7 +566,7 @@ func sync_encounter(state: Dictionary) -> void:
 		var exposed := _stage == 10 and int(state.get("core_phase", 0)) == i and int(state.get("hp", 0)) > 0
 		_set_interactive("core_%d" % i, exposed)
 		_set_interactive("root_%d" % i, exposed)
-	_first_pickup_help = not state.get("fired_after_collect", false)
+	_first_pickup_help = state.get("early_pickup_glow", false)
 	_update_workshop_delivery(state)
 	var active := {}
 	for seed_state: Dictionary in state.get("seeds", []):

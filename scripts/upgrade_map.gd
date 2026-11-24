@@ -84,16 +84,9 @@ func _zoom_button(caption: String, es: String, en: String, action: Callable) -> 
 	button.text = caption
 	button.tooltip_text = es if language == "es" else en
 	button.accessibility_name = button.tooltip_text
+	Journal.style_entry(button, Journal.sans(), "link")
 	button.custom_minimum_size = Vector2(52 if caption.contains("%") else 30, 26)
-	button.add_theme_font_size_override("font_size", 13)
-	for state in ["font_color", "font_focus_color", "font_pressed_color", "font_hover_color"]:
-		button.add_theme_color_override(state, Journal.INK)
-	for state in ["normal", "hover", "pressed"]:
-		var box := StyleBoxFlat.new()
-		box.bg_color = Journal.PAPER if state == "normal" else Journal.CANVAS
-		box.set_border_width_all(1)
-		box.border_color = Journal.RULE
-		button.add_theme_stylebox_override(state, box)
+	button.add_theme_font_size_override("font_size", 15)
 	button.pressed.connect(action)
 	_toolbar.add_child(button)
 	return button

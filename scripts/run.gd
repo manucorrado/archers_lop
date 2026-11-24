@@ -54,6 +54,7 @@ var workshop_stock: int:
 		# H2 stored its entire workshop balance in one place.
 		workshop_piles = [value, 0, 0, 0]
 var workshop_piles := [0, 0, 0, 0]
+var supply_hints := preload("res://scripts/supply_hints.gd").new()
 var workshop_buffer := 0
 var workshop_flights: Array = []
 var batches_launched := 0
@@ -654,10 +655,13 @@ func collect(from_workshop: bool, slot: int = 0) -> int:
 	if from_workshop:
 		workshop_piles[slot] -= transfer
 		if transfer > 0:
+			supply_hints.picked_up(str(slot), workshop_piles[slot], elapsed)
 			collected += transfer
 			mark("first_production_pickup")
 	else:
 		knot_stock -= transfer
+		if transfer > 0:
+			supply_hints.picked_up("knot", knot_stock, elapsed)
 	return transfer
 
 
@@ -669,6 +673,8 @@ func collect_seeds(id: String) -> int:
 		seed_drops.erase(id)
 	else:
 		seed_drops[id] = stock - transfer
+	if transfer > 0:
+		supply_hints.picked_up(id, stock - transfer, elapsed)
 	return transfer
 
 
@@ -706,7 +712,8 @@ func save_state() -> Dictionary:
 		"paid_prices": paid_prices, "steady_count": steady_count, "last_volley": last_volley,
 		"session_observations": session_observations, "at_workshop": _at_workshop,
 		"workshop_piles": workshop_piles, "workshop_flights": workshop_flights, "workshop_buffer": workshop_buffer,
-		"batches_launched": batches_launched, "core_phase": core_phase, "core_hit": core_hit, "first_gift": first_gift}
+		"batches_launched": batches_launched, "core_phase": core_phase, "core_hit": core_hit, "first_gift": first_gift,
+		"supply_hints": supply_hints.checkpoint()}
 	for field: String in SAVE_FIELDS:
 		data[field] = get(field)
 	return data.duplicate(true)
@@ -841,6 +848,7 @@ func restore_state(data: Dictionary) -> bool:
 	steady_count = saved_streak
 	volley_critical = false
 	workshop_piles = data.get("workshop_piles", [workshop_stock, 0, 0, 0]).duplicate()
+	supply_hints.restore(data.get("supply_hints"), elapsed)
 	workshop_flights = data.get("workshop_flights", []).duplicate(true)
 	workshop_buffer = data.get("workshop_buffer", 0)
 	batches_launched = data.get("batches_launched", 0)

@@ -26,7 +26,9 @@ Abrí [ElArqueroDelClaro.exe](build/windows/ElArqueroDelClaro.exe) y elegí **En
 
 El taller cuesta 17 de savia. Produce 1,25 flechas por segundo y lanza tandas de tres. Seguí el vuelo y acercate al atado para recogerlo. Si el carcaj se llena, el resto queda en el suelo.
 
-La guía de primeros pasos te indica cuándo disparar y te ayuda a encontrar a Pipo y las flechas del taller. Se retira cuando volvés a disparar tras recoger un atado. Podés desactivarla en Ajustes. A la derecha del sendero está **Brizno**, el mensajero alado. Al acercarte aparece la opción de hablar. Sus relatos cambian con lo que pasa en el claro y podés seguir una charla al reabrir el juego. Para escribirle más diálogos, editá [sus charlas bilingües](assets/charlas_de_brizno.tres) en el Inspector.
+La mira te indica dónde está Pipo durante toda la partida. Durante los primeros diez minutos de juego activo también puede señalar un atado cuando te hacen falta flechas. Después, un atado que lleva al menos 90 segundos sin recoger puede recibir un aviso de ocho segundos. En Ajustes podés desactivar las pistas de primeros pasos y de munición.
+
+A la derecha del sendero está **Brizno**, el mensajero alado. Al acercarte aparece la opción de hablar. Sus relatos cambian con lo que pasa en el claro y podés seguir una charla al reabrir el juego. Para escribirle más diálogos, editá [sus charlas bilingües](assets/charlas_de_brizno.tres) en el Inspector.
 
 Cada compra revela los nodos vecinos y otro tramo del dibujo. Las mejoras iniciales suman daño o cadencia según la base del arco. En daño 10 salen hasta tres flechas por disparo. Más afuera aparecen los multiplicadores de daño y los disparos adicionales por segundo. La compra **Buena racha** activa el combo y su prima de savia.
 

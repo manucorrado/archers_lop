@@ -490,23 +490,27 @@ func _collect_nearby() -> bool:
 	return true
 
 
-func _supply_jump_target() -> Variant:
-	var piles: Array[Vector3] = []
+func _ground_supplies() -> Dictionary:
+	var piles := {}
 	for index in run.workshop_piles.size():
 		if run.workshop_piles[index] > 0:
-			piles.append(Clearing.WORKSHOP_LANDINGS[index])
+			piles[str(index)] = Clearing.WORKSHOP_LANDINGS[index]
 	if run.knot_stock > 0:
-		piles.append(Clearing.KNOT_PICKUP)
+		piles["knot"] = Clearing.KNOT_PICKUP
 	for id: String in run.seed_drops:
 		if run.seed_drops[id] > 0:
-			piles.append(clearing.seed_drop_position(id))
+			piles[id] = clearing.seed_drop_position(id)
+	return piles
+
+
+func _supply_jump_target() -> Variant:
 	var eye := archer.camera.global_position
 	var forward := -archer.camera.global_basis.z
 	var bearing := Vector2(forward.x, forward.z).angle()
 	var pitch := asin(clampf(forward.y, -1, 1))
 	var best_score := INF
 	var destination: Variant = null
-	for point in piles:
+	for point: Vector3 in _ground_supplies().values():
 		var offset := point + Vector3.UP * 0.3 - eye
 		var horizontal := Vector2(offset.x, offset.z)
 		var distance := horizontal.length()
@@ -587,12 +591,19 @@ func _sync() -> void:
 	var target := run.sentinel_target()
 	clearing.sentinel.sync_state(state.sentinel_owned, run.sentinel_ammo, not target.is_empty(), clearing.target_center(target))
 	state.near_sentinel = clearing.sentinel.is_within_reach(archer.position)
+	state.learning_supplies = run.elapsed < run.supply_hints.LEARNING_TIME
+	state.early_pickup_glow = hud.options.first_steps and not run.fired_after_collect and state.learning_supplies
 	clearing.sync_encounter(state)
 	hud.refresh(state)
-	var goal := {}
-	if view == "play" and hud.options.first_steps:
-		goal = FirstSteps.objective(state, archer.position)
-	trail_marker.update_goal(goal, hud.language)
+	var piles := _ground_supplies()
+	var needs_supply := run.arrows < run.capacity()
+	if state.learning_supplies and run.collected > 0:
+		needs_supply = run.arrows <= run.capacity() * 0.5
+	var pile := run.supply_hints.choose(piles, archer.position, run.elapsed,
+			view == "play" and hud.options.first_steps, needs_supply)
+	var supply: Variant = null if pile.is_empty() else piles[pile] + Vector3.UP * 0.35
+	trail_marker.update_targets(view == "play", supply, state.near_dog, hud.language,
+			hud.preferences.binding_name("shop"), hud.preferences.binding_name("pet_dog") if run.rank_of("pet") > 0 else "")
 
 
 func _save_campaign() -> bool:

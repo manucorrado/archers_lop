@@ -38,7 +38,8 @@ func _run() -> void:
 	await _click(root.gui_get_focus_owner() as Button)
 	if not _expect(game.view == "play", "The start button enters the clearing"):
 		return
-	if not _expect(not game.trail_marker.visible, "The shooting target starts without a floating nameplate"):
+	if not _expect(game.trail_marker.visible and game.trail_marker.supply_position == null,
+			"Pipo's bearing is available as soon as the player enters the clearing"):
 		return
 	await _frames(12)
 	var floor_y := game.archer.position.y
@@ -241,7 +242,7 @@ func _run() -> void:
 	await _click(_button_named("Español"))
 	await _tap(KEY_ESCAPE)
 	await _click(_button_named("Continuar al blanco 6"))
-	if not _expect(game.view == "play" and game.run.stage == 6 and game.run.first_gift == offer[0],
+	if not _expect(game.view == "play" and game.trail_marker.visible and game.run.stage == 6 and game.run.first_gift == offer[0],
 			"Continuing enters the second act with the saved reward"):
 		return
 	for stage in range(6, 11):
