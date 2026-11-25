@@ -40,7 +40,9 @@ func _run() -> void:
 		quit(1)
 		return
 	var selectors := {"shot": shot, "arrow_impact": impact, "pickup": pickup}
-	var counts := {"shot": 5, "arrow_impact": 7, "pickup": 6}
+	var counts := {"shot": 5, "arrow_impact": 7, "pickup": 2}
+	_check(pickup.item_count == 2 and pickup.text == "Roce de varillas" and pickup.get_item_text(1) == "Roce de tela",
+			"Fresh Spanish profiles offer the two retained pickups and default to wooden shafts")
 	for cue: String in selectors:
 		var selector: OptionButton = selectors[cue]
 		var variants := {}
@@ -60,7 +62,7 @@ func _run() -> void:
 		_check(variants.size() == counts[cue], "Every timbre has a distinct playable stream for " + cue)
 	_pick(shot, 1)
 	_pick(impact, 2)
-	_pick(pickup, 3)
+	_pick(pickup, 1)
 	var reloaded := Prefs.new()
 	reloaded.load_settings()
 	_check(reloaded.options.shot_timbre == shot.get_selected_metadata() and
@@ -89,7 +91,7 @@ func _run() -> void:
 	hud._switch_language()
 	shot = hud.find_child("ShotTimbre", true, false) as OptionButton
 	pickup = hud.find_child("PickupTimbre", true, false) as OptionButton
-	_check(pickup.text == "Taut cord" and pickup.accessibility_name == "Arrow pickup · playtest", "Pickup names change with the language")
+	_check(pickup.text == "Fabric brush" and pickup.accessibility_name == "Arrow pickup", "Pickup names change with the language")
 	_check(shot.accessibility_name == "String release" and shot.text == "String and fiber · recording", "English labels keep the selection")
 	(hud.find_child("PreviewBurst", true, false) as Button).pressed.emit()
 	hud._open_submenu("")
@@ -100,7 +102,7 @@ func _run() -> void:
 	game.run.knot_stock = 4
 	game.archer.position = Game.Clearing.KNOT_PICKUP
 	_check(game._collect_nearby() and game.run.arrows == 4 and sound._voices.pickup.playing
-			and sound._voices.pickup.stream == Timbres.CATALOG[Timbres.PICKUP]["cord"][2], "Ground bundles play the chosen recording")
+			and sound._voices.pickup.stream == Timbres.CATALOG[Timbres.PICKUP]["fabric"][2], "Ground bundles play the chosen recording")
 	game.archer.play_shot(game.clearing.target_center("body"))
 	_check(sound._voices.shot.playing, "The live bow uses the selected release")
 	var flight := {"end": Vector3.ZERO, "id": "body", "damage": 1, "weak_damage": 1, "serial": game.run.target_serial}
@@ -115,6 +117,13 @@ func _run() -> void:
 	_check(not sound._voices.hit.playing and sound._voices.hit.stream == old_branch_hit, "Branch hit keeps its original voice")
 	var config := ConfigFile.new()
 	config.load(Prefs.FILE)
+	for id: String in ["shafts", "fabric", "tap", "leather", "cord", "satchel"]:
+		config.set_value("comfort", Timbres.PICKUP, id)
+		config.save(Prefs.FILE)
+		reloaded.load_settings()
+		var expected := "fabric" if id == "fabric" else "shafts"
+		_check(reloaded.options.pickup_timbre == expected and reloaded.options.impact_timbre == config.get_value("comfort", Timbres.IMPACT)
+				and reloaded.language == "en", "Restore existing audio profiles with pickup " + id)
 	config.set_value("comfort", Timbres.SHOT, false)
 	config.set_value("comfort", Timbres.IMPACT, "retired_sample")
 	config.set_value("comfort", Timbres.PICKUP, 123)

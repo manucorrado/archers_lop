@@ -9,69 +9,28 @@ signal inspection_changed(id: String)
 signal map_moved
 const PIGMENTS := {"damage": Color("#653524"), "speed": Color("#254b3b"),
 	"supply": Color("#624718"), "utility": Color("#394765")}
+const WALNUT_PIGMENTS := {"damage": Color("#e6ae89"), "speed": Color("#c1d5ac"),
+	"supply": Color("#e8c796"), "utility": Color("#c5c7e0")}
 const FAMILY_NAMES := {"damage": ["Daño", "Damage"], "speed": ["Cadencia", "Fire rate"],
 	"supply": ["Suministro", "Supply"], "utility": ["Utilidad", "Utility"]}
-const SEAM_INK := Color("#3d342b")
 const MAP_CENTER := Vector2(493.5, 474)
 const MAP_SPAN := Vector2(822, 761)
 const MIN_ZOOM := 0.75
 const MAX_ZOOM := 5.0
 
-class Socket extends Button:
-	var stamped_symbol: Texture2D
-	var rank := 0
-	var ranks := 1
-	var met := false
-	var affordable := false
-	var inspected := false
-	var family := "damage"
-	var space_for_rank := false
-
-	func _draw() -> void:
-		var c := size * 0.5
-		var radius := c.x - 2
-		var pigment: Color = PIGMENTS[family]
-		var complete := rank >= ranks
-		var fill := Color("#fcf4df") if met else Color("#dbd4c4")
-		if rank > 0:
-			fill = pigment if complete else Color("#845120")
-		var outline := Color("#685943") if affordable else Color("#474038")
-		var points := PackedVector2Array()
-		var corners := 4 if family == "damage" else 6 if family == "speed" else 8 if family == "supply" else 32
-		var offset := PI / 8 if family == "supply" else -PI / 2
-		for i in corners:
-			points.append(c + Vector2.from_angle(offset + TAU * i / corners) * radius)
-		draw_colored_polygon(points, fill)
-		points.append(points[0])
-		draw_polyline(points, Color("#b96a22") if inspected else outline, 2.8 if inspected else 1.7, true)
-		if rank > 0 and not complete and radius >= 6:
-			draw_arc(c, radius * 0.67, -PI * 0.5, -PI * 0.5 + TAU * rank / ranks,
-				36, Color("#fff2bd"), maxf(1.8, radius * 0.15), true)
-		var icon_size := Vector2.ONE * floorf(radius * (1.24 if rank > 0 else 1.45))
-		var tint := Color.WHITE if met or rank > 0 else Color("#9b9387")
-		draw_texture_rect(stamped_symbol, Rect2((c - icon_size * 0.5).round(), icon_size), false, tint)
-		if complete and radius >= 5:
-			var badge := c + Vector2(radius * 0.64, radius * 0.63)
-			var r := clampf(radius * 0.37, 2.7, 6.5)
-			draw_circle(badge, r + 0.8, Color("#fcf4df"), true, -1, true)
-			draw_circle(badge, r, Color("#283c35"), true, -1, true)
-			draw_polyline(PackedVector2Array([badge + Vector2(-0.55, 0) * r,
-				badge + Vector2(-0.10, 0.37) * r, badge + Vector2(0.59, -0.42) * r]),
-				Color("#fff6de"), maxf(1.2, r * 0.25), true)
-		elif rank > 0 and space_for_rank:
-			var label := "%d/%d" % [rank, ranks]
-			var font := get_theme_default_font()
-			var width := ceilf(font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x)
-			var tab := Rect2(floorf(c.x - width * 0.5) - 3, size.y - 2, width + 6, 14)
-			draw_rect(tab, Color("#66411f"))
-			draw_string(font, tab.position + Vector2(3, 11), label, HORIZONTAL_ALIGNMENT_LEFT,
-					-1, 12, Color("#fff7e5"))
+const Socket := preload("res://scripts/atlas_socket.gd")
+const Finish := preload("res://scripts/atlas_finish.gd")
+const SURFACE_SHADER := preload("res://assets/atlas_superficie.gdshader")
 
 var buttons: Dictionary = {}
 var parents: Dictionary = {}
 var offers: Dictionary = {}
 var revealed: Dictionary = {}
 var language := "es"
+var atlas_style := "walnut"
+var _colors: Dictionary
+var _surface := ColorRect.new()
+var _grain := ShaderMaterial.new()
 var zoom := 1.0
 var pan := Vector2.ZERO
 var _map_center := MAP_CENTER
@@ -84,7 +43,7 @@ var _last_drag_point := Vector2.ZERO
 var _zoom_value: Button
 var _toolbar := HBoxContainer.new()
 var _legend := HBoxContainer.new()
-var _rank_key := Label.new()
+var _rank_key := VBoxContainer.new()
 var _collection := Button.new()
 var _family_filter := ""
 var _inspected := ""
@@ -106,6 +65,9 @@ static func group_for(id: String) -> String:
 func group_name(group: String) -> String:
 	return FAMILY_NAMES[group][0 if language == "es" else 1]
 
+func family_ink(group: String) -> Color:
+	return PIGMENTS[group] if atlas_style == "linen" else WALNUT_PIGMENTS[group]
+
 func focus_entry() -> void:
 	if _complete:
 		_collection.grab_focus()
@@ -113,6 +75,16 @@ func focus_entry() -> void:
 		buttons.damage.grab_focus()
 
 func _ready() -> void:
+	_colors = Finish.palette(atlas_style)
+	_grain.shader = SURFACE_SHADER
+	_grain.set_shader_parameter("ground", _colors.surface)
+	_grain.set_shader_parameter("walnut", atlas_style != "linen")
+	_surface.material = _grain
+	_surface.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_surface.show_behind_parent = true
+	add_child(_surface)
+	_surface.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_grain.set_shader_parameter("dimensions", size)
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	resized.connect(_place_buttons)
@@ -123,9 +95,9 @@ func _ready() -> void:
 	_toolbar.z_index = 1
 	_toolbar.mouse_filter = Control.MOUSE_FILTER_STOP
 	_toolbar.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	_toolbar.offset_left = -135
-	_toolbar.offset_top = 6
-	_toolbar.offset_right = -6
+	_toolbar.offset_left = -146
+	_toolbar.offset_top = 12
+	_toolbar.offset_right = -17
 	_toolbar.offset_bottom = 34
 	_toolbar.add_theme_constant_override("separation", 2)
 	_zoom_button("−", "Alejar", "Zoom out", func(): _zoom_at(zoom / 1.25, size / 2))
@@ -133,42 +105,68 @@ func _ready() -> void:
 	_zoom_button("+", "Acercar", "Zoom in", func(): _zoom_at(zoom * 1.25, size / 2))
 	add_child(_legend)
 	_legend.z_index = 1
-	_legend.position = Vector2(3, 6)
 	_legend.add_theme_constant_override("separation", 12)
 	for group: String in FAMILY_NAMES:
 		var tab := Button.new()
-		var marks := {"damage": "◆", "speed": "⬢", "supply": "▣", "utility": "●"}
-		tab.text = marks[group] + "  " + group_name(group)
+		tab.text = group_name(group)
 		tab.name = group
 		tab.toggle_mode = true
 		Journal.style_entry(tab, Journal.serif(), "link")
+		Finish.style_link(tab, atlas_style)
 		for state in ["font_color", "font_pressed_color", "font_focus_color", "font_hover_color"]:
-			tab.add_theme_color_override(state, PIGMENTS[group])
+			tab.add_theme_color_override(state, family_ink(group))
 		tab.pressed.connect(_highlight_family.bind(group))
 		_legend.add_child(tab)
+	_legend.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 16)
 	add_child(_collection)
-	_collection.position = _legend.position
+	_collection.position = Vector2(18, 13)
 	_collection.z_index = 1
 	Journal.style_entry(_collection, Journal.serif(), "action")
+	Finish.style_link(_collection, atlas_style)
 	_collection.pressed.connect(func(): _drawing(not _show_drawing, false))
 	_collection.hide()
-	_rank_key.text = "○  Sin comprar     ◔  En progreso     ✓  Completa" if language == "es" else "○  Unbought     ◔  In progress     ✓  Complete"
-	_rank_key.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_rank_key.add_theme_font_override("font", Journal.sans())
-	_rank_key.add_theme_font_size_override("font_size", 14)
-	_rank_key.add_theme_color_override("font_color", Color("#514535"))
+	_rank_key.mouse_filter = Control.MOUSE_FILTER_STOP
 	_rank_key.z_index = 1
 	add_child(_rank_key)
-	_rank_key.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 5)
+	_rank_key.position = Vector2(23, 16)
+	_rank_key.add_theme_constant_override("separation", 3)
+	var heading := Label.new()
+	heading.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	heading.text = "Estado de las mejoras" if language == "es" else "Upgrade status"
+	heading.add_theme_font_override("font", Journal.serif())
+	heading.add_theme_font_size_override("font_size", 20)
+	heading.add_theme_color_override("font_color", _colors.ink)
+	_rank_key.add_child(heading)
+	var status_labels := ["Sin comprar", "En progreso", "Completa"] if language == "es" else ["Unbought", "In progress", "Complete"]
+	for i in 3:
+		var line := HBoxContainer.new()
+		line.mouse_behavior_recursive = Control.MOUSE_BEHAVIOR_DISABLED
+		_rank_key.add_child(line)
+		var sample := Socket.new()
+		sample.atlas_style = atlas_style
+		sample.rank = [0, 4, 10][i]
+		sample.ranks = 10
+		sample.met = true
+		sample.stamped_symbol = Icons.texture("damage", (sample.rank < 10) if atlas_style != "linen" else (sample.rank == 10))
+		sample.custom_minimum_size = Vector2(21,21)
+		sample.flat = true
+		sample.focus_mode = Control.FOCUS_NONE
+		line.add_child(sample)
+		var label := Label.new()
+		label.text = status_labels[i]
+		label.add_theme_font_override("font", Journal.sans())
+		label.add_theme_font_size_override("font_size", 13)
+		label.add_theme_color_override("font_color", _colors.muted)
+		line.add_child(label)
 	var hint := Label.new()
 	hint.text = "Rueda para acercar · Arrastrá para mover" if language == "es" else "Wheel to zoom · Drag to pan"
 	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hint.add_theme_font_override("font", Journal.sans())
 	hint.add_theme_font_size_override("font_size", 13)
-	hint.add_theme_color_override("font_color", Journal.MUTED)
+	hint.add_theme_color_override("font_color", _colors.muted)
 	hint.z_index = 1
 	add_child(hint)
-	hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 5)
+	hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 17)
 
 func _highlight_family(group: String) -> void:
 	_family_filter = "" if _family_filter == group else group
@@ -188,6 +186,7 @@ func _zoom_button(caption: String, es: String, en: String, action: Callable) -> 
 	button.tooltip_text = es if language == "es" else en
 	button.accessibility_name = button.tooltip_text
 	Journal.style_entry(button, Journal.sans(), "link")
+	Finish.style_link(button, atlas_style)
 	button.custom_minimum_size = Vector2(52 if caption.contains("%") else 30, 26)
 	button.add_theme_font_size_override("font_size", 15)
 	button.pressed.connect(action)
@@ -197,6 +196,7 @@ func _zoom_button(caption: String, es: String, en: String, action: Callable) -> 
 func add_socket(id: String) -> Socket:
 	var node := Socket.new()
 	node.family = group_for(id)
+	node.atlas_style = atlas_style
 	node.flat = true
 	node.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	node.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -209,6 +209,8 @@ func add_socket(id: String) -> Socket:
 	node.focus_exited.connect(_blur.bind(id))
 	buttons[id] = node
 	add_child(node)
+	# GUI hit tests visit siblings in reverse tree order, independently of z_index.
+	move_child(node, _toolbar.get_index())
 	return node
 
 func arrange(new_offers: Dictionary) -> void:
@@ -261,7 +263,7 @@ func _drawing(enabled: bool, animate: bool) -> void:
 	if _reveal:
 		_reveal.kill()
 	_show_drawing = enabled
-	_rank_key.visible = not enabled
+	_rank_key.visible = not _complete
 	_set_inspection("")
 	_collection.text = ("Ver mejoras" if language == "es" else "Inspect upgrades") if enabled else ("Ver arco y carcaj" if language == "es" else "View bow and quiver")
 	for id: String in buttons:
@@ -299,11 +301,12 @@ func _point(p: Vector2) -> Vector2:
 	return size * 0.5 + pan + (p - _map_center) * _scale_factor()
 
 func _place_buttons() -> void:
+	_grain.set_shader_parameter("dimensions", size)
 	var factor := _scale_factor()
 	for id: String in buttons:
 		var node: Socket = buttons[id]
 		# Each hit rectangle fits between its neighbors even at overview scale.
-		var target_size := 40.0 if id == "damage" else 33.0
+		var target_size := 48.0 if id == "damage" else 44.0
 		var room := 0.88 * float(_nearest.get(id, target_size))
 		var diameter := clampf(minf(target_size, room) * factor, 8.0, target_size)
 		node.space_for_rank = diameter >= 25 and room * factor >= diameter + 15
@@ -338,9 +341,12 @@ func _ensure_in_view(node: Socket) -> void:
 	var margin := node.size / 2 + Vector2(6, 6)
 	var center := node.get_rect().get_center()
 	var delta := center.clamp(margin, size - margin) - center
-	for bar: Control in [_toolbar, _legend, _collection]:
+	for bar: Control in [_toolbar, _legend, _collection, _rank_key]:
 		if bar.visible and bar.get_rect().grow(margin.y).has_point(center + delta):
-			delta.y = bar.get_rect().end.y + margin.y - center.y
+			if bar.position.y > size.y / 2:
+				delta.y = bar.position.y - margin.y - center.y
+			else:
+				delta.y = bar.get_rect().end.y + margin.y - center.y
 	if delta.length_squared() > 0.01:
 		pan += delta
 		_limit_pan()
@@ -394,11 +400,10 @@ func _input(event: InputEvent) -> void:
 			_: return
 		get_viewport().set_input_as_handled()
 	elif event is InputEventMouse:
+		var local := make_input_local(event) as InputEventMouse
 		if _keyboard_inspection:
 			_keyboard_inspection = false
-			var under_mouse := get_viewport().gui_get_hovered_control()
-			_set_inspection(str(buttons.find_key(under_mouse)) if under_mouse is Socket else "")
-		var local := make_input_local(event) as InputEventMouse
+			_set_inspection(_socket_at(local.position) if not _show_drawing else "")
 		if event is InputEventMouseMotion:
 			if _drag_button != 0:
 				var mask := MOUSE_BUTTON_MASK_LEFT if _drag_button == MOUSE_BUTTON_LEFT else MOUSE_BUTTON_MASK_MIDDLE
@@ -430,9 +435,8 @@ func _input(event: InputEvent) -> void:
 			return
 		if not event.pressed or not Rect2(Vector2.ZERO, size).has_point(local.position):
 			return
-		for bar: Control in [_toolbar, _legend, _collection]:
-			if bar.visible and bar.get_rect().has_point(local.position):
-				return
+		if _over_controls(local.position):
+			return
 		if event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 			var direction := 1.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -1.0
 			_zoom_at(zoom * pow(1.22, direction * maxf(0.1, event.factor)), local.position)
@@ -453,6 +457,8 @@ func _end_pointer() -> void:
 	_pressed_socket = ""
 
 func _socket_at(point: Vector2) -> String:
+	if _over_controls(point):
+		return ""
 	var nearest := ""
 	var best := INF
 	for id: String in revealed:
@@ -464,13 +470,20 @@ func _socket_at(point: Vector2) -> String:
 				best = distance
 	return nearest
 
+func _over_controls(point: Vector2) -> bool:
+	for bar: Control in [_toolbar, _legend, _collection, _rank_key]:
+		if bar.visible and bar.get_rect().has_point(point):
+			return true
+	return false
+
 func update_socket(id: String, offer: Dictionary) -> void:
 	offers[id] = offer
 	var socket: Socket = buttons[id]
 	socket.rank = int(offer.rank)
 	var stencil := Icons.for_rank(id, socket.rank)
-	socket.stamped_symbol = Icons.texture(stencil, socket.rank > 0)
 	socket.ranks = int(offer.max_rank)
+	var done := socket.rank >= socket.ranks
+	socket.stamped_symbol = Icons.texture(stencil, done if atlas_style == "linen" else not done)
 	socket.met = bool(offer.requirement_met)
 	socket.affordable = bool(offer.available)
 	socket.queue_redraw()
@@ -479,23 +492,40 @@ func _edge(from: String, to: String, tint: Color, width: float) -> void:
 	draw_line(_point(Paths.position_of(from)), _point(Paths.position_of(to)), tint, width, true)
 
 func _draw() -> void:
-	var dot := Color("#aa967a3c")
-	for y in range(12, int(size.y), 22):
-		for x in range(12, int(size.x), 22):
-			draw_rect(Rect2(x, y, 1, 1), dot)
+	if _colors.is_empty():
+		return
+	var walnut := atlas_style != "linen"
+	if walnut and size.x > 32 and size.y > 32:
+		var rim := Rect2(Vector2(7,7), size - Vector2(14,14))
+		draw_rect(rim, Color("#a98c654d"), false, 1)
+		for x: float in [rim.position.x, rim.end.x]:
+			for y: float in [rim.position.y, rim.end.y]:
+				var pin := Vector2(x,y)
+				draw_circle(pin, 3.5, Color("#bda077"), true,-1,true)
+				draw_line(pin - Vector2(1.5,-.75), pin + Vector2(1.5,-.75), Color("#6a5236"), 1.1,true)
 	for id: String in revealed:
 		var parent: String = parents[id]
 		if not parent.is_empty():
 			var offer: Dictionary = offers[id]
 			var group := group_for(id)
-			var tone: Color = PIGMENTS[group]
+			var owned := int(offer.rank) > 0
+			var tone: Color = _colors.accent if owned else _colors.rule
+			if not walnut and owned:
+				tone = Color("#484334")
 			if not _family_filter.is_empty() and group != _family_filter:
-				tone = tone.lerp(Journal.PAPER, 0.70)
+				tone = tone.lerp(_colors.surface, 0.70)
 			tone.a = 1.0 - _ink
-			_edge(parent, id, tone, 2.7 if int(offer.rank) > 0 else 1.9)
+			if walnut:
+				_edge(parent, id, Color(Color("#25180f"), tone.a), 4.3 if owned else 3.1)
+			_edge(parent, id, tone, 2.5 if owned else 1.6)
 	for pair: Array in Paths.SEAMS:
 		if int(offers.get(pair[0], {}).get("rank", 0)) > 0 and int(offers.get(pair[1], {}).get("rank", 0)) > 0:
-			_edge(pair[0], pair[1], Color(SEAM_INK, 1.0 - _ink), 1.8)
+			_edge(pair[0], pair[1], Color(_colors.accent, 1.0 - _ink), 1.8)
 	if _ink > 0.0:
 		var art := Rect2(_point(Vector2(30, 40)), Vector2(1000, 900) * _scale_factor())
+		if walnut:
+			# The collected illustration keeps its original ink and rests on a mounted sheet.
+			var mat := Rect2(_point(Vector2(65,77)), Vector2(873,794) * _scale_factor())
+			draw_rect(mat, Color(Color("#efe4cb"), _ink))
+			draw_rect(mat.grow(-3), Color(Color("#ac9876"), _ink), false, 1.5)
 		draw_texture_rect(COLLECTION_ART, art, false, Color(1, 1, 1, _ink))

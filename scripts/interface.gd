@@ -19,6 +19,7 @@ const Preferences := preload("res://scripts/play_preferences.gd")
 const Timbres := preload("res://scripts/arrow_timbres.gd")
 const UpgradeMap := preload("res://scripts/upgrade_map.gd")
 const AtlasDetail := preload("res://scripts/atlas_detail.gd")
+const AtlasFinish := preload("res://scripts/atlas_finish.gd")
 const Paths := preload("res://scripts/upgrade_paths.gd")
 const AmountFormat := preload("res://scripts/amount_format.gd")
 const REWARD_ART := preload("res://assets/cartas_pictogramas.svg")
@@ -212,9 +213,9 @@ func _sheet(parent: Control, mx: int, my: int, kind := "note") -> PanelContainer
 	parent.add_child(page)
 	return page
 
-func _rule(parent: Control) -> void:
+func _rule(parent: Control, tint := Color("#9c9d836e")) -> void:
 	var rule := ColorRect.new()
-	rule.color = Color("#9c9d836e")
+	rule.color = tint
 	rule.custom_minimum_size.y = 1
 	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(rule)
@@ -593,24 +594,38 @@ func _scroll_column(parent: Control, height: int) -> VBoxContainer:
 	return column
 
 func _build_shop(cover: Control) -> void:
+	var finish: String = options.atlas_style
+	var colors := AtlasFinish.palette(finish)
 	var binding := _sheet(cover, 4, 5, "binding")
+	binding.add_theme_stylebox_override("panel", Journal.box(colors.surround, colors.rule, 4, 5, 2))
 	binding.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var page := _sheet(binding, 30, 9, "inline")
+	page.add_theme_stylebox_override("panel", Journal.box(colors.surround, colors.rule, 26, 9))
 	var chart := _stack(page, 4)
-	var heading := _row(chart, 20)
-	var title := _label(heading, _t("Árbol de mejoras", "Upgrade tree"), 41, INK, title_font)
+	var heading := _row(chart, 14)
+	var emblem := TextureRect.new()
+	emblem.texture = UpgradeMap.COLLECTION_ART
+	emblem.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	emblem.custom_minimum_size = Vector2(40, 38)
+	emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	heading.add_child(emblem)
+	var title := _label(heading, _t("Atlas de mejoras", "Upgrade atlas"), 39, colors.ink, title_font)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var balance := _row(heading, 6)
-	balance.add_child(Pictogram.new("sap", ACCENT))
-	shop_sap = _label(balance, "", 18, INK, ui_font)
-	_entry(heading, _t("English", "Español"), _switch_language)
-	_rule(chart)
+	balance.add_child(Pictogram.new("sap", colors.accent))
+	shop_sap = _label(balance, "", 18, colors.ink, ui_font)
+	AtlasFinish.style_link(_entry(heading, _t("English", "Español"), _switch_language), finish)
+	_rule(chart, colors.rule)
 	upgrade_map = UpgradeMap.new()
+	upgrade_map.atlas_style = finish
 	upgrade_map.language = language
 	upgrade_map.animate_completion = minf(float(options.flashes), float(options.shake)) > 0.0
 	upgrade_map.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	chart.add_child(upgrade_map)
 	upgrade_detail = AtlasDetail.new()
+	upgrade_detail.atlas_style = finish
 	upgrade_map.add_child(upgrade_detail)
 	upgrade_map.inspection_changed.connect(_select_upgrade)
 	upgrade_map.map_moved.connect(_position_upgrade_detail)
@@ -622,18 +637,18 @@ func _build_shop(cover: Control) -> void:
 		node.gui_input.connect(_socket_input.bind(id))
 		offer_controls[id] = node
 	upgrade_map.arrange(available)
-	_rule(chart)
+	_rule(chart, colors.rule)
 	var equipment := _row(chart, 12)
-	_entry(equipment, _t("Volver al claro", "Return to clearing"), resume_requested.emit, "back")
-	shop_notice = _label(equipment, "", 15, MUTED)
+	AtlasFinish.style_link(_entry(equipment, _t("Volver al claro", "Return to clearing"), resume_requested.emit, "back"), finish)
+	shop_notice = _label(equipment, "", 15, colors.muted)
 	shop_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	shop_notice.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	shop_notice.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	for id: String in ["branch", "recurve", "longbow"]:
 		var button := _entry(equipment, _bow_name(id), equip_requested.emit.bind(id))
+		AtlasFinish.style_link(button, finish)
 		button.add_theme_font_size_override("font_size", 15)
 		button.accessibility_name = _t("Equipar ", "Equip ") + _bow_name(id)
-		button.add_theme_color_override("font_disabled_color", MUTED)
 		equipment_buttons[id] = button
 	upgrade_map.focus_entry()
 
@@ -1033,7 +1048,7 @@ func _update_offer(id: String, offer: Dictionary) -> void:
 		return
 	var details := upgrade_detail
 	var group := UpgradeMap.group_for(id)
-	details.set_pigment(UpgradeMap.PIGMENTS[group])
+	details.set_pigment(upgrade_map.family_ink(group))
 	details.category.text = upgrade_map.group_name(group).to_upper()
 	details.level.text = level.to_upper()
 	details.title.text = _t("%s · Disparo triple", "%s · Triple shot") % name_tag if id == "damage" and rank >= 9 else name_tag
@@ -1080,6 +1095,11 @@ func _build_settings(left: Control, right: Control) -> void:
 	var column := _scroll_column(left, 288)
 	var facing := _scroll_column(right, 288)
 	if settings_tab == "comfort":
+		var atlas_picker := _settings_picker(facing, "atlas_style", _t("Aspecto del Atlas", "Atlas appearance"), Preferences.ATLAS_STYLES)
+		atlas_picker.item_selected.connect(func(index: int):
+			options.atlas_style = atlas_picker.get_item_metadata(index)
+			_change_options()
+		)
 		_slider(column, "fov", _t("Campo de visión", "Field of view"), 55, 105, 1, "°")
 		_slider(column, "zoom", _t("Acercamiento al apuntar", "Aiming zoom"), 0, 1, 0.05, "%")
 		_slider(column, "shake", _t("Balanceo y vibración", "Sway and shake"), 0, 1, 0.05, "%")
@@ -1092,7 +1112,7 @@ func _build_settings(left: Control, right: Control) -> void:
 	elif settings_tab == "audio":
 		_timbre_picker(column, Timbres.SHOT, _t("Suelta de cuerda", "String release"), "shot")
 		_timbre_picker(column, Timbres.IMPACT, _t("Impacto en madera", "Wood impact"), "arrow_impact")
-		_timbre_picker(column, Timbres.PICKUP, _t("Recogida de flechas · prueba", "Arrow pickup · playtest"), "pickup")
+		_timbre_picker(column, Timbres.PICKUP, _t("Recogida de flechas", "Arrow pickup"), "pickup")
 		_entry(column, _t("Escuchar disparo e impacto", "Hear shot and impact"), audio_preview_requested.emit.bind("pair"), "action").name = "PreviewPair"
 		_entry(column, _t("Escuchar ráfaga", "Hear a burst"), audio_preview_requested.emit.bind("burst"), "action").name = "PreviewBurst"
 		_slider(facing, "volume_bow", _t("Arco y rama", "Bow and branch"), 0, 1, 0.05, "%")
@@ -1133,6 +1153,17 @@ func _change_tab(tab: String) -> void:
 	_render_view()
 
 func _timbre_picker(parent: Control, setting: String, title: String, cue: String) -> void:
+	var picker := _settings_picker(parent, setting, title, Timbres.CATALOG[setting])
+	picker.item_selected.connect(func(index: int):
+		options[setting] = picker.get_item_metadata(index)
+		_change_options()
+		audio_preview_requested.emit(cue)
+	)
+	var listen := _entry(picker.get_parent() as Control, _t("Escuchar", "Listen"), audio_preview_requested.emit.bind(cue))
+	listen.accessibility_name = _t("Escuchar · ", "Listen · ") + title
+	listen.name = "Listen" + setting.to_pascal_case()
+
+func _settings_picker(parent: Control, setting: String, title: String, choices: Dictionary) -> OptionButton:
 	_label(parent, title, 17, INK)
 	var row := _row(parent, 8)
 	var picker := OptionButton.new()
@@ -1150,22 +1181,15 @@ func _timbre_picker(parent: Control, setting: String, title: String, cue: String
 	popup.add_theme_font_override("font", ui_font)
 	popup.add_theme_font_size_override("font_size", 17)
 	popup.add_theme_constant_override("v_separation", 8)
-	for id: String in Timbres.CATALOG[setting]:
-		var entry: Array = Timbres.CATALOG[setting][id]
+	for id: String in choices:
+		var entry: Array = choices[id]
 		var index := picker.item_count
 		picker.add_item(_t(entry[0], entry[1]))
 		picker.set_item_metadata(index, id)
 		if id == options[setting]:
 			picker.select(index)
 	row.add_child(picker)
-	picker.item_selected.connect(func(index: int):
-		options[setting] = picker.get_item_metadata(index)
-		_change_options()
-		audio_preview_requested.emit(cue)
-	)
-	var listen := _entry(row, _t("Escuchar", "Listen"), audio_preview_requested.emit.bind(cue))
-	listen.accessibility_name = _t("Escuchar · ", "Listen · ") + title
-	listen.name = "Listen" + setting.to_pascal_case()
+	return picker
 
 func _slider(parent: Control, id: String, title: String, minimum: float, maximum: float, step_size: float, unit: String) -> void:
 	var row := _row(parent, 12)

@@ -58,7 +58,7 @@ func _run() -> void:
 	_mouse_button(cursor, MOUSE_BUTTON_WHEEL_DOWN)
 	_expect(is_equal_approx(map.zoom, original_zoom), "Reverse scrolling returns to the original scale")
 	var before := map.pan
-	var empty := map.position + Vector2(38, 83)
+	var empty := map.position + Vector2(38, 200)
 	_mouse_button(empty, MOUSE_BUTTON_MIDDLE)
 	var movement := InputEventMouseMotion.new()
 	movement.position = empty + Vector2(36, 23)
@@ -92,6 +92,38 @@ func _run() -> void:
 	_expect(map.pan.distance_to(released_at + Vector2(30, 10)) < 1 and clicks[0] == 12,
 		"Dragging from a socket moves the map without buying it")
 
+	var refunds := [0]
+	map.buttons.wheel.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
+			refunds[0] += 1)
+	var prior_pan := map.pan
+	map.pan += map._rank_key.get_rect().get_center() - map.buttons.wheel.get_rect().get_center()
+	map._place_buttons()
+	var covered: Vector2 = map.position + map.buttons.wheel.get_rect().get_center()
+	pointing.position = covered
+	pointing.global_position = covered
+	root.push_input(pointing, true)
+	_expect(map._inspected.is_empty() and root.gui_get_hovered_control() == map._rank_key,
+		"The rank key owns hover above a covered socket")
+	for button in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
+		_mouse_button(covered, button)
+		_mouse_button(covered, button, false)
+	_mouse_button(covered, MOUSE_BUTTON_WHEEL_UP)
+	_mouse_button(covered, MOUSE_BUTTON_WHEEL_UP, false)
+	_expect(clicks[0] == 12 and refunds[0] == 0 and is_equal_approx(map.zoom, original_zoom),
+		"The legend never buys, refunds or zooms the overlapping node")
+	map.pan = prior_pan
+	map._place_buttons()
+	var clear: Vector2 = map.position + map.buttons.wheel.get_rect().get_center()
+	pointing.position = clear
+	pointing.global_position = clear
+	root.push_input(pointing, true)
+	_mouse_button(clear, MOUSE_BUTTON_RIGHT)
+	_mouse_button(clear, MOUSE_BUTTON_RIGHT, false)
+	_mouse_button(clear, MOUSE_BUTTON_WHEEL_UP)
+	_expect(refunds[0] == 1 and map.zoom > original_zoom, "An uncovered socket receives refund and zoom again")
+	_mouse_button(clear, MOUSE_BUTTON_WHEEL_DOWN)
+
 	for i in segments.size():
 		var a: Array = segments[i]
 		_expect(offers.has(a[0]) and offers.has(a[1]), "Each line terminates on real upgrade buttons")
@@ -113,8 +145,14 @@ func _run() -> void:
 	_expect(map._show_drawing and map._collection.visible, "The final rank reveals the bow and quiver")
 	await create_timer(0.8).timeout
 	_expect(is_equal_approx(map._ink, 1.0) and not map.buttons.damage.visible, "The individual seals fade completely")
-	map._collection.pressed.emit()
-	_expect(map.buttons.damage.visible and map.buttons.damage.focus_mode == Control.FOCUS_ALL, "The finished collection can be inspected and refunded")
+	var collection_pos := map.position + map._collection.get_rect().get_center()
+	_mouse_button(collection_pos, MOUSE_BUTTON_LEFT)
+	_mouse_button(collection_pos, MOUSE_BUTTON_LEFT, false)
+	_expect(map.buttons.damage.visible and not map._rank_key.visible and map.buttons.damage.focus_mode == Control.FOCUS_ALL,
+		"The complete map can be inspected and its return-to-drawing button stays clear")
+	_mouse_button(collection_pos, MOUSE_BUTTON_LEFT)
+	_mouse_button(collection_pos, MOUSE_BUTTON_LEFT, false)
+	_expect(map._show_drawing, "The collection button is clickable in both directions")
 	offers.damage.rank -= 1
 	map.sync_visibility()
 	_expect(not map._complete and not map._collection.visible and map._legend.visible, "A refund restores the regular map")

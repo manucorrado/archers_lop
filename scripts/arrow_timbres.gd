@@ -1,5 +1,5 @@
 extends RefCounted
-## Stable settings IDs, bilingual names and level trims for the private audio test.
+## Stable settings IDs, bilingual names and level trims for the audio options.
 
 const SHOT := "shot_timbre"
 const IMPACT := "impact_timbre"
@@ -27,10 +27,6 @@ const CATALOG := {
 	},
 	PICKUP: {
 		"shafts": ["Roce de varillas", "Wooden shafts", preload("res://assets/audio/freesound/atado_varillas.wav"), 0.0],
-		"tap": ["Toque de madera", "Wooden tap", preload("res://assets/audio/freesound/atado_toque.wav"), 0.0],
-		"leather": ["Cuero suave", "Soft leather", preload("res://assets/audio/freesound/atado_cuero.wav"), 0.0],
-		"cord": ["Cordón tenso", "Taut cord", preload("res://assets/audio/freesound/atado_cordon.wav"), 0.0],
-		"satchel": ["Morral de tela", "Cloth satchel", preload("res://assets/audio/freesound/atado_morral.wav"), 0.0],
 		"fabric": ["Roce de tela", "Fabric brush", preload("res://assets/audio/freesound/atado_tela.wav"), 0.0],
 	},
 }

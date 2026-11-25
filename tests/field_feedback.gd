@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://scripts/game.gd")
 const Run := preload("res://scripts/run.gd")
+const Preferences := preload("res://scripts/play_preferences.gd")
 const AmountFormat := preload("res://scripts/amount_format.gd")
 var failures := 0
 
@@ -87,6 +88,31 @@ func exercise() -> void:
 	game.hud.options.damage_opacity = 0.0
 	game.hud.show_damage(20, point, "sentinel")
 	check(numbers.stamps.size() == 2, "Hidden damage numbers stay hidden")
+	check_atlas_preferences(game)
 	if failures == 0:
-		print("PASS: world impacts, guidance expiry, five pickups, historical bow prices and 64-bit late health.")
+		print("PASS: world impacts, guidance expiry, five pickups, historical bow prices, 64-bit late health and persisted atlas finish.")
 	quit(1 if failures else 0)
+
+func check_atlas_preferences(game: Game) -> void:
+	var hud := game.hud
+	check(hud.options.atlas_style == "walnut", "A fresh profile starts with the walnut atlas")
+	game._set_view("pause")
+	hud._open_submenu("settings")
+	var picker := hud.overlay.find_child("AtlasStyle", true, false) as OptionButton
+	if not picker or picker.item_count != 2:
+		check(false, "Readability settings offer both atlas finishes")
+		return
+	picker.select(1)
+	picker.item_selected.emit(1)
+	var saved := Preferences.new()
+	saved.load_settings()
+	check(saved.options.atlas_style == "linen", "The UI saves the linen finish to the profile")
+	game._set_view("shop")
+	check(hud.upgrade_map.atlas_style == "linen" and hud.upgrade_detail.atlas_style == "linen"
+			and game.run.rank_of("damage") == 1, "Reopening uses the saved finish and keeps purchases")
+	var config := ConfigFile.new()
+	check(config.load(Preferences.FILE) == OK, "Load the saved interface settings")
+	config.set_value("comfort", "atlas_style", "unknown")
+	check(config.save(Preferences.FILE) == OK, "Write an unrecognized atlas material")
+	saved.load_settings()
+	check(saved.options.atlas_style == "walnut", "Unknown material falls back to walnut")

@@ -2,6 +2,8 @@ extends PanelContainer
 ## The folio follows the inspected socket. Input passes through it to the map.
 
 const Journal := preload("res://scripts/field_journal.gd")
+const Finish := preload("res://scripts/atlas_finish.gd")
+var atlas_style := "walnut"
 var category := Label.new()
 var level := Label.new()
 var title := Label.new()
@@ -17,6 +19,8 @@ func _ready() -> void:
 	mouse_behavior_recursive = Control.MOUSE_BEHAVIOR_DISABLED
 	custom_minimum_size.x = 282
 	_panel.border_width_left = 3
+	_panel.bg_color = Finish.palette(atlas_style).popup
+	_panel.border_color = Finish.palette(atlas_style).rule
 	_panel.shadow_size = 4
 	_panel.shadow_offset = Vector2(1, 3)
 	_panel.shadow_color = Color("#50402d31")
@@ -36,7 +40,7 @@ func _ready() -> void:
 		item.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var rule := ColorRect.new()
 	rule.custom_minimum_size.y = 1
-	rule.color = Journal.RULE
+	rule.color = Finish.palette(atlas_style).rule
 	column.add_child(rule)
 	_line(column, actions, 14, Journal.sans())
 	hide()
@@ -44,7 +48,7 @@ func _ready() -> void:
 func _line(parent: Control, label: Label, pixels: int, font: Font) -> void:
 	label.add_theme_font_override("font", font)
 	label.add_theme_font_size_override("font_size", pixels)
-	label.add_theme_color_override("font_color", Color("#3d3326"))
+	label.add_theme_color_override("font_color", Finish.palette(atlas_style).ink)
 	parent.add_child(label)
 
 func set_pigment(tint: Color) -> void:

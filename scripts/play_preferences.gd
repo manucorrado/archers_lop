@@ -3,6 +3,10 @@ extends RefCounted
 
 const FILE := "user://interface.cfg"
 const Timbres := preload("res://scripts/arrow_timbres.gd")
+const ATLAS_STYLES := {
+	"walnut": ["C · Nogal y latón", "C · Walnut and brass"],
+	"linen": ["A · Lino y tinta", "A · Linen and ink"],
+}
 const DEFAULT_BINDINGS := {
 	"move_forward": KEY_W, "move_back": KEY_S, "move_left": KEY_A, "move_right": KEY_D,
 	"shoot": -MOUSE_BUTTON_LEFT, "aim": -MOUSE_BUTTON_RIGHT, "strike": KEY_F,
@@ -39,7 +43,7 @@ const KEY_NAMES := {
 const DEFAULTS := {
 	"sensitivity": 1.0, "fov": 70.0, "zoom": 1.0, "shake": 0.65, "flashes": 0.65,
 	"reticle_size": 1.0, "damage_opacity": 0.9, "group_damage": true, "toggle_fire": false,
-	"first_steps": true, "pause_on_focus_loss": false,
+	"first_steps": true, "pause_on_focus_loss": false, "atlas_style": "walnut",
 	"volume_bow": 0.85, "volume_world": 0.85, "volume_ui": 0.8,
 	Timbres.SHOT: Timbres.DEFAULT_SHOT, Timbres.IMPACT: Timbres.DEFAULT_IMPACT, Timbres.PICKUP: Timbres.DEFAULT_PICKUP,
 }
@@ -61,6 +65,8 @@ func load_settings() -> void:
 			options[id] = clampf(saved, 55.0, 105.0) if id == "fov" else clampf(saved, 0.0, 3.0)
 		elif id in Timbres.CATALOG:
 			options[id] = Timbres.selected(id, saved)
+		elif id == "atlas_style":
+			options[id] = saved if saved is String and ATLAS_STYLES.has(saved) else DEFAULTS[id]
 	var saved_bindings := {}
 	for id in DEFAULT_BINDINGS:
 		if not config.has_section_key("bindings", id):
