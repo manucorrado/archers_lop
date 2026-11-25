@@ -1,0 +1,31 @@
+:root{--ink:#2d3329;--umber:#70482d;--accent:#a95b25;--linen:#f6efdc;--paper:#eee4cb;--line:#bbae8c;
+  color:var(--ink);font:15px/1.35 "Segoe UI",Arial,sans-serif;background:#5b5140}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0}main{height:100svh;min-height:420px;display:grid;grid-template-rows:auto 1fr auto;padding:0 clamp(22px,3.3vw,52px);
+  border:5px solid #5b5140;box-shadow:inset 0 0 0 1px #a99c7f,inset 0 0 35px #9a835b24;
+  background-color:var(--linen);background-image:repeating-linear-gradient(8deg,#6a533305 0px,#6a533305 1px,transparent 1px,transparent 4px),repeating-linear-gradient(98deg,#8e76520a 0px,#8e76520a 1px,transparent 1px,transparent 4px)}
+header,footer,.identity,.balance,.footRight,.zoom{display:flex;align-items:center}header{padding:clamp(10px,2vh,20px) 0;gap:22px;border-bottom:1px solid var(--line)}
+.identity{gap:16px;flex:1}.identity img{width:clamp(40px,4.6vw,60px);height:50px}.identity h1{margin:0;font:normal clamp(29px,3vw,43px)/1 "Palatino Linotype",Palatino,Georgia,serif;letter-spacing:-.045em}
+.balance{gap:6px;font-family:Georgia,serif;font-size:20px;white-space:nowrap}.balance svg{width:20px;fill:#b7834533;stroke:#725333;stroke-width:1.7;stroke-linecap:round}.balance #wallet{font-weight:bold}
+button,a{font:inherit;color:var(--ink)}button{background:none;border:0;cursor:pointer}button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+#lang{font-size:14px;padding:6px 0 6px 20px;border-left:1px solid var(--line)}
+.paper{min-height:0;position:relative;isolation:isolate}.legend{position:absolute;left:0;top:clamp(18px,4vh,33px);width:213px;z-index:2;pointer-events:none}
+.legendTitle{font:normal 20px/1.23 "Palatino Linotype",Georgia,serif;letter-spacing:-.035em}.legend ul{padding:0;margin:15px 0 14px;list-style:none;display:grid;gap:9px}.legend li{display:flex;align-items:center;gap:10px;font-size:14px}
+.key{display:grid;place-items:center;width:21px;height:21px;border-radius:50%;font:bold 15px/1 "Segoe UI",sans-serif}.virgin{border:1.5px dashed var(--umber);color:var(--umber)}.progress{border:1.5px solid var(--umber);color:var(--umber);font-size:17px;background:#e6d2a2}.full{border:3px double var(--linen);color:white;background:var(--ink);outline:1px solid var(--ink)}
+#rankTotal{display:inline-block;padding-top:10px;margin:0;border-top:1px solid var(--line);font-size:12px;letter-spacing:.02em;color:#605a49;font-variant-numeric:tabular-nums}
+#map{position:absolute;inset:0;overflow:hidden;touch-action:none;cursor:grab}
+#map.dragging{cursor:grabbing}#edges,#nodes{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.node{pointer-events:auto;position:absolute;border:0;border-radius:50%;display:grid;place-items:center;padding:0;transform:translate(-50%,-50%);touch-action:none;font-weight:700;
+  --stamp-ink:var(--umber);--stamp-fill:var(--linen);--stroke-width:1.8;isolation:isolate;transition:filter .1s}
+.node svg{width:100%;height:100%;overflow:visible;color:var(--stamp-ink);pointer-events:none}.node.owned{--stamp-fill:#364538;--stamp-ink:#fff4d5}
+.node.part{--stamp-ink:#472e1b}.node:hover,.node:focus-visible{filter:drop-shadow(0 0 3px #7a562c95)}.node:focus-visible{outline-offset:7px}.node .bubble{position:absolute;bottom:-2px;right:-9px;font:700 11px/1.15 "Segoe UI",sans-serif;padding:2px 5px;letter-spacing:-.035em;color:#fff9e6;background:#6b492e;box-shadow:0 0 0 2px var(--linen);border-radius:3px;pointer-events:none}
+.node.owned .bubble{border-radius:50%;height:19px;width:19px;display:grid;place-items:center;padding:0;background:#334438;right:-4px;bottom:0}
+.node.open .bubble{border:1px solid #816a47;background:var(--linen);box-shadow:0 0 0 2px var(--linen);color:#594221;border-radius:50%;width:16px;height:16px;display:grid;place-items:center;padding:0;right:-4px;bottom:1px}
+#note{position:absolute;z-index:4;pointer-events:none;width:clamp(200px,21vw,265px);padding:14px 17px 13px;background:#fcf6e8;box-shadow:0 4px 14px #5141281c;border:1px solid #ad9b75;border-top:3px solid #7d5837}
+#noteStatus{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--umber)}
+#note h2{margin:5px 0 7px;font:normal 24px/1.05 "Palatino Linotype",Georgia,serif;letter-spacing:-.045em}
+#note p{margin:0;font-size:14px}#noteBuy{margin-top:10px;padding-top:7px;border-top:1px solid #cfc1a1;font-size:12px;font-weight:600;color:#654025}
+footer{border-top:1px solid var(--line);padding:9px 0;justify-content:space-between;gap:12px;font-size:13px}footer a{text-decoration:none}footer a:hover,#reset:hover,#lang:hover{text-decoration:underline;text-underline-offset:3px}
+.footRight{gap:22px}.zoom{padding-left:14px;border-left:1px solid var(--line)}.zoom button{min-width:30px;height:30px}.zoom button:hover{background:#e4d6b7}#homeZoom{min-width:56px;font-variant-numeric:tabular-nums}
+@media(max-width:990px){.legend{width:150px}.legendTitle{font-size:17px}.legend ul{gap:7px;margin:12px 0}.legend li{font-size:12px}.key{width:18px;height:18px}#note p{font-size:12px}.identity img{height:40px}#note{padding:11px 13px}.node .bubble{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.node{transition:none}}

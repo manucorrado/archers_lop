@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://scripts/game.gd")
 const Run := preload("res://scripts/run.gd")
+const AmountFormat := preload("res://scripts/amount_format.gd")
 var failures := 0
 
 func _initialize() -> void:
@@ -17,6 +18,16 @@ func check(condition: bool, message: String) -> void:
 		printerr("FAIL: ", message)
 
 func exercise() -> void:
+	for pair: Array in [[0,"0"], [850,"850"], [12500,"12,500"], [99999,"99,999"],
+			[100000,"100K"], [9999999,"9999K"], [10000000,"10M"],
+			[9999999999,"9999M"], [10000000000,"10B"], [83825374000,"83B"],
+			[9223372036854775807,"9223Qa"], ["1" + "0".repeat(64),"10Vg"],
+			["9".repeat(67),"9999Vg"], ["1" + "0".repeat(67),"1e67"]]:
+		check(AmountFormat.short(pair[0], "en") == pair[1], "Truncated damage display " + str(pair[0]))
+	check(AmountFormat.short(99999, "es") == "99.999", "Use local grouping for full amounts")
+	for group in range(2, AmountFormat.SUFFIXES.size()):
+		var boundary := "1" + "0".repeat(group * 3 + 1)
+		check(AmountFormat.short(boundary) == "10" + AmountFormat.SUFFIXES[group], "First two-digit amount per suffix")
 	var run := Run.new()
 	for i in 3:
 		check(run.take_pickup_notice(), "First pickups are announced")

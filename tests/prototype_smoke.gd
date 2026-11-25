@@ -218,11 +218,14 @@ func _run() -> void:
 			"Resuming the pending reward returns to the same three cards"):
 		return
 	await _click(_button_named("English"))
-	if not _expect(game.hud.language == "en" and game.run.gift_offer == offer and game.hud.confirm_gift.text.contains("Confirm"),
+	if not _expect(game.hud.language == "en" and game.run.gift_offer == offer and game.hud.confirm_gift.text == "Confirm",
 			"Switching the card screen to English preserves its choices"):
 		return
 	await _click(_button_named("Español"))
 	await _click(game.hud.gift_buttons[offer[0]])
+	if not _expect(game.hud.confirm_gift.text == "Confirmar" and game.hud.confirm_gift.size.x < game.hud.gift_buttons[offer[0]].size.x,
+			"Confirmation stays compact after a card is selected"):
+		return
 	await _click(game.hud.confirm_gift)
 	await _reopen()
 	if not _expect(game.view == "end" and game.run.chosen_gift == offer[0] and game.run.bow == "recurve"

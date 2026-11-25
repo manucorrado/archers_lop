@@ -130,19 +130,20 @@ static func index_tab(active: bool, hover: bool) -> StyleBoxFlat:
 	return style
 
 static func style_entry(button: Button, font: Font, kind: String) -> void:
-	var record := kind in ["action", "lead"]
+	var lead := kind in ["lead", "confirm"]
+	var record := kind == "action" or kind == "lead"
 	var tab := kind in ["tab", "current_tab"]
 	var tab_fill := Color("#dbcdb0") if kind == "tab" else Color("#69543e")
-	button.custom_minimum_size.y = 43 if record else 32
+	button.custom_minimum_size.y = 43 if record or lead else 32
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	button.add_theme_font_override("font", font)
-	button.add_theme_font_size_override("font_size", 20 if record else 16)
+	button.add_theme_font_size_override("font_size", 20 if record or lead else 16)
 	if record:
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	if button is Entry:
 		button.mark = "forward" if record else "back" if kind == "back" else ""
 	for state: String in ["normal", "hover", "pressed", "disabled"]:
-		var fill := Color("#e7dabd") if kind == "lead" else Color.TRANSPARENT
+		var fill := Color("#e7dabd") if lead else Color.TRANSPARENT
 		if tab:
 			fill = tab_fill
 		if state == "hover" or state == "pressed":
@@ -157,7 +158,7 @@ static func style_entry(button: Button, font: Font, kind: String) -> void:
 			style.border_width_bottom = 1
 			style.content_margin_right = 30
 			style.content_margin_left = 15
-		if kind == "lead":
+		if lead:
 			style.border_width_left = 3
 			style.border_color = Color("#957747")
 			if state == "disabled":
@@ -177,7 +178,7 @@ static func style_entry(button: Button, font: Font, kind: String) -> void:
 			style.border_color = GILT if kind == "current_tab" else RULE
 		button.add_theme_stylebox_override(state, style)
 	for state in ["font_color", "font_pressed_color", "font_focus_color", "font_hover_color", "font_hover_pressed_color"]:
-		button.add_theme_color_override(state, PAPER if kind == "current_tab" else INK if record or tab else ACCENT)
+		button.add_theme_color_override(state, PAPER if kind == "current_tab" else INK if record or lead or tab else ACCENT)
 	button.add_theme_color_override("font_disabled_color", MUTED)
 	var focus := box(Color.TRANSPARENT, GILT, 0, 0)
 	focus.set_border_width_all(0)

@@ -25,13 +25,17 @@ class Socket extends Button:
 	var affordable := false
 	var inspected := false
 	var family := "damage"
+	var space_for_rank := false
 
 	func _draw() -> void:
 		var c := size * 0.5
 		var radius := c.x - 2
 		var pigment: Color = PIGMENTS[family]
-		var fill := pigment if rank > 0 else Color("#36312e") if affordable else Color("#5a5248")
-		var outline := Color("#df9e45") if affordable else Color("#251f1c")
+		var complete := rank >= ranks
+		var fill := Color("#fcf4df") if met else Color("#dbd4c4")
+		if rank > 0:
+			fill = pigment if complete else Color("#845120")
+		var outline := Color("#685943") if affordable else Color("#474038")
 		var points := PackedVector2Array()
 		var corners := 4 if family == "damage" else 6 if family == "speed" else 8 if family == "supply" else 32
 		var offset := PI / 8 if family == "supply" else -PI / 2
@@ -40,12 +44,28 @@ class Socket extends Button:
 		draw_colored_polygon(points, fill)
 		points.append(points[0])
 		draw_polyline(points, Color("#b96a22") if inspected else outline, 2.8 if inspected else 1.7, true)
-		if rank > 0 and ranks > 1 and radius >= 7:
-			draw_arc(c, radius - 2, -PI * 0.5, -PI * 0.5 + TAU * rank / ranks,
-				36, Color("#ebc078"), 1.3, true)
-		var icon_size := Vector2.ONE * floorf(radius * 1.50)
-		var tint := Color.WHITE if met or rank > 0 else Color(1, 1, 1, 0.80)
+		if rank > 0 and not complete and radius >= 6:
+			draw_arc(c, radius * 0.67, -PI * 0.5, -PI * 0.5 + TAU * rank / ranks,
+				36, Color("#fff2bd"), maxf(1.8, radius * 0.15), true)
+		var icon_size := Vector2.ONE * floorf(radius * (1.24 if rank > 0 else 1.45))
+		var tint := Color.WHITE if met or rank > 0 else Color("#9b9387")
 		draw_texture_rect(stamped_symbol, Rect2((c - icon_size * 0.5).round(), icon_size), false, tint)
+		if complete and radius >= 5:
+			var badge := c + Vector2(radius * 0.64, radius * 0.63)
+			var r := clampf(radius * 0.37, 2.7, 6.5)
+			draw_circle(badge, r + 0.8, Color("#fcf4df"), true, -1, true)
+			draw_circle(badge, r, Color("#283c35"), true, -1, true)
+			draw_polyline(PackedVector2Array([badge + Vector2(-0.55, 0) * r,
+				badge + Vector2(-0.10, 0.37) * r, badge + Vector2(0.59, -0.42) * r]),
+				Color("#fff6de"), maxf(1.2, r * 0.25), true)
+		elif rank > 0 and space_for_rank:
+			var label := "%d/%d" % [rank, ranks]
+			var font := get_theme_default_font()
+			var width := ceilf(font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x)
+			var tab := Rect2(floorf(c.x - width * 0.5) - 3, size.y - 2, width + 6, 14)
+			draw_rect(tab, Color("#66411f"))
+			draw_string(font, tab.position + Vector2(3, 11), label, HORIZONTAL_ALIGNMENT_LEFT,
+					-1, 12, Color("#fff7e5"))
 
 var buttons: Dictionary = {}
 var parents: Dictionary = {}
@@ -64,6 +84,7 @@ var _last_drag_point := Vector2.ZERO
 var _zoom_value: Button
 var _toolbar := HBoxContainer.new()
 var _legend := HBoxContainer.new()
+var _rank_key := Label.new()
 var _collection := Button.new()
 var _family_filter := ""
 var _inspected := ""
@@ -131,6 +152,14 @@ func _ready() -> void:
 	Journal.style_entry(_collection, Journal.serif(), "action")
 	_collection.pressed.connect(func(): _drawing(not _show_drawing, false))
 	_collection.hide()
+	_rank_key.text = "○  Sin comprar     ◔  En progreso     ✓  Completa" if language == "es" else "○  Unbought     ◔  In progress     ✓  Complete"
+	_rank_key.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_rank_key.add_theme_font_override("font", Journal.sans())
+	_rank_key.add_theme_font_size_override("font_size", 14)
+	_rank_key.add_theme_color_override("font_color", Color("#514535"))
+	_rank_key.z_index = 1
+	add_child(_rank_key)
+	_rank_key.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 5)
 	var hint := Label.new()
 	hint.text = "Rueda para acercar · Arrastrá para mover" if language == "es" else "Wheel to zoom · Drag to pan"
 	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -232,6 +261,7 @@ func _drawing(enabled: bool, animate: bool) -> void:
 	if _reveal:
 		_reveal.kill()
 	_show_drawing = enabled
+	_rank_key.visible = not enabled
 	_set_inspection("")
 	_collection.text = ("Ver mejoras" if language == "es" else "Inspect upgrades") if enabled else ("Ver arco y carcaj" if language == "es" else "View bow and quiver")
 	for id: String in buttons:
@@ -276,6 +306,7 @@ func _place_buttons() -> void:
 		var target_size := 40.0 if id == "damage" else 33.0
 		var room := 0.88 * float(_nearest.get(id, target_size))
 		var diameter := clampf(minf(target_size, room) * factor, 8.0, target_size)
+		node.space_for_rank = diameter >= 25 and room * factor >= diameter + 15
 		node.size = Vector2.ONE * floorf(diameter)
 		node.position = (_point(Paths.position_of(id)) - node.size * 0.5).round()
 		node.queue_redraw()
@@ -438,7 +469,7 @@ func update_socket(id: String, offer: Dictionary) -> void:
 	var socket: Socket = buttons[id]
 	socket.rank = int(offer.rank)
 	var stencil := Icons.for_rank(id, socket.rank)
-	socket.stamped_symbol = Icons.texture(stencil, true)
+	socket.stamped_symbol = Icons.texture(stencil, socket.rank > 0)
 	socket.ranks = int(offer.max_rank)
 	socket.met = bool(offer.requirement_met)
 	socket.affordable = bool(offer.available)
@@ -448,10 +479,6 @@ func _edge(from: String, to: String, tint: Color, width: float) -> void:
 	draw_line(_point(Paths.position_of(from)), _point(Paths.position_of(to)), tint, width, true)
 
 func _draw() -> void:
-	var fold := floorf(size.x / 2)
-	for i in 10:
-		draw_rect(Rect2(fold - 10 + i, 0, 1, size.y), Color(0.47, 0.37, 0.24, 0.014 * (i + 1)))
-	draw_line(Vector2(fold, 0), Vector2(fold, size.y), Color("#a48b6066"), 1)
 	var dot := Color("#aa967a3c")
 	for y in range(12, int(size.y), 22):
 		for x in range(12, int(size.x), 22):

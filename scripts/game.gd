@@ -313,7 +313,7 @@ func _call_arrow_rain(arrow: Dictionary) -> void:
 		var origin := start + archer.camera.global_basis.x * offset.x + Vector3.UP * offset.y
 		var duration := clampf(origin.distance_to(arrow.end) / 36.0, 0.13, 0.4)
 		in_flight.append({"source": "rain", "stage": arrow.stage, "id": arrow.id, "origin": origin,
-			"end": arrow.end, "damage": arrow.damage, "duration": duration,
+			"end": arrow.end, "damage": arrow.damage, "critical": arrow.get("critical", false), "duration": duration,
 			"remaining": duration + float(arrow.duration) + i * 0.055})
 
 
@@ -343,7 +343,7 @@ func _land_arrow_rain(hits: Array[Dictionary]) -> void:
 		# Wood damage only. Collecting a bullseye and unlocking a hollow require the player's arrow.
 		var dealt := run.damage_part(hit.damage, hit.id, false, "bow")
 		damage += dealt
-		hud.show_damage(dealt, hit.end, "rain")
+		hud.show_damage(dealt, hit.end, "critical" if hit.get("critical", false) else "rain")
 		if run.hp == 0:
 			break
 	if damage > 0:
@@ -620,7 +620,6 @@ func _sync() -> void:
 	archer.set_has_arrows(run.arrows > 0)
 	archer.set_speed_multiplier(run.speed_multiplier())
 	var state := run.snapshot()
-	state.rain_falling = in_flight.any(func(arrow: Dictionary) -> bool: return arrow.get("source") == "rain")
 	state.near_dog = clearing.is_near_dog(archer.position)
 	state.near_brizno = clearing.is_near_brizno(archer.position)
 	state.has_save = has_save

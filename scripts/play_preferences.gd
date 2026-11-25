@@ -41,7 +41,7 @@ const DEFAULTS := {
 	"reticle_size": 1.0, "damage_opacity": 0.9, "group_damage": true, "toggle_fire": false,
 	"first_steps": true, "pause_on_focus_loss": false,
 	"volume_bow": 0.85, "volume_world": 0.85, "volume_ui": 0.8,
-	Timbres.SHOT: Timbres.DEFAULT_SHOT, Timbres.IMPACT: Timbres.DEFAULT_IMPACT,
+	Timbres.SHOT: Timbres.DEFAULT_SHOT, Timbres.IMPACT: Timbres.DEFAULT_IMPACT, Timbres.PICKUP: Timbres.DEFAULT_PICKUP,
 }
 
 var language := "es"

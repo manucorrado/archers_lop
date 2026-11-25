@@ -53,7 +53,7 @@ Hay **113 nodos, 141 niveles y 61.800 de savia** en compras. Sin primas, al entr
 
 En los blancos 6 a 9 y 11 a 20, acertar con el arco a la diana que aparece por unos segundos devuelve hasta **tres flechas** directamente al carcaj. La primera aparece al entrar al sexto blanco y dura siete segundos. Cada diana paga una vez, incluso con el disparo triple. Si quedan dos lugares, recuperás dos.
 
-El combo aparece junto a la vida del blanco e indica cuándo empieza a bajar. Junto al carcaj podés ver cuántas flechas soltó el disparo triple y cuándo cae la lluvia. Con las dos mejoras y tres flechas en el carcaj, una suelta produce tres flechas en abanico y nueve adicionales desde arriba. Los huecos del jefe se abren con un acierto directo o un golpe de rama en la raíz correspondiente.
+El combo aparece debajo de la savia, arriba a la derecha, e indica cuándo empieza a bajar. Abajo a la izquierda se ve cuánta munición queda sobre la capacidad del carcaj. Con disparo triple, lluvia y tres flechas en el carcaj, una suelta produce tres flechas en abanico y nueve adicionales desde arriba. Los huecos del jefe se abren con un acierto directo o un golpe de rama en la raíz correspondiente.
 
 Al romper el blanco 15, elegís entre **Ojo de búho** (+0,5 al multiplicador del punto débil), **Paso ligero** (+15 % de velocidad al caminar) y **Cosecha doble** (16 flechas al pie de cada árbol roto).
 

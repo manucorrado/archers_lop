@@ -4,6 +4,7 @@ extends RefCounted
 const Journal = preload("res://scripts/field_journal.gd")
 const Save = preload("res://scripts/save_data.gd")
 const Paths = preload("res://scripts/upgrade_paths.gd")
+const AmountFormat = preload("res://scripts/amount_format.gd")
 
 
 static func splits(marks: Dictionary) -> Dictionary:
@@ -32,13 +33,6 @@ static func _clock(seconds: float) -> String:
 		return "—"
 	var ticks := roundi(seconds)
 	return "%d:%02d" % [floori(ticks / 60.0), ticks % 60]
-
-
-static func _amount(value: int, es: bool) -> String:
-	var digits := str(value)
-	for position in range(digits.length() - 3, 0, -3):
-		digits = digits.insert(position, "." if es else ",")
-	return digits
 
 
 static func _line(parent: Control, text: String, font: Font, px: int, color: Color, expand := false) -> Label:
@@ -145,7 +139,7 @@ static func _times(parent: Control, state: Dictionary, es: bool, sans: Font, ser
 		levels += int(offer.rank)
 		possible += int(offer.max_rank)
 	var balance := ("Niveles comprados  %d / %d     ·     Savia disponible  %s" if es else
-			"Upgrade levels owned  %d / %d     ·     Sap on hand  %s") % [levels, possible, _amount(state.get("sap", 0), es)]
+			"Upgrade levels owned  %d / %d     ·     Sap on hand  %s") % [levels, possible, AmountFormat.grouped(state.get("sap", 0), es)]
 	_line(parent, balance, sans, 17, Journal.INK)
 
 
@@ -169,10 +163,10 @@ static func _damage(parent: Control, state: Dictionary, es: bool, sans: Font) ->
 		if id == "other" and amount == 0:
 			continue
 		_line(table, names[id][0 if es else 1], sans, 18, Journal.INK, true)
-		_line(table, _amount(amount, es), sans, 18, Journal.INK)
+		_line(table, AmountFormat.grouped(amount, es), sans, 18, Journal.INK)
 		var share := "%.1f %%" % (100.0 * amount / total) if total > 0 else "—"
 		_line(table, share.replace(".", ",") if es else share, sans, 18, Journal.ACCENT)
-	_line(parent, ("Daño total  %s" if es else "Total damage  %s") % _amount(total, es), sans, 18, Journal.INK)
+	_line(parent, ("Daño total  %s" if es else "Total damage  %s") % AmountFormat.grouped(total, es), sans, 18, Journal.INK)
 
 
 static func _entry(parent: Control, state: Dictionary, es: bool, sans: Font, upgrades: Dictionary, gifts: Dictionary) -> void:
@@ -192,7 +186,7 @@ static func _entry(parent: Control, state: Dictionary, es: bool, sans: Font, upg
 		"longbow": ["Arco largo", "Longbow"]}
 	var gift: Array = gifts.get(entry.gift, ["—", "—"])
 	var header := ("Al aparecer el árbol     %d niveles comprados     ·     %s de savia" if es else
-		"When the tree appeared     %d upgrade levels owned     ·     %s sap on hand") % [levels, _amount(entry.sap, es)]
+		"When the tree appeared     %d upgrade levels owned     ·     %s sap on hand") % [levels, AmountFormat.grouped(entry.sap, es)]
 	_line(parent, header, sans, 18, Journal.INK)
 	_line(parent, "%s     ·     %s" % [bow_names[entry.bow][index], gift[index]], sans, 17, Journal.MUTED)
 	var scroll := ScrollContainer.new()
@@ -217,4 +211,4 @@ static func _entry(parent: Control, state: Dictionary, es: bool, sans: Font, upg
 		var invested := 0
 		for cost: int in prices:
 			invested += cost
-		_line(table, _amount(invested, es) if prices.size() == entry.ranks[id] else "—", sans, 17, Journal.ACCENT)
+		_line(table, AmountFormat.grouped(invested, es) if prices.size() == entry.ranks[id] else "—", sans, 17, Journal.ACCENT)

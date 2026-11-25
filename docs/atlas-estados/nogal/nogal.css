@@ -1,0 +1,30 @@
+:root{--ink:#f4e4cd;--muted:#d7bfa1;--metal:#dabc87;--dark:#2c1e19;--edge:#765b45;color-scheme:dark;font-family:"Segoe UI",sans-serif}
+*{box-sizing:border-box}body{margin:0;height:100dvh;min-height:360px;background:#1c1511;color:var(--ink);padding:8px}
+main{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto;border:1px solid #725a42;background:var(--dark);box-shadow:inset 0 0 0 2px #261913}
+header,footer{display:flex;align-items:center;gap:clamp(15px,2.2vw,36px);padding:0 clamp(18px,3.2vw,50px)}
+header{height:clamp(60px,10vh,82px);border-bottom:3px double #86694d;background:linear-gradient(180deg,#35251d,#291c17)}
+h1,h2,h3{font-family:"Palatino Linotype",Georgia,serif;font-weight:400}h1{font-size:clamp(28px,3.25vw,48px);line-height:1.04;letter-spacing:-.04em;margin:0}
+button,a{color:inherit;font:inherit;cursor:pointer}button{background:transparent}button:focus-visible,a:focus-visible{outline:2px solid #f5d39b;outline-offset:3px}.link{border:0;text-decoration:underline;text-underline-offset:4px;color:#e4cda9;font-size:14px;padding:5px 0}
+#collection{display:flex;align-items:center;gap:7px;padding:0 17px 0 0;border:0;border-right:1px solid #806951;color:#d6bc98}
+#collection img{width:38px;height:38px;filter:brightness(1.75) sepia(.4)}#collection span{font-size:12px}
+.wallet{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:16px;font-variant-numeric:tabular-nums}.wallet b{font-weight:600}.wallet svg{width:16px;fill:none;stroke:#e7c696;stroke-width:1.5}
+#surface{position:relative;isolation:isolate;overflow:hidden;border:2px solid #251914;background:#34241e;
+ background-image:radial-gradient(ellipse at 58% 45%,#543c2fc4,transparent 72%),url("grain.svg");box-shadow:inset 0 0 36px #1f130f99}
+#surface:before{content:"";position:absolute;inset:9px;pointer-events:none;border:1px solid #ad886d40;z-index:-1}
+.pin{position:absolute;width:9px;height:9px;display:block;background:linear-gradient(135deg,#b69661,#7d623e 45%,#cfab72);border-radius:50%;box-shadow:1px 2px 2px #241711;z-index:2;pointer-events:none}
+.pin:after{content:"";width:5px;height:1px;background:#634d34;position:absolute;left:2px;top:4px;transform:rotate(-36deg)}
+.tl{top:16px;left:16px}.tr{top:16px;right:16px}.bl{bottom:16px;left:16px}.br{bottom:16px;right:16px}
+.legend{position:absolute;z-index:2;left:clamp(24px,3.1vw,45px);top:clamp(27px,4.2vh,40px);padding:0 0 12px;color:#e2c9a9;pointer-events:none}
+.legend h2{font-size:clamp(18px,1.65vw,25px);margin:0 0 10px;border-bottom:1px solid #94724f8c;padding:0 15px 5px 0}
+.legend ul{list-style:none;margin:0;padding:0}.legend li{display:flex;align-items:center;gap:7px;font-size:clamp(11px,1.07vw,15px);margin-bottom:4px}
+.legend svg{width:29px;height:29px;overflow:visible}.legend #levels{display:block;margin-top:9px;color:#d4b997;font-size:12px}
+#map{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+.tier{cursor:pointer;outline:0}.tier .outline{transition:stroke .1s}.tier:focus-visible .outline,.tier:hover .outline{stroke:#fff7d5;stroke-width:.8}
+.route{stroke:#a78966;stroke-width:.6;pointer-events:none}.established{stroke:#e0bd89;stroke-width:.95}
+.route-shadow{stroke:#241711;stroke-width:1.5;pointer-events:none}
+#tip{position:absolute;max-width:clamp(215px,23vw,310px);border:1px solid #b99b76;border-radius:2px;background:#292019;color:var(--ink);padding:13px 16px;pointer-events:none;box-shadow:0 3px 15px #120b0877}
+#status,#price{color:#e6c99b;font:12px/1.35 "Segoe UI",sans-serif}h3{font-size:clamp(20px,1.8vw,27px);letter-spacing:-.035em;line-height:1.12;margin:5px 0}#tip p{font-size:14px;line-height:1.35;margin:5px 0 8px}#price{padding-top:7px;border-top:1px solid #675340}
+footer{height:clamp(44px,7.5vh,60px);border-top:1px solid #785c42;background:#291d17;font-size:13px}footer a{text-underline-offset:3px}.reset{margin-left:auto}.zoom{display:flex;align-items:center;gap:4px}.zoom button{border:0;padding:4px 7px;font-size:17px;color:#e8d4b4}.zoom #fit{font-size:12px;min-width:43px}
+dialog{background:#ede0bd;color:#35291b;border:4px double #91724a;max-width:80vw;padding:12px 24px;text-align:center}dialog::backdrop{background:#17110ee0}dialog .link{display:block;color:#513c28;margin-left:auto}dialog img{display:block;width:42vh;height:42vh;object-fit:contain}dialog h2{margin:.3em 0}
+@media(max-height:570px){.legend svg{width:23px;height:23px}.legend li{margin-bottom:1px}.legend #levels{margin-top:5px}}
+@media(max-width:750px){#collection span{display:none}.legend{left:15px;top:15px}.legend h2{font-size:16px}.legend svg{height:21px;width:21px}header{gap:9px}}

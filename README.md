@@ -38,11 +38,11 @@ En los blancos 6 a 9 y 11 a 20, acertar con el arco a la diana temporal devuelve
 
 Al terminar una vuelta, el registro muestra el tiempo hasta romper el blanco 20, las compras al entrar al 10 y el daño por fuente. Al cambiar de ventana el claro sigue en marcha por defecto. Podés activar **Ajustes → Vista y lectura → Pausar al cambiar de ventana**. Durante el juego en segundo plano avanzan el taller y los dos relojes. Una pausa manual detiene la simulación y solo suma al total mientras la ventana está en primer plano.
 
-**Probar los sonidos del arco.** En **Ajustes → Sonido**, elegí por separado la suelta de cuerda y el impacto. En un perfil nuevo se escuchan **Cuerda y fibra** y **Dardo 1 · golpe sordo**. Probá también **Dardo 3 · golpe corto**. Usá **Escuchar** para aislar cada sonido o **Ráfaga** para oír el par a alta cadencia. Las seis grabaciones de Freesound se incluyen en el ejecutable. [Grabaciones y créditos](assets/audio/freesound/CREDITOS.md)
+**Probar los sonidos.** En **Ajustes → Sonido**, elegí por separado la suelta de cuerda, el impacto y la recogida de flechas. En un perfil nuevo se escuchan **Cuerda y fibra**, **Dardo 1 · golpe sordo** y **Roce de varillas**. El selector de recogida de esta prueba incluye seis grabaciones de madera, cuero y tela. Usá **Escuchar** para comparar cada opción al volumen que tendrá en el claro. **Escuchar ráfaga** reproduce el arco y su impacto a alta cadencia. [Grabaciones y créditos](assets/audio/freesound/CREDITOS.md)
 
 **Guardar y continuar.** Podés guardar desde pausa. También se guardan las compras, los cambios de blanco y de fase y las recompensas. En el menú de inicio, **Continuar** recupera la partida. Si cerraste mientras elegías la recompensa, vuelven las mismas tres cartas. Si terminaste la versión de diez blancos, desde su resumen podés continuar al 11. Durante la pausa y con el juego cerrado se detienen el reloj de juego activo y el taller.
 
-[Árbol, precios y opciones para la demo](docs/arbol-de-la-demo.md) · [Catálogo de mejoras potenciales](docs/catalogo-de-mejoras-potenciales.docx) · [Comparar 16 tipografías para el Atlas](docs/atlas-tipografias/index.html)
+[Árbol, precios y opciones para la demo](docs/arbol-de-la-demo.md) · [Catálogo de mejoras potenciales](docs/catalogo-de-mejoras-potenciales.docx) · [Comparar los tres diseños de los estados de compra](docs/atlas-estados/index.html) · [Comparar 16 tipografías para el Atlas](docs/atlas-tipografias/index.html)
 
 ## Cambiar un asset desde el editor
 

@@ -3,8 +3,11 @@ extends RefCounted
 
 const SHOT := "shot_timbre"
 const IMPACT := "impact_timbre"
+const PICKUP := "pickup_timbre"
 const DEFAULT_SHOT := "recorded_fiber"
 const DEFAULT_IMPACT := "dart_1"
+const DEFAULT_PICKUP := "shafts"
+const CUE_SETTING := {"shot": SHOT, "arrow_impact": IMPACT, "pickup": PICKUP}
 const CATALOG := {
 	SHOT: {
 		"recorded_dry": ["Suelta seca · grabación", "Dry release · recording", preload("res://assets/audio/freesound/suelta_seca.wav"), 0.0],
@@ -22,12 +25,20 @@ const CATALOG := {
 		"crack": ["Tronco con crujido", "Cracking trunk", null, 0.0],
 		"original": ["Original de la demo", "Demo original", null, -4.5],
 	},
+	PICKUP: {
+		"shafts": ["Roce de varillas", "Wooden shafts", preload("res://assets/audio/freesound/atado_varillas.wav"), 0.0],
+		"tap": ["Toque de madera", "Wooden tap", preload("res://assets/audio/freesound/atado_toque.wav"), 0.0],
+		"leather": ["Cuero suave", "Soft leather", preload("res://assets/audio/freesound/atado_cuero.wav"), 0.0],
+		"cord": ["Cordón tenso", "Taut cord", preload("res://assets/audio/freesound/atado_cordon.wav"), 0.0],
+		"satchel": ["Morral de tela", "Cloth satchel", preload("res://assets/audio/freesound/atado_morral.wav"), 0.0],
+		"fabric": ["Roce de tela", "Fabric brush", preload("res://assets/audio/freesound/atado_tela.wav"), 0.0],
+	},
 }
 
 static func selected(setting: String, value: Variant) -> String:
 	if value is String and CATALOG[setting].has(value):
 		return value
-	return DEFAULT_SHOT if setting == SHOT else DEFAULT_IMPACT
+	return {SHOT: DEFAULT_SHOT, IMPACT: DEFAULT_IMPACT, PICKUP: DEFAULT_PICKUP}[setting]
 
 # A short, damped string and a struck piece of wood each keep their own noise envelope.
 static func synthesize(setting: String, id: String) -> AudioStreamWAV:

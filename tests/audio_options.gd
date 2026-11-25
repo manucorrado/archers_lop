@@ -34,30 +34,43 @@ func _run() -> void:
 	var old_branch_hit: AudioStream = sound._voices.hit.stream
 	var shot := hud.find_child("ShotTimbre", true, false) as OptionButton
 	var impact := hud.find_child("ImpactTimbre", true, false) as OptionButton
-	if not shot or not impact:
-		printerr("FAIL: missing release/impact selectors")
+	var pickup := hud.find_child("PickupTimbre", true, false) as OptionButton
+	if not shot or not impact or not pickup:
+		printerr("FAIL: missing release, impact or pickup selector")
 		quit(1)
 		return
-	for selector: OptionButton in [shot, impact]:
-		var cue := "shot" if selector == shot else "arrow_impact"
+	var selectors := {"shot": shot, "arrow_impact": impact, "pickup": pickup}
+	var counts := {"shot": 5, "arrow_impact": 7, "pickup": 6}
+	for cue: String in selectors:
+		var selector: OptionButton = selectors[cue]
 		var variants := {}
 		for index in selector.item_count:
-			var opposite := "arrow_impact" if selector == shot else "shot"
-			var other_stream: AudioStream = sound._voices[opposite].stream
+			var previous := {}
+			for other: String in selectors:
+				previous[other] = sound._voices[other].stream
 			_pick(selector, index)
 			var audition: AudioStreamPlayer = sound._preview_voices[cue]
 			var live: AudioStreamPlayer = sound._voices[cue]
 			variants[live.stream] = true
 			_check(paused and audition.can_process() and audition.playing, "Changing a timbre auditions it while paused")
 			_check(audition.stream == live.stream and audition.volume_db == live.volume_db, "Audition uses the live stream and gain")
-			_check(sound._voices[opposite].stream == other_stream, "Selecting one timbre preserves the other")
-		_check(variants.size() == (5 if selector == shot else 7), "Every timbre has a distinct playable stream for " + cue)
+			for other: String in selectors:
+				if cue != other:
+					_check(sound._voices[other].stream == previous[other], "Selecting " + cue + " preserves " + other)
+		_check(variants.size() == counts[cue], "Every timbre has a distinct playable stream for " + cue)
 	_pick(shot, 1)
 	_pick(impact, 2)
+	_pick(pickup, 3)
 	var reloaded := Prefs.new()
 	reloaded.load_settings()
 	_check(reloaded.options.shot_timbre == shot.get_selected_metadata() and
-			reloaded.options.impact_timbre == impact.get_selected_metadata(), "Both independent selections survive reloading")
+			reloaded.options.impact_timbre == impact.get_selected_metadata() and reloaded.options.pickup_timbre == pickup.get_selected_metadata(),
+			"All independent selections survive reloading")
+	var world_volume := hud.find_child("VolumeWorld", true, false) as HSlider
+	world_volume.value = 0.0
+	_check(sound._voices.pickup.volume_db < -90 and sound._preview_voices.pickup.volume_db < -90,
+			"The world slider mutes pickups and their preview")
+	world_volume.value = 0.85
 	var bow_volume := hud.find_child("VolumeBow", true, false) as HSlider
 	var impact_level: float = sound._voices.arrow_impact.volume_db
 	bow_volume.value = 0.0
@@ -75,12 +88,19 @@ func _run() -> void:
 	root.focus_entered.emit()
 	hud._switch_language()
 	shot = hud.find_child("ShotTimbre", true, false) as OptionButton
+	pickup = hud.find_child("PickupTimbre", true, false) as OptionButton
+	_check(pickup.text == "Taut cord" and pickup.accessibility_name == "Arrow pickup · playtest", "Pickup names change with the language")
 	_check(shot.accessibility_name == "String release" and shot.text == "String and fiber · recording", "English labels keep the selection")
 	(hud.find_child("PreviewBurst", true, false) as Button).pressed.emit()
 	hud._open_submenu("")
 	await create_timer(0.18, true, false, true).timeout
 	_check(not sound._preview_voices.shot.playing and not sound._preview_voices.arrow_impact.playing, "Leaving settings cancels pending sounds")
 	game._start_campaign()
+	game.run.arrows = 0
+	game.run.knot_stock = 4
+	game.archer.position = Game.Clearing.KNOT_PICKUP
+	_check(game._collect_nearby() and game.run.arrows == 4 and sound._voices.pickup.playing
+			and sound._voices.pickup.stream == Timbres.CATALOG[Timbres.PICKUP]["cord"][2], "Ground bundles play the chosen recording")
 	game.archer.play_shot(game.clearing.target_center("body"))
 	_check(sound._voices.shot.playing, "The live bow uses the selected release")
 	var flight := {"end": Vector3.ZERO, "id": "body", "damage": 1, "weak_damage": 1, "serial": game.run.target_serial}
@@ -97,12 +117,14 @@ func _run() -> void:
 	config.load(Prefs.FILE)
 	config.set_value("comfort", Timbres.SHOT, false)
 	config.set_value("comfort", Timbres.IMPACT, "retired_sample")
+	config.set_value("comfort", Timbres.PICKUP, 123)
 	config.save(Prefs.FILE)
 	reloaded.load_settings()
-	_check(reloaded.options.shot_timbre == Timbres.DEFAULT_SHOT and reloaded.options.impact_timbre == Timbres.DEFAULT_IMPACT,
+	_check(reloaded.options.shot_timbre == Timbres.DEFAULT_SHOT and reloaded.options.impact_timbre == Timbres.DEFAULT_IMPACT
+			and reloaded.options.pickup_timbre == Timbres.DEFAULT_PICKUP,
 			"Invalid or retired sample IDs fall back to playable defaults")
 	if failures.is_empty():
-		print("PASS: Bilingual bow audio selectors, persisted samples, paused previews, live impacts and focus cancellation.")
+		print("PASS: Bilingual bow and pickup selectors, distinct recordings, persisted samples, live pickups, previews and focus cancellation.")
 	unload_current_scene()
 	# The mixer uses wall time even when the test accelerates simulation with --fixed-fps.
 	for i in 4:

@@ -1,4 +1,4 @@
-# Sonidos de la prueba de arco
+# Sonidos del arco y de la recogida de flechas
 
 Las grabaciones proceden de las vistas previas MP3 que Freesound enlaza en cada ficha. Las dos grabaciones de dardos pertenecen a **CosmicEmbers (Dane S Casperson)** y se usan bajo [Creative Commons Atribución 3.0](https://creativecommons.org/licenses/by/3.0/). Las otras cuatro se publicaron bajo [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/).
 
@@ -23,3 +23,16 @@ Los archivos se pasaron a mono a 48 kHz, se recortaron, se nivelaron y se export
 | `suelta_fibra.wav` | 212–401 ms | +3 dB | −5,08 dBFS |
 | `impacto_seco.wav` | 485–669 ms | 0 dB | −3,16 dBFS |
 | `impacto_grave.wav` | 0–377 ms | −12 dB | −9,28 dBFS |
+
+## Muestras de recogida
+
+Estas seis grabaciones fueron publicadas en Freesound bajo [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/). Para el juego usamos un gesto corto de cada vista previa, mezclado en mono con fundidos de entrada y salida. La ventana más intensa de 50 ms de cada muestra queda entre −25,1 y −26,9 dBFS RMS antes del mezclador.
+
+| Archivo | Grabación y autor | Fragmento | Fuente |
+|---|---|---|---|
+| `atado_varillas.wav` | *Popsicle Sticks Being Rubbed Together.wav*, 170026 | 1,540–1,985 s | [Ficha](https://freesound.org/people/170026/sounds/407758/) · [Audio](https://cdn.freesound.org/previews/407/407758_7159146-hq.mp3) |
+| `atado_toque.wav` | *Wooden Stick Taps*, GammaGool | 0,079–0,240 s | [Ficha](https://freesound.org/people/GammaGool/sounds/855313/) · [Audio](https://cdn.freesound.org/previews/855/855313_8908475-hq.mp3) |
+| `atado_cuero.wav` | *Leather - Creak, soft*, Vrymaa | 7,535–7,980 s | [Ficha](https://freesound.org/people/Vrymaa/sounds/734598/) · [Audio](https://cdn.freesound.org/previews/734/734598_13973196-hq.mp3) |
+| `atado_cordon.wav` | *Rope Tightening.wav*, EugeneEverett | 23,435–23,870 s | [Ficha](https://freesound.org/people/EugeneEverett/sounds/596513/) · [Audio](https://cdn.freesound.org/previews/596/596513_10974703-hq.mp3) |
+| `atado_morral.wav` | *backpack rustling sounds*, breadparticles | 0,630–1,110 s | [Ficha](https://freesound.org/people/breadparticles/sounds/657832/) · [Audio](https://cdn.freesound.org/previews/657/657832_9246516-hq.mp3) |
+| `atado_tela.wav` | *foley cloth rustle.wav*, martian | 0,475–0,890 s | [Ficha](https://freesound.org/people/martian/sounds/19291/) · [Audio](https://cdn.freesound.org/previews/19/19291_84709-hq.mp3) |

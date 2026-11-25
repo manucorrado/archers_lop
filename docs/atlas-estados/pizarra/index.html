@@ -1,0 +1,15 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atlas de mejoras · Pizarra del claro</title><link rel="stylesheet" href="pizarra.css">
+<script defer src="../lino/data.js"></script><script defer src="pizarra.js"></script></head><body><main>
+<header><h1 data-es="Atlas de mejoras" data-en="Upgrade atlas">Atlas de mejoras</h1>
+<div class="wallet"><svg viewBox="0 0 16 22" aria-hidden="true"><path d="M8 1C7 5 1 11 1 15a7 6 0 0 0 14 0C15 11 10 5 8 1Z"/><path d="M4 15q0 3 3 3"/></svg><strong id="wallet">850</strong> <span data-es="savia" data-en="sap">savia</span></div><button id="lang">English</button></header>
+<section class="slate">
+<svg id="map" role="group"><g id="edges"></g><g id="nodes"></g></svg>
+<aside class="key"><img src="../../../assets/atlas_arco.svg" alt=""><h2 data-es="Marcas de compra" data-en="Purchase marks">Marcas de compra</h2><ul>
+<li><i class="open"></i><span data-es="Sin comprar" data-en="Unpurchased">Sin comprar</span></li>
+<li><i class="part"></i><span data-es="En progreso" data-en="In progress">En progreso</span></li>
+<li><i class="full">✓</i><span data-es="Completa" data-en="Complete">Completa</span></li></ul><p id="count"></p></aside>
+<aside id="tip" role="tooltip" hidden><div id="status"></div><h2 id="name"></h2><p id="effect"></p><strong id="cost"></strong></aside>
+</section>
+<footer><a href="../index.html" data-es="← Volver a las opciones" data-en="← Back to studies">← Volver a las opciones</a><span class="hint" data-es="Rueda para acercar · Arrastrá para mover" data-en="Scroll to zoom · Drag to pan">Rueda para acercar · Arrastrá para mover</span><button id="reset" data-es="Reiniciar prueba" data-en="Reset study">Reiniciar prueba</button><div class="zoom"><button id="less">−</button><button id="fit">100 %</button><button id="more">+</button></div></footer>
+</main></body></html>

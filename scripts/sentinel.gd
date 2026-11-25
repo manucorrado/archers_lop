@@ -79,9 +79,12 @@ func build(cube: BoxMesh, capacity: int) -> void:
 	shape.shape = box
 	add_child(shape)
 	var synth := CueAudio.new()
-	for cue: String in ["shot", "pickup", "empty"]:
+	for cue: String in ["shot", "load", "empty"]:
 		var speaker := AudioStreamPlayer3D.new()
-		speaker.stream = synth._make_clip(cue, CueAudio.LENGTHS[cue])
+		if cue == "load":
+			speaker.stream = preload("res://assets/audio/freesound/atado_toque.wav")
+		else:
+			speaker.stream = synth._make_clip(cue, CueAudio.LENGTHS[cue])
 		speaker.position.y = 1.0
 		speaker.unit_size = 7.0
 		speaker.pitch_scale = 0.72 if cue == "shot" else 0.83
@@ -125,7 +128,7 @@ func receive() -> void:
 	_flag.position.y = 0.72
 	_load_tween = create_tween()
 	_load_tween.tween_property(_flag, "position:y", 0.81, 0.26)
-	_sound("pickup")
+	_sound("load")
 
 func set_volume(value: float) -> void:
 	_volume = value

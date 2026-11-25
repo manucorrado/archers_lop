@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Estados de compra · Atlas de Pipo</title>
+  <style>
+    :root{color-scheme:light;background:#f3eedd;color:#342c23;font:16px/1.45 "Segoe UI",sans-serif}
+    *{box-sizing:border-box}body{margin:0}main{max-width:1480px;margin:auto;padding:clamp(20px,4vw,64px)}
+    header{display:flex;align-items:baseline;justify-content:space-between;border-bottom:2px solid #51432f;margin-bottom:22px;padding-bottom:10px;gap:16px}
+    h1,h2{font-family:"Palatino Linotype",Georgia,serif;font-weight:500;margin:0}h1{font-size:clamp(30px,4vw,52px);line-height:1.18}
+    header p{margin:0;font-size:15px;color:#665641}.studies{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(12px,2vw,30px)}
+    article{min-width:0;display:flex;flex-direction:column;border-bottom:1px solid #ad9e80;padding-bottom:14px}
+    .image{display:block;background:#dcd3bf;border:1px solid #9b8d75}.image img{width:100%;display:block;aspect-ratio:16/9;object-fit:cover}
+    h2{font-size:clamp(21px,2.2vw,32px);margin:12px 0 4px;line-height:1.2}p{margin:4px 0 14px}a{color:#634523;text-underline-offset:4px}a:focus-visible{outline:3px solid #8a5226;outline-offset:3px}
+    .open{font-weight:650;align-self:start;margin-top:auto}.note{margin-top:24px;font-size:14px;color:#645641}
+    @media(max-width:780px){header{display:block}header p{margin-top:8px}.studies{grid-template-columns:1fr}article{display:grid;grid-template-columns:minmax(130px,40%) 1fr;column-gap:16px}.image{grid-row:span 3}h2{margin-top:0}}
+    @media(max-width:460px){article{display:flex}}
+  </style>
+</head>
+<body><main>
+  <header><h1>Estados de compra</h1><p>Atlas de Pipo · El arquero del claro</p></header>
+  <div class="studies">
+    <article><a class="image" href="lino/index.html"><img src="lino/preview.jpg" alt="Vista del árbol sobre lino claro"></a>
+      <h2>A · Lino y tinta</h2><p>Sellos sobre papel claro. El relleno indica cuánto compraste.</p>
+      <a class="open" href="lino/index.html">Probar Lino y tinta →</a></article>
+    <article><a class="image" href="pizarra/index.html"><img src="pizarra/preview.jpg" alt="Vista del árbol sobre pizarra oscura"></a>
+      <h2>B · Pizarra del claro</h2><p>Marcas claras sobre pizarra. Podés seguir una rama sin perder de vista sus conexiones.</p>
+      <a class="open" href="pizarra/index.html">Probar Pizarra del claro →</a></article>
+    <article><a class="image" href="nogal/index.html"><img src="nogal/preview.jpg" alt="Vista del árbol sobre madera de nogal"></a>
+      <h2>C · Nogal y latón</h2><p>Las piezas sobre madera oscura cambian de acabado a medida que las comprás.</p>
+      <a class="open" href="nogal/index.html">Probar Nogal y latón →</a></article>
+  </div>
+  <p class="note">Cada estudio empieza con 850 de savia. Enfocá un nodo o pasá el cursor para ver su nivel. Las compras de estos prototipos son simuladas. La animación final del arco A se ve en el juego.</p>
+</main></body></html>

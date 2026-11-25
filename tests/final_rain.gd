@@ -54,7 +54,8 @@ func test() -> void:
 		await physics_frame
 	game._shoot()
 	check(game.in_flight.size() == 4 and game.run.arrows == 0, "One remaining arrow calls three free arrows")
-	check(game.hud.rain_status.is_visible_in_tree() and game.hud.rain_status.text.contains("cayendo"), "The ledger shows when purchased rain is falling")
+	check(game.hud.ammo_text.get_parent().get_child_count() == 1 and not game.hud.combo_panel.visible,
+			"The ammunition corner contains just the count and combo is hidden until purchased")
 	var direct: Dictionary = game.in_flight[0]
 	check(direct.id == "body", "The original shot was aimed at the tree")
 	var damage: int = direct.damage
@@ -99,7 +100,8 @@ func test() -> void:
 	game.archer.restore_pose(pose)
 	game._shoot()
 	initial_hp = game.run.hp
-	check(game.hud.triple_status.is_visible_in_tree() and game.hud.triple_status.text.contains("2/3"), "A partial triple shot reports its real arrow count")
+	check(game.hud.ammo_text.text == "0 / %d" % game.run.capacity(),
+			"The compact counter reflects the two arrows spent on the partial triple")
 	check(game.in_flight.size() == 8 and game.run.arrows == 0, "A partially filled triple shot only copies two paid arrows")
 	game._tick_flights(1.5)
 	check(game.run.hp == initial_hp, "A volley aimed away from the target misses with every copy")

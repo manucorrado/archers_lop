@@ -5,7 +5,7 @@ const Timbres := preload("res://scripts/arrow_timbres.gd")
 const MIX_RATE := 22050
 const LENGTHS := {
 	"shot": 0.21, "hit": 0.15, "miss": 0.08, "empty": 0.09,
-	"pickup": 0.24, "buy": 0.43, "break": 0.43, "win": 0.95, "branch": 0.14,
+	"buy": 0.43, "break": 0.43, "win": 0.95, "branch": 0.14,
 	"target": 0.35, "event": 0.55, "spark": 0.24,
 }
 var _voices: Dictionary = {}
@@ -20,18 +20,19 @@ var _impact_frame := -1
 func _ready() -> void:
 	for cue: String in LENGTHS:
 		var voice := AudioStreamPlayer.new()
-		voice.stream = preload("res://assets/audio/recoger_atado.wav") if cue == "pickup" else _make_clip(cue, LENGTHS[cue])
+		voice.stream = _make_clip(cue, LENGTHS[cue])
 		if cue == "buy" or cue == "win":
 			voice.process_mode = Node.PROCESS_MODE_ALWAYS
 		voice.max_polyphony = 2
 		add_child(voice)
 		_voices[cue] = voice
 	_original = {Timbres.SHOT: _voices.shot.stream, Timbres.IMPACT: _voices.hit.stream}
-	var impact := AudioStreamPlayer.new()
-	add_child(impact)
-	_voices["arrow_impact"] = impact
-	for cue: String in ["shot", "arrow_impact"]:
-		_voices[cue].max_polyphony = 3
+	for cue: String in Timbres.CUE_SETTING:
+		if not _voices.has(cue):
+			var voice := AudioStreamPlayer.new()
+			add_child(voice)
+			_voices[cue] = voice
+		_voices[cue].max_polyphony = 1 if cue == "pickup" else 3
 		var preview_voice := AudioStreamPlayer.new()
 		preview_voice.max_polyphony = 3
 		preview_voice.process_mode = Node.PROCESS_MODE_ALWAYS
@@ -50,9 +51,9 @@ func apply_settings(options: Dictionary) -> void:
 			group = "volume_ui"
 		var mix := clampf(options.get(group, 1.0), 0, 1)
 		var voice := _voices[cue] as AudioStreamPlayer
-		var base_db := -7.0 if cue == "pickup" else -10.0
+		var base_db := -10.0
 		if cue in _preview_voices:
-			var setting := Timbres.SHOT if cue == "shot" else Timbres.IMPACT
+			var setting: String = Timbres.CUE_SETTING[cue]
 			var id := Timbres.selected(setting, options.get(setting))
 			var entry: Array = Timbres.CATALOG[setting][id]
 			var stream: AudioStream = entry[2]

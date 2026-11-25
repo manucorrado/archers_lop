@@ -20,6 +20,13 @@ const Timbres := preload("res://scripts/arrow_timbres.gd")
 const UpgradeMap := preload("res://scripts/upgrade_map.gd")
 const AtlasDetail := preload("res://scripts/atlas_detail.gd")
 const Paths := preload("res://scripts/upgrade_paths.gd")
+const AmountFormat := preload("res://scripts/amount_format.gd")
+const REWARD_ART := preload("res://assets/cartas_pictogramas.svg")
+const REWARD_STAMPS := {
+	"D01": Vector2i(0, 0), "D04": Vector2i(1, 0), "D08": Vector2i(2, 0),
+	"D03": Vector2i(0, 1), "D14": Vector2i(1, 1), "D09": Vector2i(2, 1),
+	"D05": Vector2i(0, 2), "D10": Vector2i(1, 2), "D12": Vector2i(2, 2),
+}
 const UPGRADES := {
 	"seeds": ["Semillas aladas", "Winged seeds", "Caen tres semillas a distinta velocidad. Cada acierto deja 4 flechas en el suelo. Si rompés las tres, duplicás la cosecha a 24 flechas en total. El taller también gana 0,025 flechas/s.", "Three seeds fall at different speeds. Each hit drops 4 arrows on the ground. Hit all three to double the harvest to 24 arrows total. The workshop also gains 0.025 arrows/s."],
 	"sentinel": ["Ballesta del claro", "Clearing crossbow", "Instalá una ballesta a la derecha del sendero y sumá 0,025 flechas/s al taller. Cargala de a ocho. Conservás cuatro flechas. Dispara al tronco y espera cuando tenés que acertar al punto débil.", "Build a crossbow to the right of the path and add 0.025 arrows/s to the workshop. Load up to eight arrows and keep four. It fires at the trunk and waits when you need to hit a weak spot."],
@@ -125,13 +132,6 @@ class Pictogram extends Control:
 			points.append(points[0])
 			draw_polyline(points, ink, 1.6, true)
 			draw_line(o + Vector2(9, 15), o + Vector2(11, 11), ink, 1.2, true)
-		else:
-			draw_line(o + Vector2(4, 20), o + Vector2(18, 6), ink, 2.0, true)
-			draw_colored_polygon(PackedVector2Array([
-				o + Vector2(21, 3), o + Vector2(18, 11), o + Vector2(13, 6)
-			]), ink)
-			draw_line(o + Vector2(6, 18), o + Vector2(3, 18), ink, 2.0)
-			draw_line(o + Vector2(7, 17), o + Vector2(7, 21), ink, 2.0)
 
 var language := "es"
 var current_view := "start"
@@ -160,10 +160,7 @@ var options: Dictionary
 var combo_text: Label
 var combo_panel: PanelContainer
 var combo_hint: Label
-var triple_status: Label
-var rain_status: Label
 var lobes_text: Label
-var bow_text: Label
 var event_text: Label
 const ImpactNumbers := preload("res://scripts/impact_numbers.gd")
 var impact_numbers: ImpactNumbers
@@ -249,7 +246,7 @@ func _label(parent: Control, caption: String, pixels: int, color: Color, font: F
 func _entry(parent: Control, caption: String, action: Callable, kind := "link") -> Button:
 	var button := Journal.Entry.new()
 	button.text = caption
-	Journal.style_entry(button, title_font if kind in ["lead", "action"] else ui_font, kind)
+	Journal.style_entry(button, title_font if kind in ["lead", "action", "confirm"] else ui_font, kind)
 	parent.add_child(button)
 	button.pressed.connect(action)
 	return button
@@ -270,23 +267,37 @@ func _build_hud() -> void:
 	layer_root.add_child(hud)
 	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
-	var target := _sheet(hud, 21, 12)
-	_place(target, 0, 0, 34, 26, 285, 26)
+	var target := _sheet(hud, 15, 8)
+	_place(target, 0, 0, 30, 24, 247, 24)
 	var target_col := _stack(target, 3)
-	var tag := _row(target_col, 9)
+	var tag := _row(target_col, 6)
 	tag.add_child(Pictogram.new("grain", INK))
-	_label(tag, _t("FICHA DE CAMPO", "FIELD RECORD"), 12, MUTED)
-	stage_text = _label(target_col, "", 32, INK, title_font)
+	stage_text = _label(tag, "", 22, INK, title_font)
 	hp_bar = ProgressBar.new()
 	hp_bar.show_percentage = false
 	hp_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hp_bar.custom_minimum_size.y = 4
+	hp_bar.custom_minimum_size.y = 10
 	hp_bar.add_theme_stylebox_override("background", Journal.box(Color("#cfccb3"), Color.TRANSPARENT, 0, 0, 0))
 	hp_bar.add_theme_stylebox_override("fill", Journal.box(Color("#41614c"), Color.TRANSPARENT, 0, 0, 0))
 	target_col.add_child(hp_bar)
-	hp_text = _label(target_col, "", 14, MUTED, mono_font)
-	lobes_text = _label(target_col, "", 14, INK)
-	combo_panel = _sheet(target_col, 0, 0, "inline")
+	var health_font := Journal.sans()
+	health_font.font_weight = 700
+	hp_text = _label(target_col, "", 19, INK, health_font)
+	lobes_text = _label(target_col, "", 13, MUTED)
+
+	var balances := _stack(hud, 6)
+	_place(balances, 1, 0, -30, 24, -30, 24)
+	balances.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	var purse := _sheet(balances, 14, 8)
+	purse.size_flags_horizontal = Control.SIZE_SHRINK_END
+	var purse_col := _stack(purse, 3)
+	var wallet := _row(purse_col, 7)
+	wallet.add_child(Pictogram.new("sap", ACCENT))
+	_label(wallet, _t("Savia", "Sap"), 16, MUTED)
+	sap_text = _label(wallet, "", 23, INK, title_font)
+	sap_gain = _label(wallet, "", 14, ACCENT, mono_font)
+	sap_gain.hide()
+	combo_panel = _sheet(purse_col, 0, 0, "inline")
 	combo_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	var combo_row := _row(combo_panel, 10)
 	_power_icon(combo_row, "combo")
@@ -298,32 +309,16 @@ func _build_hud() -> void:
 	_place(sight, 0.5, 0.5, -16, -16, 16, 16)
 	sight.radius_scale = options.reticle_size
 	impact_numbers = ImpactNumbers.new()
-	impact_numbers.typeface = mono_font
 	hud.add_child(impact_numbers)
-	event_text = _label(hud, "", 16, PAPER, mono_font)
+	event_text = _label(balances, "", 16, PAPER, mono_font)
 	event_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	event_text.add_theme_constant_override("outline_size", 5)
 	event_text.add_theme_color_override("font_outline_color", INK)
-	_place(event_text, 1, 0, -330, 22, -30, 58)
-
-	var ledger := _sheet(hud, 21, 12)
-	_place(ledger, 0, 1, 34, -145, 237, -34)
+	var ledger := _sheet(hud, 17, 6)
+	_place(ledger, 0, 1, 30, -28, 30, -28)
 	ledger.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	var entries := _stack(ledger, 4)
-	var ammo_row := _row(entries, 10)
-	ammo_row.add_child(Pictogram.new("arrow", INK))
-	var quiver := _stack(ammo_row, -4)
-	bow_text = _label(quiver, "", 12, MUTED)
-	ammo_text = _label(quiver, "", 30, INK, title_font)
-	triple_status = _power_line(entries, "multishot")
-	rain_status = _power_line(entries, "rain")
-	_rule(entries)
-	var wallet := _row(entries, 7)
-	wallet.add_child(Pictogram.new("sap", ACCENT))
-	_label(wallet, _t("Savia", "Sap"), 17, INK, title_font)
-	sap_text = _label(wallet, "", 20, INK, title_font)
-	sap_gain = _label(wallet, "", 14, ACCENT, mono_font)
-	sap_gain.hide()
+	ammo_text = _label(ledger, "", 30, INK, title_font)
+	ammo_text.accessibility_name = _t("Munición", "Ammunition")
 	guide_panel = _sheet(hud, 14, 8, "inline")
 	guide_panel.add_theme_stylebox_override("panel", Journal.box(INK, Color("#d4c8a0"), 14, 8))
 	_place(guide_panel, 1, 1, -416, -72, -34, -34)
@@ -347,11 +342,6 @@ func _power_icon(row: HBoxContainer, id: String) -> void:
 	icon.custom_minimum_size = Vector2(19, 19)
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(icon)
-
-func _power_line(entries: VBoxContainer, id: String) -> Label:
-	var line := _row(entries, 5)
-	_power_icon(line, id)
-	return _label(line, "", 14, INK)
 
 func set_view(view: String) -> void:
 	current_view = view
@@ -705,8 +695,11 @@ func _build_gifts(content: Control) -> void:
 		col.offset_bottom = -14
 		var head := _row(col, 8)
 		var stamp := TextureRect.new()
-		stamp.texture = UpgradeMap.Icons.texture({"D01":"rate", "D03":"wheel", "D04":"damage", "D05":"weak", "D08":"capacity", "D09":"pickup", "D10":"pace", "D12":"capacity", "D14":"combo"}[id])
-		stamp.custom_minimum_size = Vector2(32, 32)
+		var glyph := AtlasTexture.new()
+		glyph.atlas = REWARD_ART
+		glyph.region = Rect2(Vector2(REWARD_STAMPS[id]) * 128.0, Vector2(128, 128))
+		stamp.texture = glyph
+		stamp.custom_minimum_size = Vector2(52, 52)
 		stamp.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		stamp.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		stamp.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -728,7 +721,9 @@ func _build_gifts(content: Control) -> void:
 		card.pressed.connect(_select_gift.bind(id))
 		card.accessibility_name = card_name.text + ". " + effect.text
 		gift_buttons[id] = card
-	confirm_gift = _entry(content, "", _commit_gift, "lead")
+	confirm_gift = _entry(content, _t("Confirmar", "Confirm"), _commit_gift, "confirm")
+	confirm_gift.size_flags_horizontal = Control.SIZE_SHRINK_END
+	confirm_gift.custom_minimum_size.x = 128
 	_select_gift(selected_gift)
 	if not gift_buttons.is_empty():
 		gift_buttons.get(selected_gift, gift_buttons.values()[0]).grab_focus()
@@ -739,9 +734,6 @@ func _select_gift(id: String) -> void:
 		var card: Journal.RewardCard = gift_buttons[key]
 		card.set_pressed_no_signal(key == selected_gift)
 		card.selection_mark.text = _t("✓  Elegida", "✓  Selected") if key == selected_gift else ""
-	confirm_gift.text = _t("Confirmar mejora", "Confirm reward")
-	if not selected_gift.is_empty():
-		confirm_gift.text += "  ·  " + _t(GIFTS[id][0], GIFTS[id][1])
 	confirm_gift.disabled = selected_gift.is_empty()
 
 func _commit_gift() -> void:
@@ -903,15 +895,15 @@ func _reward_result(id: String) -> String:
 func _update_hud() -> void:
 	var stage := int(values.get("stage", 1))
 	var ammo := int(values.get("arrows", 24))
-	sap_text.text = str(values.get("sap", 0))
+	sap_text.text = AmountFormat.grouped(values.get("sap", 0), language == "es")
 	stage_text.text = _stage_label(stage)
-	hp_text.text = "%d / %d" % [values.get("hp", 160), values.get("max_hp", 160)]
+	hp_text.text = "%s / %s" % [AmountFormat.short(values.get("hp", 160), language),
+		AmountFormat.short(values.get("max_hp", 160), language)]
 	hp_bar.max_value = maxi(1, int(values.get("max_hp", 160)))
 	hp_bar.value = values.get("hp", 160)
 	lobes_text.visible = values.get("split", false)
 	if lobes_text.visible:
 		lobes_text.text = _t("Izq. %d  ·  Der. %d", "Left %d  ·  Right %d") % [values.get("left_hp", 0), values.get("right_hp", 0)]
-	bow_text.text = _bow_name(str(values.get("bow", "branch"))).to_upper()
 	ammo_text.text = "%d / %d" % [ammo, values.get("capacity", 24)]
 	ammo_text.add_theme_color_override("font_color", ACCENT if ammo == 0 else INK)
 	var combo := float(values.get("combo", 1.0))
@@ -923,20 +915,6 @@ func _update_hud() -> void:
 		combo_hint.text = _t("En descenso", "Falling")
 	else:
 		combo_hint.text = _t("En racha", "Streak active")
-	var ranks: Dictionary = values.get("ranks", {})
-	triple_status.get_parent().visible = int(ranks.get("damage", 0)) >= 10
-	var recent := int(values.get("recent_volley", 0))
-	if recent > 0:
-		triple_status.text = _t("Disparo triple · %d/3 en el tiro", "Triple shot · %d/3 fired") % recent
-	else:
-		triple_status.text = _t("Disparo triple · %d/3 listas", "Triple shot · %d/3 ready") % mini(ammo, 3)
-	rain_status.get_parent().visible = int(ranks.get("rain", 0)) > 0
-	if values.get("rain_falling", false):
-		rain_status.text = _t("Lluvia de flechas · cayendo", "Arrow rain · falling")
-	elif ammo == 0:
-		rain_status.text = _t("Lluvia · sin munición", "Arrow rain · out of arrows")
-	else:
-		rain_status.text = _t("Lluvia de flechas · lista", "Arrow rain · ready")
 	var wave_active: bool = values.get("event", "") == "seed_rain"
 	var harvest: int = values.get("seed_bonus", 0)
 	event_text.visible = wave_active or harvest > 0
@@ -1092,7 +1070,7 @@ func _build_settings(left: Control, right: Control) -> void:
 	var left_title := _t("Vista", "View")
 	var right_title := _t("Lectura", "Readability")
 	if settings_tab == "audio":
-		left_title = _t("Arco e impacto", "Bow and impact")
+		left_title = _t("Muestras de sonido", "Sound samples")
 		right_title = _t("Volumen", "Volume")
 	elif settings_tab == "controls":
 		left_title = _t("Movimiento", "Movement")
@@ -1114,6 +1092,7 @@ func _build_settings(left: Control, right: Control) -> void:
 	elif settings_tab == "audio":
 		_timbre_picker(column, Timbres.SHOT, _t("Suelta de cuerda", "String release"), "shot")
 		_timbre_picker(column, Timbres.IMPACT, _t("Impacto en madera", "Wood impact"), "arrow_impact")
+		_timbre_picker(column, Timbres.PICKUP, _t("Recogida de flechas · prueba", "Arrow pickup · playtest"), "pickup")
 		_entry(column, _t("Escuchar disparo e impacto", "Hear shot and impact"), audio_preview_requested.emit.bind("pair"), "action").name = "PreviewPair"
 		_entry(column, _t("Escuchar ráfaga", "Hear a burst"), audio_preview_requested.emit.bind("burst"), "action").name = "PreviewBurst"
 		_slider(facing, "volume_bow", _t("Arco y rama", "Bow and branch"), 0, 1, 0.05, "%")
@@ -1336,12 +1315,14 @@ func show_sap_earned(amount: int) -> void:
 		return
 	grouped_sap = (grouped_sap if gain_remaining > 0 else 0) + amount
 	gain_remaining = 0.55
-	sap_gain.text = "+%d" % grouped_sap
+	sap_gain.text = "+" + AmountFormat.short(grouped_sap, language)
 	sap_gain.show()
 
 func show_damage(amount: int, point: Vector3, source := "manual") -> void:
 	impact_numbers.language = language
 	impact_numbers.opacity = float(options.damage_opacity)
+	impact_numbers.movement = float(options.shake)
+	impact_numbers.glints = float(options.flashes)
 	impact_numbers.add_hit(point, amount, source, bool(options.group_damage))
 
 func _process(delta: float) -> void:
