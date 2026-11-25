@@ -82,13 +82,52 @@ class Entry extends Button:
 	var mark := ""
 
 	func _draw() -> void:
-		if mark != "forward" and mark != "back":
+		if disabled or (mark != "forward" and mark != "back"):
 			return
 		var tip := Vector2(size.x - 12 if mark == "forward" else 8, roundf(size.y * 0.5))
 		var direction := 1 if mark == "forward" else -1
 		var tint := Color("#88765b") if disabled else GILT
 		draw_line(tip - Vector2(10 * direction, 0), tip, tint, 1.5, true)
 		draw_polyline(PackedVector2Array([tip - Vector2(4 * direction, 4), tip, tip - Vector2(4 * direction, -4)]), tint, 1.5, true)
+
+class RewardCard extends Button:
+	var selection_mark := Label.new()
+
+	func _ready() -> void:
+		toggle_mode = true
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		custom_minimum_size = Vector2(252, 202)
+		for state: String in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+			var selected := state in ["pressed", "hover_pressed"]
+			var highlighted := state in ["hover", "hover_pressed"]
+			var fill := Color("#eadbb8") if selected else Color("#fcf7e9") if highlighted else Color("#f7efd9")
+			var style := StyleBoxFlat.new()
+			style.bg_color = fill
+			style.border_color = ACCENT if selected or highlighted else RULE
+			style.set_corner_radius_all(2)
+			style.set_border_width_all(1)
+			style.border_width_top = 4 if selected else 1
+			if state == "focus":
+				style.draw_center = false
+				style.border_color = GILT
+				style.set_border_width_all(2)
+			add_theme_stylebox_override(state, style)
+
+static func scrollbar(scroll: ScrollContainer) -> void:
+	var bar := scroll.get_v_scroll_bar()
+	var track := box(Color("#dfd3b8"), Color.TRANSPARENT, 4, 1)
+	bar.add_theme_stylebox_override("scroll", track)
+	for state: String in ["grabber", "grabber_highlight", "grabber_pressed"]:
+		var thumb := box(GILT if state == "grabber" else COVER, Color.TRANSPARENT, 4, 6, 2)
+		bar.add_theme_stylebox_override(state, thumb)
+
+static func index_tab(active: bool, hover: bool) -> StyleBoxFlat:
+	var fill := COVER if active else CANVAS if hover else Color.TRANSPARENT
+	var style := box(fill, GILT if active else RULE, 14, 6, 2)
+	style.set_border_width_all(0)
+	style.border_width_bottom = 2 if active else 1
+	return style
 
 static func style_entry(button: Button, font: Font, kind: String) -> void:
 	var record := kind in ["action", "lead"]
@@ -121,6 +160,10 @@ static func style_entry(button: Button, font: Font, kind: String) -> void:
 		if kind == "lead":
 			style.border_width_left = 3
 			style.border_color = Color("#957747")
+			if state == "disabled":
+				style.bg_color = Color.TRANSPARENT
+				style.border_width_left = 0
+				style.border_color = RULE
 		if kind == "back":
 			style.content_margin_left = 25
 		if tab:

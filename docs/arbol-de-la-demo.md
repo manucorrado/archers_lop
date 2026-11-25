@@ -10,8 +10,8 @@ Pipo se sienta bajo el pino a la izquierda del taller. Acercate y apretá **E**.
 |---|---|---|---|
 | Daño por flecha | Desde el inicio | 0, 9, 9, 14, 21, 31, 46, 69, 103, 1.250 | Cada nivel suma el 20 % del daño base del arco. El arco de rama gana 2 por nivel. En el décimo salen hasta tres flechas en abanico con el daño completo de cada una. |
 | Velocidad de ataque | Daño | 14, 21, 31, 46, 68, 103, 154, 231, 346, 346 | Cada nivel suma el 12 % de la cadencia base del arco equipado. |
-| Arco rápido | Velocidad | 37 | Base de 11 de daño y 2,5 disparos por segundo. Con los diez niveles iniciales de velocidad llega a 5,5. |
-| Arco largo | Arco rápido y los dos nodos de Suelta ágil que le siguen en la cuerda | 1.670 | Tercer arco. Base de 22 de daño y 2 disparos por segundo. Favorece el daño por flecha y comparte el mismo carcaj. |
+| Arco rápido | Velocidad | 370 | Base de 11 de daño y 2,5 disparos por segundo. Con los diez niveles iniciales de velocidad llega a 5,5. |
+| Arco largo | Arco rápido y los dos nodos de Suelta ágil que le siguen en la cuerda | 16.700 | Tercer arco. Base de 22 de daño y 2 disparos por segundo. Favorece el daño por flecha y comparte el mismo carcaj. |
 | Ojo de veta | Daño | 14 | Acertar al punto débil pasa de ×1,5 a ×2 de daño. |
 | Chispa de copa | Ojo de veta | 18 | Cada ocho aciertos, una descarga de 20 de daño base. |
 | Golpe crítico | La primera Punta reforzada después de Chispa de copa | 24 | Cada disparo tiene un 10 % de probabilidad de duplicar el daño de las flechas de esa suelta. |
@@ -35,7 +35,8 @@ En los tramos intermedios, cada vértice es una compra de un nivel. Cuanto más 
 |---|---|---|---|
 | Punta reforzada | 31 vértices | 21–1.071 por vértice | Suma 1 al daño de la flecha antes de aplicar los multiplicadores. |
 | Suelta ágil | 36 vértices | 45–933 por vértice | Suma un 2 % de la cadencia base del arco. |
-| Engranaje del taller | 25 vértices | 45–686 por vértice | El taller produce 0,025 flechas más por segundo. |
+| Engranaje del taller | 24 vértices | 45–686 por vértice | El taller produce 0,025 flechas más por segundo. |
+| Semillas aladas | Primer engranaje de la rama que baja de la Rueda de savia hacia el fondo del carcaj | 45 | Habilita tandas de tres semillas con caídas de 8, 9 y 10 segundos. Cada acierto deja cuatro flechas para recoger. Si acertás las tres, la última deja 16, lo que lleva la cosecha total a 24. El taller mantiene los 0,025 flechas/s de este engranaje. |
 | Ballesta del claro | Después de los cuatro engranajes que bajan desde la Rueda hacia el extremo derecho de la flecha | 235 | Instala una ballesta a la derecha del sendero y suma otras 0,025 flechas/s al taller. |
 | Potencia multiplicada | Extremo de la rama que pasa por Golpe crítico | 390, 820, 1.460 | Cada nivel multiplica el daño que ya tiene la flecha por 1,2. Los tres juntos aplican ×1,728. |
 | Disparo adicional | Después del arco largo | 260, 320, 420, 550, 720, 930, 1.210, 1.560 | Suma un disparo por segundo por nivel, para cualquiera de los tres arcos. |
@@ -48,7 +49,7 @@ Al devolver un nivel conservás las otras compras. Para comprar otro nivel vuelv
 
 Cada **8 puntos de vida que pierde un blanco** entran **1 de savia**. Importa cuánto daño recibió realmente. Si a una mitad le quedan 3 de vida y le pegás por 50, esos 3 puntos se acumulan para el próximo cobro. El sobrante pasa al siguiente blanco y se guarda al salir. Con Buena racha, los impactos manuales ganan además una prima que llega hasta un 50 % de su ingreso base cuando el combo alcanza ×6.
 
-Hay **113 nodos, 141 niveles y 46.437 de savia** en compras. Sin primas, al entrar al décimo blanco habrás ganado **38.612 de savia**, el **83,1 %** del costo total. El daño al jefe alcanza para financiar las últimas compras durante su primer cuarto de vida. El saldo visible depende de cuánto hayas gastado.
+Hay **113 nodos, 141 niveles y 61.800 de savia** en compras. Sin primas, al entrar al décimo blanco habrás ganado **38.612 de savia**, el **62,5 %** del costo total. El ingreso base alcanza para comprar todo al quitarle aproximadamente el 52 % de la vida al jefe. El saldo visible depende de cuánto hayas gastado. Respecto de la versión 0.10, los blancos 11–19 tienen cien veces la vida y el 20 tiene mil veces la vida. El vigésimo empieza con 83.825.374.000 puntos. Al continuar una partida previa se conserva la fracción de vida que le quedaba al tronco.
 
 En los blancos 6 a 9 y 11 a 20, acertar con el arco a la diana que aparece por unos segundos devuelve hasta **tres flechas** directamente al carcaj. La primera aparece al entrar al sexto blanco y dura siete segundos. Cada diana paga una vez, incluso con el disparo triple. Si quedan dos lugares, recuperás dos.
 

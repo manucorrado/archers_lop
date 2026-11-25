@@ -9,6 +9,7 @@ const SHADOW := Color("#251f19d8")
 var camera: Camera3D
 var supply_position: Variant = null
 var near_dog := false
+var show_dog_guide := true
 var language := "es"
 var shop_key := ""
 var pet_key := ""
@@ -22,9 +23,10 @@ func _ready() -> void:
 	hide()
 
 
-func update_targets(playing: bool, supply: Variant, in_reach: bool, locale: String, interact: String, pet: String) -> void:
+func update_targets(playing: bool, supply: Variant, in_reach: bool, locale: String, interact: String, pet: String, guide_to_dog: bool) -> void:
 	supply_position = supply
 	near_dog = in_reach
+	show_dog_guide = guide_to_dog
 	language = locale
 	shop_key = interact
 	pet_key = pet
@@ -66,18 +68,18 @@ func _draw() -> void:
 	var supply := Vector2.ZERO
 	if supply_position != null:
 		supply = _bearing("supply", supply_position, 0.11)
-	if dog != Vector2.ZERO:
+	if show_dog_guide and dog != Vector2.ZERO:
 		_draw_edge("dog", dog, _edge(dog))
 	if supply_position != null and supply != Vector2.ZERO:
 		var point := _edge(supply)
-		if dog != Vector2.ZERO and point.distance_to(_edge(dog)) < 54:
+		if show_dog_guide and dog != Vector2.ZERO and point.distance_to(_edge(dog)) < 54:
 			point += Vector2.DOWN * 32 if absf(supply.x) > absf(supply.y) else Vector2.RIGHT * 50
 		_draw_edge("supply", supply, point)
-	if dog == Vector2.ZERO and (near_dog or supply_position == null or supply != Vector2.ZERO):
+	if dog == Vector2.ZERO and (near_dog or (show_dog_guide and (supply_position == null or supply != Vector2.ZERO))):
 		_draw_focus("dog")
 	elif supply_position != null and supply == Vector2.ZERO:
 		_draw_focus("supply")
-		if dog == Vector2.ZERO:
+		if show_dog_guide and dog == Vector2.ZERO:
 			# Both targets line up with the crosshair. Keep Pipo's bearing present.
 			_draw_symbol("dog", size * 0.5 + Vector2(-30, 0))
 
@@ -117,7 +119,8 @@ func _draw_focus(subject: String) -> void:
 	var dog := subject == "dog"
 	var en := language == "en"
 	var anchor := (size * 0.5).round() + Vector2(54, 5)
-	_draw_symbol(subject, anchor - Vector2(0, 5))
+	if not dog or show_dog_guide:
+		_draw_symbol(subject, anchor - Vector2(0, 5))
 	var name_text := "Pipo" if dog else ("Arrow bundle" if en else "Atado de flechas")
 	_text(guide_font, anchor + Vector2(13, 0), name_text, 23)
 	if not dog:

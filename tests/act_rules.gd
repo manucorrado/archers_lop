@@ -66,7 +66,7 @@ func _test_build_and_combo() -> void:
 	_expect(run.buy("rate"), "Rate opens the next bow")
 	var balance := run.sap
 	var arrows := run.arrows
-	_expect(run.buy("recurve") and run.sap == balance - 37, "N4 recurve costs 37")
+	_expect(run.buy("recurve") and run.sap == balance - 370, "Recurve costs 370")
 	_expect(run.bow == "recurve" and is_equal_approx(1.0 / run.shot_interval(), 2.8), "First rate rank adds 12% of the recurve's base rate")
 	_expect(run.equip("branch") and run.arrows == arrows and is_equal_approx(1.0 / run.shot_interval(), 1.12),
 		"Changing bows preserves the quiver and changes cadence")
@@ -122,7 +122,14 @@ func _test_encounters() -> void:
 	_expect(not run.manual_impact("body", run.damage(), run.damage(true), 0).weak_spot,
 		"A regular body hit does not emit weak-point feedback")
 	run.tick(8)
+	_expect(run.seeds.is_empty() and run.event_serial == 0, "Dianas alone never unlock the seed harvest")
+	run.sap = 150
+	_expect(run.buy("workshop") and run.buy("wheel") and run.buy(Run.Paths.SEED_NODE), "The workshop wheel unlocks the seed purchase")
+	_expect(is_equal_approx(run.production_rate(), 1.525), "Seed ownership retains the workshop gear's production")
+	run.tick(8)
 	_expect(run.seeds.size() == 3, "The first seed rain displays its targets")
+	_expect(run.seeds[0].duration != run.seeds[1].duration and run.seeds[1].duration != run.seeds[2].duration,
+		"The three falls have individual durations")
 	impact = run.manual_impact("seed_0", run.damage(), run.damage(true), run.event_serial)
 	_expect(impact.hit and impact.direct == 0 and run.seed_drops.seed_0 == 4, "A seed drops a physical bundle")
 	_expect(not run.manual_impact("seed_0", 10, 15, run.event_serial).hit, "A second hit cannot collect the same reward")
@@ -131,6 +138,46 @@ func _test_encounters() -> void:
 	var restored := Run.new()
 	_expect(restored.restore_state(run.save_state()), "An active event can be restored")
 	_expect(restored.save_state() == run.save_state(), "RNG, event, combo and drops survive restore")
+	var full := Run.new()
+	full.restore_state(restored.save_state())
+	var token := full.event_serial
+	_expect(full.manual_impact("seed_1", 10, 15, token).hit and full.seed_drops.seed_1 == 4,
+		"The second hit adds its own four arrows")
+	_expect(full.manual_impact("seed_2", 10, 15, token).hit and full.seed_drops.seed_2 == 16
+		and full.snapshot().seed_bonus == 24 and full.seeds.is_empty(), "Three successful hits double all three drops exactly once")
+	_expect(not full.manual_impact("seed_2", 10, 15, token).hit, "A late volley never repeats the completion bonus")
+	_expect(full.collect_seeds("seed_2") == 0 and full.seed_drops.seed_2 == 16, "Even the complete harvest waits for quiver space")
+	var old := restored.save_state()
+	old.erase("seed_hits")
+	old.erase("last_seed_bonus")
+	old.ranks.erase(Run.Paths.SEED_NODE)
+	old.paid_prices.erase(Run.Paths.SEED_NODE)
+	for seed_state: Dictionary in old.seeds:
+		seed_state.erase("duration")
+		seed_state.remaining = 7.0
+	old.event_remaining = 7.0
+	var migrated := Run.new()
+	_expect(migrated.restore_state(old) and migrated.seed_hits == 1 and migrated.seeds[0].duration == 9.0,
+		"An active pre-upgrade wave resumes at its old speed and with its existing hits")
+	_expect(migrated.manual_impact("seed_1", 10, 15, token).hit and migrated.manual_impact("seed_2", 10, 15, token).hit,
+		"The legacy wave can be finished")
+	migrated.seen_target = true
+	migrated.event_clock = 0.0
+	migrated.tick(0.1)
+	_expect(migrated.event_serial == token, "A legacy player must purchase the upgrade for subsequent waves")
+	var missed := Run.new()
+	missed.restore_state(restored.save_state())
+	missed.tick(8.5)
+	_expect(missed.seeds.size() == 1 and missed.seed_hits == 1 and missed.event_remaining > 0,
+		"The fast seed lands while the slower seed is still hittable")
+	var remaining_id: String = missed.seeds[0].id
+	_expect(missed.manual_impact(remaining_id, 10, 15, token).hit and missed.seed_drops[remaining_id] == 4
+		and missed.snapshot().seed_bonus == 0, "Two hits and a miss pay eight arrows before collection")
+	var refund := Run.new()
+	refund.restore_state(restored.save_state())
+	_expect(refund.buy("refund") and refund.refund(Run.Paths.SEED_NODE) and refund.seeds.is_empty()
+		and refund.seed_drops.seed_0 == 3 and not refund.manual_impact("seed_1", 10, 15, token).hit,
+		"Refunding closes the active wave and keeps already earned physical drops")
 	run.tick(11)
 	restored.tick(11)
 	_expect(run.event_remaining == 0 and run.hp > 0 and restored.save_state() == run.save_state(),
@@ -300,7 +347,7 @@ func _test_tree_costs() -> void:
 	_expect(run.buy("damage") and run.sap == 3000, "The root is free even with a positive wallet")
 	_expect(run.observations.has("first_purchase") and not run.observations.has("first_paid_purchase"),
 		"Claiming the free root is recorded separately from spending sap")
-	var first_costs := {"damage": 9, "rate": 14, "weak": 14, "recurve": 37, "workshop": 17,
+	var first_costs := {"damage": 9, "rate": 14, "weak": 14, "recurve": 370, "longbow": 16700, "workshop": 17,
 		"capacity": 7, "wheel": 21, "pickup": 11, "pace": 21, "spark": 18}
 	var offers := run.offers()
 	var open_children := []
@@ -326,13 +373,13 @@ func _test_tree_costs() -> void:
 	for index in 9:
 		health_before_boss += Run.HEALTH[index]
 	var earned := floori(health_before_boss / 8.0)
-	_expect(earned < full_price and (health_before_boss + Run.HEALTH[9] / 4) / Run.DAMAGE_PER_SAP >= full_price,
-		"The last power purchases can be paid from base damage during the first quarter of target ten")
+	_expect(full_price == 61800 and earned < full_price and (health_before_boss + Run.HEALTH[9]) / Run.DAMAGE_PER_SAP >= full_price,
+		"The ten-target earnings still cover the entire Atlas with the repriced bows")
 
 
 func _test_refunds() -> void:
 	var run := Run.new()
-	run.sap = 6000
+	run.sap = 25000
 	for id in ["damage", "damage", "workshop", "capacity", "pickup", "leap", "rate", "recurve", "rate_step_01", "rate_step_02", "longbow"]:
 		_expect(run.buy(id), "Purchases alone open " + id)
 	_expect(not run.refund("damage") and run.buy("refund") and not run.refund("refund"), "Refunding needs the permanent license")
@@ -380,7 +427,7 @@ func _test_refunds() -> void:
 
 func _test_volley_and_cadence() -> void:
 	var run := Run.new()
-	run.sap = 20000
+	run.sap = 45000
 	for i in 9:
 		run.buy("damage")
 	_expect(run.damage() == 28 and run.volley_size() == 1, "The first nine damage levels each add 20% of the bow's original power")

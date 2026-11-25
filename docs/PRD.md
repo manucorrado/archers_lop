@@ -104,7 +104,7 @@ La **Diana de veta** aparece sobre el nudo desde N2 y recompensa precisión. El 
 
 | Suceso del claro | Primera ventana propuesta | Acción y recompensa |
 |---|---|---|
-| Lluvia de semillas | Acto I, después de la primera compra | Caen blancos lentos alrededor del nudo. Los aciertos desprenden flechas. |
+| Lluvia de semillas | Al comprar Semillas aladas en el Atlas | Tres semillas caen a ritmos distintos. Cada acierto deja cuatro flechas. Acertar las tres duplica la recompensa total a 24. |
 | Frente de tormenta | Acto II | Una nube anuncia una veta conductora. Acertarla deriva una descarga hacia el nudo. |
 | Ráfaga de polen | Acto III | El polen dibuja una secuencia de dianas. Cada acierto manual ya aporta una prima aunque se deje pasar el resto. |
 | Migración de brotes | Acto III, después del primer abanico disponible | Una hilera atraviesa un lateral. Una buena suelta puede alcanzar varios y convertirlos en daño al nudo. |

@@ -4,20 +4,20 @@ extends Control
 const Journal := preload("res://scripts/field_journal.gd")
 const Icons := preload("res://scripts/upgrade_icons.gd")
 const Paths := preload("res://scripts/upgrade_paths.gd")
+const COLLECTION_ART := preload("res://assets/atlas_arco.svg")
 signal inspection_changed(id: String)
 signal map_moved
-const PIGMENTS := {"damage": Color("#974a35"), "speed": Color("#3d6453"),
-	"supply": Color("#88641c"), "utility": Color("#526481")}
+const PIGMENTS := {"damage": Color("#653524"), "speed": Color("#254b3b"),
+	"supply": Color("#624718"), "utility": Color("#394765")}
 const FAMILY_NAMES := {"damage": ["Daño", "Damage"], "speed": ["Cadencia", "Fire rate"],
 	"supply": ["Suministro", "Supply"], "utility": ["Utilidad", "Utility"]}
-const SILHOUETTE := Color("#65482c")
+const SEAM_INK := Color("#3d342b")
 const MAP_CENTER := Vector2(493.5, 474)
 const MAP_SPAN := Vector2(822, 761)
 const MIN_ZOOM := 0.75
 const MAX_ZOOM := 5.0
 
 class Socket extends Button:
-	var symbol: Texture2D
 	var stamped_symbol: Texture2D
 	var rank := 0
 	var ranks := 1
@@ -30,8 +30,8 @@ class Socket extends Button:
 		var c := size * 0.5
 		var radius := c.x - 2
 		var pigment: Color = PIGMENTS[family]
-		var fill := pigment if rank > 0 else Color("#fff7e3") if affordable else Journal.CANVAS
-		var outline := pigment if met or rank > 0 else pigment.lerp(Journal.PAPER, 0.35)
+		var fill := pigment if rank > 0 else Color("#36312e") if affordable else Color("#5a5248")
+		var outline := Color("#df9e45") if affordable else Color("#251f1c")
 		var points := PackedVector2Array()
 		var corners := 4 if family == "damage" else 6 if family == "speed" else 8 if family == "supply" else 32
 		var offset := PI / 8 if family == "supply" else -PI / 2
@@ -39,13 +39,13 @@ class Socket extends Button:
 			points.append(c + Vector2.from_angle(offset + TAU * i / corners) * radius)
 		draw_colored_polygon(points, fill)
 		points.append(points[0])
-		draw_polyline(points, Color("#31291e") if inspected else outline, 2.5 if inspected else 1.5, true)
+		draw_polyline(points, Color("#b96a22") if inspected else outline, 2.8 if inspected else 1.7, true)
 		if rank > 0 and ranks > 1 and radius >= 7:
 			draw_arc(c, radius - 2, -PI * 0.5, -PI * 0.5 + TAU * rank / ranks,
 				36, Color("#ebc078"), 1.3, true)
 		var icon_size := Vector2.ONE * floorf(radius * 1.50)
-		var tint := Color.WHITE if met or rank > 0 else Color(1, 1, 1, 0.68)
-		draw_texture_rect(stamped_symbol if rank > 0 else symbol, Rect2((c - icon_size * 0.5).round(), icon_size), false, tint)
+		var tint := Color.WHITE if met or rank > 0 else Color(1, 1, 1, 0.80)
+		draw_texture_rect(stamped_symbol, Rect2((c - icon_size * 0.5).round(), icon_size), false, tint)
 
 var buttons: Dictionary = {}
 var parents: Dictionary = {}
@@ -57,6 +57,9 @@ var pan := Vector2.ZERO
 var _map_center := MAP_CENTER
 var _nearest: Dictionary = {}
 var _drag_button := 0
+var _dragging := false
+var _pressed_socket := ""
+var _press_point := Vector2.ZERO
 var _last_drag_point := Vector2.ZERO
 var _zoom_value: Button
 var _toolbar := HBoxContainer.new()
@@ -75,7 +78,7 @@ var animate_completion := true
 static func group_for(id: String) -> String:
 	match Paths.family(id).trim_suffix("_step"):
 		"rate", "rate_flat", "recurve", "longbow", "steady", "rain": return "speed"
-		"workshop", "wheel", "capacity", "pickup", "sentinel": return "supply"
+		"workshop", "wheel", "capacity", "pickup", "sentinel", "seeds": return "supply"
 		"refund", "leap", "pace", "pet": return "utility"
 		_: return "damage"
 
@@ -92,6 +95,8 @@ func _ready() -> void:
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	resized.connect(_place_buttons)
+	get_window().focus_exited.connect(_end_pointer)
+	visibility_changed.connect(_end_pointer)
 	add_child(_toolbar)
 	_toolbar.name = "Zoom"
 	_toolbar.z_index = 1
@@ -311,8 +316,8 @@ func _ensure_in_view(node: Socket) -> void:
 		_place_buttons()
 
 func _focus_socket(node: Socket, id: String) -> void:
-	_ensure_in_view(node)
 	if _keyboard_inspection:
+		_ensure_in_view(node)
 		_set_inspection(id)
 
 func _set_inspection(id: String) -> void:
@@ -341,7 +346,6 @@ func _blur(id: String) -> void:
 
 func _input(event: InputEvent) -> void:
 	if not is_visible_in_tree():
-		_drag_button = 0
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		_keyboard_inspection = true
@@ -366,17 +370,32 @@ func _input(event: InputEvent) -> void:
 		var local := make_input_local(event) as InputEventMouse
 		if event is InputEventMouseMotion:
 			if _drag_button != 0:
-				pan += local.position - _last_drag_point
-				_last_drag_point = local.position
-				_limit_pan()
-				_place_buttons()
+				var mask := MOUSE_BUTTON_MASK_LEFT if _drag_button == MOUSE_BUTTON_LEFT else MOUSE_BUTTON_MASK_MIDDLE
+				if (event.button_mask & mask) == 0:
+					_end_pointer()
+					return
+				if not _dragging and local.position.distance_squared_to(_press_point) > 16.0:
+					_dragging = true
+					_set_inspection("")
+				if _dragging:
+					pan += local.position - _last_drag_point
+					_last_drag_point = local.position
+					_limit_pan()
+					_place_buttons()
 				get_viewport().set_input_as_handled()
 			return
 		if not event is InputEventMouseButton:
 			return
 		if _drag_button != 0 and event.button_index == _drag_button and not event.pressed:
-			_drag_button = 0
+			var buy := _pressed_socket
+			var was_click := not _dragging and local.position.distance_squared_to(_press_point) <= 16.0
+			_end_pointer()
 			get_viewport().set_input_as_handled()
+			var under_pointer := _socket_at(local.position) if not _show_drawing else ""
+			_set_inspection(under_pointer)
+			if was_click and not buy.is_empty() and under_pointer == buy:
+				buttons[buy].grab_focus()
+				buttons[buy].pressed.emit()
 			return
 		if not event.pressed or not Rect2(Vector2.ZERO, size).has_point(local.position):
 			return
@@ -386,25 +405,39 @@ func _input(event: InputEvent) -> void:
 		if event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 			var direction := 1.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -1.0
 			_zoom_at(zoom * pow(1.22, direction * maxf(0.1, event.factor)), local.position)
-		elif event.button_index == MOUSE_BUTTON_MIDDLE or (event.button_index == MOUSE_BUTTON_LEFT and _empty_at(local.position)):
+		elif event.button_index in [MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_LEFT]:
 			_drag_button = event.button_index
+			_press_point = local.position
 			_last_drag_point = local.position
+			_dragging = _drag_button == MOUSE_BUTTON_MIDDLE
+			_pressed_socket = _socket_at(local.position) if not _dragging and not _show_drawing else ""
+			_set_inspection(_pressed_socket)
 		else:
 			return
 		get_viewport().set_input_as_handled()
 
-func _empty_at(point: Vector2) -> bool:
+func _end_pointer() -> void:
+	_drag_button = 0
+	_dragging = false
+	_pressed_socket = ""
+
+func _socket_at(point: Vector2) -> String:
+	var nearest := ""
+	var best := INF
 	for id: String in revealed:
-		if buttons[id].visible and buttons[id].get_rect().has_point(point):
-			return false
-	return true
+		var rect: Rect2 = buttons[id].get_rect()
+		if buttons[id].visible and rect.has_point(point):
+			var distance := point.distance_squared_to(rect.get_center())
+			if distance < best:
+				nearest = id
+				best = distance
+	return nearest
 
 func update_socket(id: String, offer: Dictionary) -> void:
 	offers[id] = offer
 	var socket: Socket = buttons[id]
 	socket.rank = int(offer.rank)
 	var stencil := Icons.for_rank(id, socket.rank)
-	socket.symbol = Icons.texture(stencil)
 	socket.stamped_symbol = Icons.texture(stencil, true)
 	socket.ranks = int(offer.max_rank)
 	socket.met = bool(offer.requirement_met)
@@ -429,10 +462,13 @@ func _draw() -> void:
 			var offer: Dictionary = offers[id]
 			var group := group_for(id)
 			var tone: Color = PIGMENTS[group]
-			tone = tone.lerp(Journal.PAPER, 0.17 if int(offer.rank) > 0 else 0.50)
 			if not _family_filter.is_empty() and group != _family_filter:
 				tone = tone.lerp(Journal.PAPER, 0.70)
-			_edge(parent, id, tone.lerp(SILHOUETTE, _ink), lerpf(1.6, 3.3, _ink))
+			tone.a = 1.0 - _ink
+			_edge(parent, id, tone, 2.7 if int(offer.rank) > 0 else 1.9)
 	for pair: Array in Paths.SEAMS:
 		if int(offers.get(pair[0], {}).get("rank", 0)) > 0 and int(offers.get(pair[1], {}).get("rank", 0)) > 0:
-			_edge(pair[0], pair[1], SILHOUETTE.lerp(Journal.PAPER, (1.0 - _ink) * 0.6), lerpf(1.2, 2.8, _ink))
+			_edge(pair[0], pair[1], Color(SEAM_INK, 1.0 - _ink), 1.8)
+	if _ink > 0.0:
+		var art := Rect2(_point(Vector2(30, 40)), Vector2(1000, 900) * _scale_factor())
+		draw_texture_rect(COLLECTION_ART, art, false, Color(1, 1, 1, _ink))

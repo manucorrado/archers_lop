@@ -176,7 +176,7 @@ func _run() -> void:
 		return
 	await _buy("weak")
 	await _buy("spark")
-	if not await _fight_until(func(): return game.run.stage >= 4 and game.run.sap >= 65):
+	if not await _fight_until(func(): return game.run.stage >= 4 and game.run.sap >= 390):
 		return
 	await _buy("rate")
 	await _buy("recurve")
@@ -302,6 +302,7 @@ func _run() -> void:
 		return
 	await _click(_button_named("Continuar al blanco 11"))
 	for stage in range(11, 16):
+		_skip_bulk_wood(stage)
 		if not await _fight_until(func(): return game.run.stage > stage or game.view == "gift"):
 			return
 	var third := game.run.gift_offer.duplicate()
@@ -313,14 +314,14 @@ func _run() -> void:
 	await _click(game.hud.confirm_gift)
 	await _click(_button_named("Continuar al blanco 16"))
 	for stage in range(16, 21):
+		_skip_bulk_wood(stage)
 		if not await _fight_until(func(): return game.run.stage > stage or game.view == "end"):
 			return
 	await _reopen()
 	if not _expect(game.view == "end" and game.run.stage == 20 and game.run.has_gift("D05")
 			and not game.run.snapshot().can_continue_act, "The last tree opens the persistent twenty-target result"):
 		return
-	print("Route timing, active seconds: target 10 entered at ", game.run.observations.broke_9,
-			", target 10 broken at ", game.run.observations.broke_10, ", target 20 broken at ", game.run.observations.broke_20)
+	print("Smoke route (bulk wood fast-forwarded from target 11). Target 10 entered at ", game.run.observations.broke_9)
 	await _click(_button_named("Volver a jugar"))
 	await _click(_button_named("Empezar de nuevo"))
 	await _frames(6)
@@ -409,6 +410,14 @@ func _refill() -> void:
 		await _until(func(): return game.run.arrows > 0, 800, "Next bundle lands within reach")
 	await _walk_to(Vector2(0.4, 3.8))
 
+
+func _skip_bulk_wood(stage: int) -> void:
+	# Exercise the original health budget through real input. Settle the extra wood
+	# through the same damage/earnings path to keep the smoke test quick.
+	var factor := 1000 if stage == 20 else 100
+	@warning_ignore("integer_division")
+	var bulk: int = game.run.max_hp() - game.run.max_hp() / factor
+	game.run.damage_part(bulk, "body")
 
 func _fight_until(done: Callable, target_id := "body") -> bool:
 	if game.clearing.is_near_dog(game.archer.position) and not await _walk_to(Vector2(0, 5)):

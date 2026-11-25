@@ -64,9 +64,33 @@ func _run() -> void:
 	movement.position = empty + Vector2(36, 23)
 	movement.global_position = movement.position
 	movement.relative = Vector2(36, 23)
+	movement.button_mask = MOUSE_BUTTON_MASK_MIDDLE
 	root.push_input(movement, true)
 	_mouse_button(movement.position, MOUSE_BUTTON_MIDDLE, false)
 	_expect(map.pan.distance_to(before + movement.relative) < 1, "Dragging pans the map")
+	# Missing mouse-up outside the window used to make plain hover pan indefinitely.
+	var released_at := map.pan
+	_mouse_button(empty, MOUSE_BUTTON_MIDDLE)
+	movement.button_mask = 0
+	movement.position = empty + Vector2(20, 0)
+	movement.global_position = movement.position
+	root.push_input(movement, true)
+	_expect(map.pan == released_at and map._drag_button == 0, "A missed release cannot turn hover into a drag")
+	var clicks := [0]
+	map.buttons.wheel.pressed.connect(func(): clicks[0] += 1)
+	var press_at: Vector2 = map.position + map.buttons.wheel.get_rect().get_center()
+	for i in 12:
+		_mouse_button(press_at, MOUSE_BUTTON_LEFT)
+		_mouse_button(press_at, MOUSE_BUTTON_LEFT, false)
+	_expect(clicks[0] == 12 and map.pan == released_at, "Repeated clicks do not move the map away from the pointer")
+	_mouse_button(press_at, MOUSE_BUTTON_LEFT)
+	movement.button_mask = MOUSE_BUTTON_MASK_LEFT
+	movement.position = press_at + Vector2(30, 10)
+	movement.global_position = movement.position
+	root.push_input(movement, true)
+	_mouse_button(movement.position, MOUSE_BUTTON_LEFT, false)
+	_expect(map.pan.distance_to(released_at + Vector2(30, 10)) < 1 and clicks[0] == 12,
+		"Dragging from a socket moves the map without buying it")
 
 	for i in segments.size():
 		var a: Array = segments[i]

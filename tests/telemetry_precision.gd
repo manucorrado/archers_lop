@@ -146,8 +146,8 @@ func _tenth_entry() -> void:
 	var run := Run.new()
 	run.stage = 9
 	run.hp = 0
-	run.sap = 100
-	for id: String in ["damage", "damage", "workshop", "refund"]:
+	run.sap = 500
+	for id: String in ["damage", "damage", "workshop", "refund", "wheel", Run.Paths.SEED_NODE]:
 		_check(run.buy(id), "Buy real ranks for tenth target")
 	run.first_gift = "D01"
 	var ranks := run.ranks.duplicate()
@@ -163,16 +163,19 @@ func _tenth_entry() -> void:
 	for lang: String in ["es", "en"]:
 		var page := VBoxContainer.new()
 		root.add_child(page)
-		Log.build(page, state, lang, {"damage": ["Daño", "Damage"]}, {"D01": ["Liebre", "Hare"]})
+		Log.build(page, state, lang, preload("res://scripts/interface.gd").UPGRADES, {"D01": ["Liebre", "Hare"]})
 		var tabs := page.get_child(1) as TabContainer
 		_check(tabs.get_tab_count() == 3, "All report pages are navigable in " + lang)
 		tabs.current_tab = 2
-		var expected := ("Al aparecer el árbol     4 niveles comprados     ·     %d de savia" if lang == "es" else
-			"When the tree appeared     4 upgrade levels owned     ·     %d sap on hand") % balance
+		var expected := ("Al aparecer el árbol     6 niveles comprados     ·     %d de savia" if lang == "es" else
+			"When the tree appeared     6 upgrade levels owned     ·     %d sap on hand") % balance
 		var has_balance := false
+		var has_seeds := false
 		for label: Label in tabs.get_current_tab_control().find_children("*", "Label", true, false):
 			has_balance = has_balance or label.text == expected
+			has_seeds = has_seeds or label.text == ("Semillas aladas" if lang == "es" else "Winged seeds")
 		_check(has_balance, "Report renders the saved entrance balance in " + lang)
+		_check(has_seeds, "Report uses the atlas name for the unique seed upgrade in " + lang)
 		page.free()
 	var legacy := run.save_state()
 	legacy.erase("tenth_entry")
@@ -184,6 +187,34 @@ func _gameplay() -> void:
 	await scene_changed
 	var game := current_scene as Game
 	game._start_campaign()
+	_check(not game.hud.options.pause_on_focus_loss, "A profile without the option keeps the world running in the background")
+	var before := game.run.elapsed
+	game.wants_shot = true
+	game._focus_lost()
+	game._physics_process(0.25)
+	_check(game.view == "play" and game.run.elapsed > before and game.run._session_focused and not game.wants_shot
+			and not game.archer._accepts_controls, "Background play advances the world and clocks while releasing controls")
+	game._focus_returned()
+	_check(game.archer._accepts_controls, "Returning to the play window restores controls")
+	game._set_view("pause")
+	game.hud._open_submenu("settings")
+	var option := game.hud.overlay.find_child("PauseOnFocusLoss", true, false) as CheckButton
+	_check(option != null, "The background preference is available in settings")
+	if option:
+		option.button_pressed = true
+		var restored_preferences := preload("res://scripts/play_preferences.gd").new()
+		restored_preferences.load_settings()
+		_check(restored_preferences.options.pause_on_focus_loss, "Enabling automatic pause persists")
+	game.hud._open_submenu("")
+	game._resume_play()
+	game._focus_lost()
+	before = game.run.elapsed
+	game._physics_process(0.25)
+	_check(game.view == "pause" and game.run.elapsed == before and not game.run._session_focused,
+			"Optional automatic pause freezes the world and both clocks in the background")
+	game._focus_returned()
+	_check(game.view == "pause" and not game.archer._accepts_controls, "Returning to a paused game keeps its menu open")
+	game._resume_play()
 	game.run.stage = 6
 	game.run.hp = game.run.max_hp()
 	game.run.arrows = 8

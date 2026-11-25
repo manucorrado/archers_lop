@@ -27,6 +27,7 @@ var wants_shot := false
 var wants_branch := false
 var in_flight: Array = []
 var campaign_started := false
+var _window_focused := true
 var has_save := false
 var hud_wait := 0.0
 var checkpoint_due := false
@@ -109,7 +110,9 @@ func _set_view(next: String) -> void:
 	wants_shot = false
 	wants_branch = false
 	get_tree().paused = view != "play"
-	archer.set_active(view == "play", view != "dialogue")
+	archer.set_active(view == "play", view != "dialogue", _window_focused)
+	if campaign_started:
+		run.set_session_focus(_window_focused or view == "play", Time.get_ticks_usec())
 	_sync()
 	hud.set_view(view)
 	if view == "dialogue":
@@ -122,19 +125,26 @@ func _set_view(next: String) -> void:
 
 
 func _focus_lost() -> void:
-	if campaign_started:
-		run.set_session_focus(false, Time.get_ticks_usec())
-	if view == "play":
+	_window_focused = false
+	wants_shot = false
+	wants_branch = false
+	if view == "play" and hud.options.pause_on_focus_loss:
 		_set_view("pause")
+	else:
+		archer.set_active(view == "play", view != "dialogue", false)
+		if campaign_started:
+			run.set_session_focus(view == "play", Time.get_ticks_usec())
 
 
 func _focus_returned() -> void:
+	_window_focused = true
+	archer.set_active(view == "play", view != "dialogue")
 	if campaign_started:
 		run.set_session_focus(true, Time.get_ticks_usec())
 
 
 func _input(event: InputEvent) -> void:
-	if event.is_echo() or not hud.is_node_ready() or hud.is_submenu_open():
+	if not _window_focused or event.is_echo() or not hud.is_node_ready() or hud.is_submenu_open():
 		return
 	if view == "play" and event.is_action_pressed("shop") and clearing.sentinel.is_within_reach(archer.position):
 		get_viewport().set_input_as_handled()
@@ -222,7 +232,10 @@ func _physics_process(delta: float) -> void:
 	var old_target := run.target_serial
 	var old_rain := run.event_serial
 	var old_stock := run.workshop_stock
+	var had_seeds := not run.seeds.is_empty()
 	run.tick(delta)
+	if had_seeds or not run.seeds.is_empty():
+		clearing.update_falling_seeds(run.seeds)
 	shot_wait = maxf(0.0, shot_wait - delta)
 	branch_wait = maxf(0.0, branch_wait - delta)
 	recovery_wait = maxf(0.0, recovery_wait - delta)
@@ -328,11 +341,12 @@ func _land_arrow_rain(hits: Array[Dictionary]) -> void:
 	var damage := 0
 	for hit in hits:
 		# Wood damage only. Collecting a bullseye and unlocking a hollow require the player's arrow.
-		damage += run.damage_part(hit.damage, hit.id, false, "bow")
+		var dealt := run.damage_part(hit.damage, hit.id, false, "bow")
+		damage += dealt
+		hud.show_damage(dealt, hit.end, "rain")
 		if run.hp == 0:
 			break
 	if damage > 0:
-		hud.show_damage(damage)
 		hud.show_sap_earned(run.sap - balance)
 		if run.hp == 0 or milestone != _boss_milestone():
 			_after_damage(milestone, false)
@@ -345,7 +359,7 @@ func _land_shot(flight: Dictionary) -> void:
 		var effective := run.damage_part(flight.damage, flight.id, false, "sentinel")
 		if effective > 0:
 			hud.show_sap_earned(run.sap - balance)
-			hud.show_damage(effective, "sentinel")
+			hud.show_damage(effective, flight.end, "sentinel")
 			clearing.hit_feedback(flight.end)
 			_after_damage(milestone, false)
 		return
@@ -358,11 +372,11 @@ func _land_shot(flight: Dictionary) -> void:
 	clearing.hit_feedback(flight.end)
 	if outcome.direct > 0:
 		var source := "critical" if flight.get("critical", false) else ("weak" if outcome.weak_spot else "manual")
-		hud.show_damage(outcome.direct, source)
+		hud.show_damage(outcome.direct, flight.end, source)
 	if outcome.spark > 0:
 		clearing.play_spark(clearing.target_center(outcome.spark_target))
-		hud.show_damage(outcome.spark, "spark")
-	if outcome.arrows_returned > 0:
+		hud.show_damage(outcome.spark, clearing.target_center(outcome.spark_target), "spark")
+	if outcome.arrows_returned > 0 and run.pickup_notices < Run.PICKUP_NOTICE_LIMIT:
 		hud.notify("Diana · +%d al carcaj" % outcome.arrows_returned, "Bullseye · +%d to quiver" % outcome.arrows_returned)
 	archer.play_cue("hit" if flight.id.begins_with("seed_") else "arrow_impact")
 	_after_damage(milestone, false)
@@ -385,7 +399,7 @@ func _strike() -> void:
 	var balance := run.sap
 	var damage := run.strike_part(roundi(4 * Run.POWER[run.stage - 1]), id)
 	hud.show_sap_earned(run.sap - balance)
-	hud.show_damage(damage, "branch")
+	hud.show_damage(damage, point, "branch")
 	clearing.hit_feedback(point)
 	hud.hit_marker()
 	_after_damage(milestone)
@@ -494,7 +508,8 @@ func _collect_nearby() -> bool:
 	if total <= 0:
 		return false
 	archer.play_cue("pickup")
-	hud.notify("+%d flechas" % total, "+%d arrows" % total)
+	if run.take_pickup_notice():
+		hud.notify("+%d flechas" % total, "+%d arrows" % total)
 	return true
 
 
@@ -624,7 +639,8 @@ func _sync() -> void:
 			view == "play" and hud.options.first_steps, needs_supply)
 	var supply: Variant = null if pile.is_empty() else piles[pile] + Vector3.UP * 0.35
 	trail_marker.update_targets(view == "play", supply, state.near_dog, hud.language,
-			hud.preferences.binding_name("shop"), hud.preferences.binding_name("pet_dog") if run.rank_of("pet") > 0 else "")
+			hud.preferences.binding_name("shop"), hud.preferences.binding_name("pet_dog") if run.rank_of("pet") > 0 else "",
+			hud.options.first_steps and run.elapsed < 90.0 and not run.observations.has("buy_damage"))
 
 
 func _save_campaign() -> bool:

@@ -36,7 +36,7 @@ func test() -> void:
 	game.run.hp = 0
 	game._next_knot()
 	check(game.run.stage == 9 and game.run.rank_of("rain") == 0, "Reaching target nine keeps rain locked in a new run")
-	game.run.sap = 5000
+	game.run.sap = 20000
 	for id in ["damage", "rate", "recurve", "rate_step_01", "rate_step_02", "longbow"]:
 		check(game.run.buy(id), "Unlocking rain's parent via " + id)
 	game._set_view("shop")
@@ -107,7 +107,7 @@ func test() -> void:
 	game.run.stage = 10
 	game.run.hp = game.run.max_hp()
 	game._redraw_world()
-	var hits: Array[Dictionary] = [{"id":"core_0", "damage":game.run.hp}]
+	var hits: Array[Dictionary] = [{"id":"core_0", "damage":game.run.hp, "end":game.clearing.target_center("core_0")}]
 	game._land_arrow_rain(hits)
 	game._land_arrow_rain(hits)
 	check(game.run.core_phase == 0 and game.run.core_needs_hit() and not game.run.core_hit, "Rain cannot unlock a boss hollow")

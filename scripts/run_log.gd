@@ -34,6 +34,13 @@ static func _clock(seconds: float) -> String:
 	return "%d:%02d" % [floori(ticks / 60.0), ticks % 60]
 
 
+static func _amount(value: int, es: bool) -> String:
+	var digits := str(value)
+	for position in range(digits.length() - 3, 0, -3):
+		digits = digits.insert(position, "." if es else ",")
+	return digits
+
+
 static func _line(parent: Control, text: String, font: Font, px: int, color: Color, expand := false) -> Label:
 	var label := Label.new()
 	label.text = text
@@ -60,17 +67,25 @@ static func _table(parent: Control, columns: int) -> GridContainer:
 static func build(parent: Control, state: Dictionary, language: String, upgrades := {}, gifts := {}) -> void:
 	var es := language == "es"
 	var serif := Journal.serif()
-	var sans := SystemFont.new()
-	sans.font_names = PackedStringArray(["Source Sans 3", "Segoe UI", "Arial"])
+	var sans := Journal.sans()
 	_line(parent, "Registro de la vuelta" if es else "Run log", serif, 34, Journal.INK)
 	var tabs := TabContainer.new()
 	tabs.use_hidden_tabs_for_min_size = true
-	tabs.add_theme_stylebox_override("panel", Journal.box(Journal.PAPER, Journal.RULE, 14, 8))
-	for style in ["tab_unselected", "tab_hovered", "tab_selected"]:
-		tabs.add_theme_stylebox_override(style, Journal.box(Journal.PAPER if style == "tab_selected" else Journal.CANVAS, Journal.RULE, 14, 5))
-	for color in ["font_selected_color", "font_unselected_color", "font_hovered_color"]:
-		tabs.add_theme_color_override(color, Journal.INK)
+	var leaf := Journal.box(Color.TRANSPARENT, Journal.RULE, 2, 9)
+	leaf.set_border_width_all(0)
+	leaf.border_width_top = 1
+	tabs.add_theme_stylebox_override("panel", leaf)
+	tabs.add_theme_stylebox_override("tab_unselected", Journal.index_tab(false, false))
+	tabs.add_theme_stylebox_override("tab_hovered", Journal.index_tab(false, true))
+	tabs.add_theme_stylebox_override("tab_selected", Journal.index_tab(true, false))
+	var focus := Journal.box(Color.TRANSPARENT, Journal.GILT, 0, 0, 2)
+	focus.set_border_width_all(2)
+	tabs.add_theme_stylebox_override("tab_focus", focus)
+	tabs.add_theme_color_override("font_selected_color", Journal.PAPER)
+	tabs.add_theme_color_override("font_unselected_color", Journal.ACCENT)
+	tabs.add_theme_color_override("font_hovered_color", Journal.INK)
 	tabs.add_theme_font_override("font", sans)
+	tabs.add_theme_font_size_override("font_size", 17)
 	parent.add_child(tabs)
 	var pages: Array[VBoxContainer] = []
 	for title in (["Tiempos", "Daño", "Compras al blanco 10"] if es else ["Times", "Damage", "Upgrades at target 10"]):
@@ -91,11 +106,12 @@ static func _times(parent: Control, state: Dictionary, es: bool, sans: Font, ser
 	var active := _clock(marks.get("broke_20", -1.0))
 	_line(parent, ("Hasta romper el blanco 20     Total  %s     ·     En juego  %s" if es else
 			"Through target 20     Total  %s     ·     Active play  %s") % [total, active], sans, 18, Journal.INK)
-	_line(parent, "El total incluye menús, charlas y pausas con el juego en primer plano." if es else
-		"The total includes menus, conversations and pauses while the game is in focus.", sans, 16, Journal.MUTED)
+	_line(parent, "El total suma el juego activo y los menús, charlas y pausas en primer plano." if es else
+		"The total includes active play plus menus, conversations and pauses while the window is in focus.", sans, 16, Journal.MUTED)
 	var times := splits(marks)
 	var records := Save.best_times()
 	var scroll := ScrollContainer.new()
+	Journal.scrollbar(scroll)
 	scroll.custom_minimum_size.y = 312
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	parent.add_child(scroll)
@@ -128,8 +144,8 @@ static func _times(parent: Control, state: Dictionary, es: bool, sans: Font, ser
 	for offer: Dictionary in state.get("offers", {}).values():
 		levels += int(offer.rank)
 		possible += int(offer.max_rank)
-	var balance := ("Niveles comprados  %d / %d     ·     Savia disponible  %d" if es else
-			"Upgrade levels owned  %d / %d     ·     Sap on hand  %d") % [levels, possible, state.get("sap", 0)]
+	var balance := ("Niveles comprados  %d / %d     ·     Savia disponible  %s" if es else
+			"Upgrade levels owned  %d / %d     ·     Sap on hand  %s") % [levels, possible, _amount(state.get("sap", 0), es)]
 	_line(parent, balance, sans, 17, Journal.INK)
 
 
@@ -153,10 +169,10 @@ static func _damage(parent: Control, state: Dictionary, es: bool, sans: Font) ->
 		if id == "other" and amount == 0:
 			continue
 		_line(table, names[id][0 if es else 1], sans, 18, Journal.INK, true)
-		_line(table, str(amount), sans, 18, Journal.INK)
+		_line(table, _amount(amount, es), sans, 18, Journal.INK)
 		var share := "%.1f %%" % (100.0 * amount / total) if total > 0 else "—"
 		_line(table, share.replace(".", ",") if es else share, sans, 18, Journal.ACCENT)
-	_line(parent, ("Daño total  %d" if es else "Total damage  %d") % total, sans, 18, Journal.INK)
+	_line(parent, ("Daño total  %s" if es else "Total damage  %s") % _amount(total, es), sans, 18, Journal.INK)
 
 
 static func _entry(parent: Control, state: Dictionary, es: bool, sans: Font, upgrades: Dictionary, gifts: Dictionary) -> void:
@@ -175,11 +191,12 @@ static func _entry(parent: Control, state: Dictionary, es: bool, sans: Font, upg
 	var bow_names := {"branch": ["Arco de rama", "Branch bow"], "recurve": ["Arco rápido", "Recurve bow"],
 		"longbow": ["Arco largo", "Longbow"]}
 	var gift: Array = gifts.get(entry.gift, ["—", "—"])
-	var header := ("Al aparecer el árbol     %d niveles comprados     ·     %d de savia" if es else
-		"When the tree appeared     %d upgrade levels owned     ·     %d sap on hand") % [levels, entry.sap]
+	var header := ("Al aparecer el árbol     %d niveles comprados     ·     %s de savia" if es else
+		"When the tree appeared     %d upgrade levels owned     ·     %s sap on hand") % [levels, _amount(entry.sap, es)]
 	_line(parent, header, sans, 18, Journal.INK)
 	_line(parent, "%s     ·     %s" % [bow_names[entry.bow][index], gift[index]], sans, 17, Journal.MUTED)
 	var scroll := ScrollContainer.new()
+	Journal.scrollbar(scroll)
 	scroll.custom_minimum_size.y = 247
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	parent.add_child(scroll)
@@ -192,7 +209,7 @@ static func _entry(parent: Control, state: Dictionary, es: bool, sans: Font, upg
 		var family := Paths.family(id)
 		var labels: Array = upgrades.get(family, [id, id])
 		var item_name: String = labels[index]
-		if id != family and family != "sentinel":
+		if family.ends_with("_step"):
 			item_name += " " + str(int(id.get_slice("_step_", 1)))
 		_line(table, item_name, sans, 17, Journal.INK, true)
 		_line(table, str(entry.ranks[id]), sans, 17, Journal.INK)
@@ -200,4 +217,4 @@ static func _entry(parent: Control, state: Dictionary, es: bool, sans: Font, upg
 		var invested := 0
 		for cost: int in prices:
 			invested += cost
-		_line(table, str(invested) if prices.size() == entry.ranks[id] else "—", sans, 17, Journal.ACCENT)
+		_line(table, _amount(invested, es) if prices.size() == entry.ranks[id] else "—", sans, 17, Journal.ACCENT)

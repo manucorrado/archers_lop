@@ -21,6 +21,7 @@ const UpgradeMap := preload("res://scripts/upgrade_map.gd")
 const AtlasDetail := preload("res://scripts/atlas_detail.gd")
 const Paths := preload("res://scripts/upgrade_paths.gd")
 const UPGRADES := {
+	"seeds": ["Semillas aladas", "Winged seeds", "Caen tres semillas a distinta velocidad. Cada acierto deja 4 flechas en el suelo. Si rompés las tres, duplicás la cosecha a 24 flechas en total. El taller también gana 0,025 flechas/s.", "Three seeds fall at different speeds. Each hit drops 4 arrows on the ground. Hit all three to double the harvest to 24 arrows total. The workshop also gains 0.025 arrows/s."],
 	"sentinel": ["Ballesta del claro", "Clearing crossbow", "Instalá una ballesta a la derecha del sendero y sumá 0,025 flechas/s al taller. Cargala de a ocho. Conservás cuatro flechas. Dispara al tronco y espera cuando tenés que acertar al punto débil.", "Build a crossbow to the right of the path and add 0.025 arrows/s to the workshop. Load up to eight arrows and keep four. It fires at the trunk and waits when you need to hit a weak spot."],
 	"damage": ["Daño por flecha", "Arrow damage", "Cada nivel suma un 20 % del daño base del arco. En el nivel 10 salen hasta tres flechas por disparo.", "Each level adds 20% of your bow’s base damage. At level 10, release up to three arrows per shot."],
 	"workshop": ["Taller de flechas", "Arrow workshop", "Construí un taller que lanza atados de tres flechas por el claro.", "Build a workshop that launches bundles of three arrows across the clearing."],
@@ -164,10 +165,8 @@ var rain_status: Label
 var lobes_text: Label
 var bow_text: Label
 var event_text: Label
-var damage_text: Label
-var damage_remaining := 0.0
-var damage_total := 0
-var last_source := ""
+const ImpactNumbers := preload("res://scripts/impact_numbers.gd")
+var impact_numbers: ImpactNumbers
 var can_continue := false
 var submenu := ""
 var settings_tab := "comfort"
@@ -247,31 +246,6 @@ func _label(parent: Control, caption: String, pixels: int, color: Color, font: F
 	parent.add_child(label)
 	return label
 
-func _button(parent: Control, caption: String, primary: bool, action: Callable) -> Button:
-	var button := Button.new()
-	button.text = caption
-	_style_button(button, primary)
-	parent.add_child(button)
-	button.pressed.connect(action)
-	return button
-
-func _style_button(button: Button, primary: bool) -> void:
-	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	button.custom_minimum_size.y = 40
-	button.add_theme_font_override("font", ui_font)
-	button.add_theme_font_size_override("font_size", 18)
-	var foreground := PAPER if primary else INK
-	for state in ["font_color", "font_hover_color", "font_focus_color", "font_pressed_color", "font_hover_pressed_color"]:
-		button.add_theme_color_override(state, foreground)
-	button.add_theme_color_override("font_disabled_color", MUTED)
-	button.add_theme_stylebox_override("normal", Journal.box(INK if primary else Journal.CANVAS, INK if primary else RULE, 16, 5))
-	button.add_theme_stylebox_override("hover", Journal.box(Color("#415c45") if primary else Color("#f8f0da"), ACCENT, 16, 5))
-	button.add_theme_stylebox_override("pressed", Journal.box(Color("#1e3527") if primary else Color("#d4c8ab"), ACCENT, 16, 5))
-	button.add_theme_stylebox_override("disabled", Journal.box(Color("#ded9c3"), RULE, 16, 5))
-	var focus := Journal.box(Color.TRANSPARENT, Color("#b1803c"), 0, 0)
-	focus.set_border_width_all(2)
-	button.add_theme_stylebox_override("focus", focus)
-
 func _entry(parent: Control, caption: String, action: Callable, kind := "link") -> Button:
 	var button := Journal.Entry.new()
 	button.text = caption
@@ -323,11 +297,9 @@ func _build_hud() -> void:
 	hud.add_child(sight)
 	_place(sight, 0.5, 0.5, -16, -16, 16, 16)
 	sight.radius_scale = options.reticle_size
-	damage_text = _label(hud, "", 20, Color("#ffe2a3"), mono_font)
-	damage_text.add_theme_constant_override("outline_size", 5)
-	damage_text.add_theme_color_override("font_outline_color", INK)
-	_place(damage_text, 0.5, 0.5, 24, -36, 240, -8)
-	damage_text.hide()
+	impact_numbers = ImpactNumbers.new()
+	impact_numbers.typeface = mono_font
+	hud.add_child(impact_numbers)
 	event_text = _label(hud, "", 16, PAPER, mono_font)
 	event_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	event_text.add_theme_constant_override("outline_size", 5)
@@ -440,12 +412,9 @@ func _build_overlay() -> void:
 	if current_view == "shop" and submenu.is_empty():
 		_build_shop(cover)
 		return
-	if submenu == "settings" or current_view == "pause":
+	if submenu == "settings" or current_view == "pause" or (current_view == "end" and submenu.is_empty()):
 		_build_book(cover)
 		return
-	var language_note := _sheet(cover, 7, 1, "right")
-	_place(language_note, 1, 0, -124, 15, -20, 51)
-	_entry(language_note, _t("English", "Español"), _switch_language)
 	if cover.side_only:
 		_build_start(cover)
 		return
@@ -453,25 +422,38 @@ func _build_overlay() -> void:
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cover.add_child(holder)
 	holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var card := _sheet(holder, 26, 18, "folio")
+	var binding := _sheet(holder, 5, 6, "binding")
+	var card := _sheet(binding, 30, 18, "folio")
 	var wide := submenu in ["test_times", "run_log"] or (submenu.is_empty() and current_view == "gift")
 	card.custom_minimum_size.x = 880 if wide else 500
 	var content := _stack(card, 10)
 	if submenu == "run_log":
 		preload("res://scripts/run_log.gd").build(content, values, language, UPGRADES, GIFTS)
-		_button(content, _t("Volver al resumen", "Back to results"), true, _open_submenu.bind("")).grab_focus()
 	elif submenu == "test_times":
 		_build_test_times(content)
 	elif submenu == "confirm_new":
 		_build_confirmation(content)
 	elif current_view == "gift":
 		_build_gifts(content)
-	elif current_view == "end":
-		_build_end(content)
+	_rule(content)
+	var foot := _row(content, 16)
+	if submenu in ["run_log", "test_times"]:
+		_entry(foot, _t("Volver al resumen", "Back to results"), _open_submenu.bind(""), "back").grab_focus()
+	elif current_view == "gift" and submenu.is_empty():
+		_entry(foot, _t("Guardar", "Save"), save_requested.emit)
+		_entry(foot, _t("Ajustes", "Settings"), _open_submenu.bind("settings"))
+		_entry(foot, _t("Guardar y salir", "Save and quit"), quit_requested.emit)
+	_language_link(foot)
 	overlay_notice = _label(content, "", 16, ACCENT)
 	overlay_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	overlay_notice.hide()
-	language_note.move_to_front()
+
+func _language_link(row: BoxContainer) -> void:
+	var spacer := Control.new()
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(spacer)
+	_entry(row, _t("English", "Español"), _switch_language)
 
 func _build_book(cover: Control) -> void:
 	var holder := CenterContainer.new()
@@ -495,6 +477,8 @@ func _build_book(cover: Control) -> void:
 	var right := _book_page(pages, false)
 	if settings:
 		_build_settings(left, right)
+	elif current_view == "end":
+		_build_end(left, right)
 	else:
 		_pause_summary(left)
 		if submenu == "confirm_new":
@@ -521,6 +505,8 @@ func _build_book(cover: Control) -> void:
 	if settings:
 		var label := _t("Volver a pausa", "Back to pause") if current_view == "pause" else _t("Volver", "Back")
 		_entry(left_foot, label, _open_submenu.bind(""), "back")
+	elif current_view == "end":
+		_entry(left_foot, _t("Salir", "Quit"), quit_requested.emit)
 	var right_foot := _row(right, 0)
 	right_foot.alignment = BoxContainer.ALIGNMENT_END
 	_entry(right_foot, _t("English", "Español"), _switch_language)
@@ -562,36 +548,44 @@ func _pause_datum(page: Control, title: String, value: String) -> void:
 	_rule(page)
 
 func _build_start(parent: Control) -> void:
-	var leaf := _sheet(parent, 36, 29, "folio")
-	_place(leaf, 0.055, 0.5, 0, -193, 562, 193)
-	var content := _stack(leaf, 14)
+	var cover := _sheet(parent, 5, 6, "binding")
+	_place(cover, 0.055, 0.5, 0, -245, 562, 245)
+	var leaf := _sheet(cover, 32, 22, "folio")
+	var content := _stack(leaf, 9)
 	_label(content, _t("CUADERNO DE CAMPO", "FIELD JOURNAL"), 15, MUTED)
 	_rule(content)
 	var title := _label(content, _t("El arquero\ndel claro", "Archer of\nthe Clearing"), 58, INK, title_font)
 	title.add_theme_constant_override("line_spacing", -9)
 	var description := _label(content, _t(
-		"Rompé diez blancos de madera. Elegí cómo mejorar tu arco y buscá los puntos débiles de los dos jefes.",
-		"Break ten wooden targets. Upgrade your bow and find the weak points on both bosses."
+		"Rompé veinte blancos de madera. Elegí cómo mejorar tu arco y buscá los puntos débiles de los dos jefes.",
+		"Break twenty wooden targets. Upgrade your bow and find the weak points on both bosses."
 	), 20, MUTED)
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var actions := _row(content, 9)
+	var actions := _stack(content, 2)
 	if can_continue:
-		start_continue = _button(actions, _t("Continuar", "Continue"), true, continue_requested.emit)
-		start_new = _button(actions, _t("Nueva partida", "New game"), false, _open_submenu.bind("confirm_new"))
+		start_continue = _entry(actions, _t("Continuar", "Continue"), continue_requested.emit, "lead")
+		start_new = _entry(actions, _t("Nueva partida", "New game"), _open_submenu.bind("confirm_new"), "action")
 		start_continue.grab_focus()
 	else:
-		start_new = _button(actions, _t("Entrar al claro", "Enter the clearing"), true, start_requested.emit)
+		start_new = _entry(actions, _t("Entrar al claro", "Enter the clearing"), start_requested.emit, "lead")
 		start_new.grab_focus()
-	_button(actions, _t("Ajustes", "Settings"), false, _open_submenu.bind("settings"))
-	_button(actions, _t("Salir", "Quit"), false, quit_requested.emit)
+	_entry(actions, _t("Ajustes", "Settings"), _open_submenu.bind("settings"), "action")
+	var space := Control.new()
+	space.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	space.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content.add_child(space)
+	_rule(content)
+	var foot := _row(content, 16)
+	_entry(foot, _t("Salir", "Quit"), quit_requested.emit)
+	_language_link(foot)
 	overlay_notice = _label(content, "", 16, ACCENT)
 	overlay_notice.hide()
 
 func _build_confirmation(content: Control) -> void:
 	_label(content, _t("¿Empezar de nuevo?", "Start a new game?"), 33, INK, title_font)
 	var explanation := _label(content, _t(
-		"Se reemplazará la partida del claro, incluidas tus compras y la recompensa que elegiste. Tus ajustes se conservan.",
-		"This will replace your clearing, upgrades and gift. Your settings will carry over."
+		"Empezar de nuevo reemplaza esta partida, incluidas las compras y las cartas que elegiste. Conservás tus récords y ajustes.",
+		"Starting over replaces this run, including your upgrades and chosen cards. You keep your records and settings."
 	), 18, MUTED)
 	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_entry(content, _t("Conservar partida", "Keep this run"), _open_submenu.bind(""), "lead").grab_focus()
@@ -599,6 +593,7 @@ func _build_confirmation(content: Control) -> void:
 
 func _scroll_column(parent: Control, height: int) -> VBoxContainer:
 	var scroll := ScrollContainer.new()
+	Journal.scrollbar(scroll)
 	scroll.custom_minimum_size.y = height
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true
@@ -699,38 +694,54 @@ func _build_gifts(content: Control) -> void:
 		if not GIFTS.has(id):
 			continue
 		var data: Array = GIFTS[id]
-		var card := _sheet(cards, 14, 14, "note")
-		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		card.custom_minimum_size = Vector2(245, 172)
-		var col := _stack(card, 10)
+		var card := Journal.RewardCard.new()
+		cards.add_child(card)
+		var col := _stack(card, 8)
+		col.mouse_behavior_recursive = Control.MOUSE_BEHAVIOR_DISABLED
+		col.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		col.offset_left = 16
+		col.offset_right = -16
+		col.offset_top = 18
+		col.offset_bottom = -14
+		var head := _row(col, 8)
 		var stamp := TextureRect.new()
 		stamp.texture = UpgradeMap.Icons.texture({"D01":"rate", "D03":"wheel", "D04":"damage", "D05":"weak", "D08":"capacity", "D09":"pickup", "D10":"pace", "D12":"capacity", "D14":"combo"}[id])
 		stamp.custom_minimum_size = Vector2(32, 32)
 		stamp.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		stamp.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		stamp.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-		col.add_child(stamp)
+		head.add_child(stamp)
+		var mark := card.selection_mark
+		mark.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		mark.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		mark.add_theme_font_override("font", ui_font)
+		mark.add_theme_font_size_override("font_size", 15)
+		mark.add_theme_color_override("font_color", ACCENT)
+		head.add_child(mark)
 		_rule(col)
-		_label(col, _t(data[0], data[1]), 23, INK, title_font)
+		var card_name := _label(col, _t(data[0], data[1]), 25, INK, title_font)
+		card_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		var effect := _label(col, _t(data[2], data[3]), 17, MUTED)
 		effect.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		effect.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		var pick := _button(col, "", false, _select_gift.bind(id))
-		pick.accessibility_name = _t(data[0], data[1]) + ". " + effect.text
-		gift_buttons[id] = pick
-	confirm_gift = _button(content, _t("Confirmar mejora", "Confirm reward"), true, _commit_gift)
+		card.pressed.connect(_select_gift.bind(id))
+		card.accessibility_name = card_name.text + ". " + effect.text
+		gift_buttons[id] = card
+	confirm_gift = _entry(content, "", _commit_gift, "lead")
 	_select_gift(selected_gift)
-	var actions := _row(content, 9)
-	_button(actions, _t("Guardar", "Save"), false, save_requested.emit)
-	_button(actions, _t("Ajustes", "Settings"), false, _open_submenu.bind("settings"))
-	_button(actions, _t("Guardar y salir", "Save and quit"), false, quit_requested.emit)
 	if not gift_buttons.is_empty():
-		gift_buttons.values()[0].grab_focus()
+		gift_buttons.get(selected_gift, gift_buttons.values()[0]).grab_focus()
 
 func _select_gift(id: String) -> void:
 	selected_gift = id if gift_buttons.has(id) else ""
-	for key in gift_buttons:
-		gift_buttons[key].text = _t("Seleccionado", "Selected") if key == selected_gift else _t("Seleccionar", "Select")
+	for key: String in gift_buttons:
+		var card: Journal.RewardCard = gift_buttons[key]
+		card.set_pressed_no_signal(key == selected_gift)
+		card.selection_mark.text = _t("✓  Elegida", "✓  Selected") if key == selected_gift else ""
+	confirm_gift.text = _t("Confirmar mejora", "Confirm reward")
+	if not selected_gift.is_empty():
+		confirm_gift.text += "  ·  " + _t(GIFTS[id][0], GIFTS[id][1])
 	confirm_gift.disabled = selected_gift.is_empty()
 
 func _commit_gift() -> void:
@@ -747,32 +758,33 @@ func _act_name(stage: int) -> String:
 func _stage_label(stage: int) -> String:
 	return _t("Blanco %d de %d", "Target %d of %d") % [stage, values.get("stage_count", 20)]
 
-func _build_end(content: Control) -> void:
+func _build_end(summary: Control, actions: Control) -> void:
 	var stage := int(values.get("stage", 5))
 	var can_continue := bool(values.get("can_continue_act", false))
 	var title := _t("%s completado", "%s complete") % _act_name(stage) if can_continue else _t("El claro es tuyo", "The clearing is yours")
-	_label(content, title, 38, INK, title_font)
-	_label(content, _t("%d blancos rotos", "%d targets broken") % stage, 18, MUTED)
-	end_stats = _label(content, "", 16, INK)
+	_label(summary, title, 38, INK, title_font)
+	_label(summary, _t("%d blancos rotos", "%d targets broken") % stage, 20, MUTED)
+	_rule(summary)
+	end_stats = _label(summary, "", 18, INK)
 	end_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	end_stats.add_theme_constant_override("line_spacing", 5)
-	_button(content, _t("Registro de la vuelta", "Run log"), false, _open_submenu.bind("run_log"))
-	_button(content, _t("Ver tiempos de la prueba", "View playtest times"), false, _open_submenu.bind("test_times"))
-	var replay := _button(content, _t("Volver a jugar", "Play again"), not can_continue, _open_submenu.bind("confirm_new"))
+	_label(actions, _t("Tu vuelta", "Your run"), 34, INK, title_font)
 	if can_continue:
-		var proceed := _button(content, _t("Continuar al blanco %d", "Continue to target %d") % (stage + 1), true, next_act_requested.emit)
-		content.move_child(proceed, 3)
+		var proceed := _entry(actions, _t("Continuar al blanco %d", "Continue to target %d") % (stage + 1), next_act_requested.emit, "lead")
 		proceed.grab_focus()
 	else:
-		replay.grab_focus()
-	_button(content, _t("Ajustes", "Settings"), false, _open_submenu.bind("settings"))
-	_button(content, _t("Salir", "Quit"), false, quit_requested.emit)
+		_entry(actions, _t("Volver a jugar", "Play again"), _open_submenu.bind("confirm_new"), "lead").grab_focus()
+	_entry(actions, _t("Registro de la vuelta", "Run log"), _open_submenu.bind("run_log"), "action")
+	_entry(actions, _t("Ver tiempos de la prueba", "View playtest times"), _open_submenu.bind("test_times"), "action")
+	if can_continue:
+		_entry(actions, _t("Volver a jugar", "Play again"), _open_submenu.bind("confirm_new"), "action")
+	_entry(actions, _t("Ajustes", "Settings"), _open_submenu.bind("settings"), "action")
 
 func _build_test_times(content: Control) -> void:
 	_label(content, _t("Tiempos de la prueba", "Playtest times"), 33, INK, title_font)
 	var explanation := _label(content, _t(
-		"El tiempo observado incluye los menús y las pausas desde que entrás al claro. Ambos relojes se detienen si cambiás de ventana, minimizás o cerrás el juego.",
-		"Observed time includes menus and pauses after you enter the clearing. Both clocks stop when you switch windows, minimize or close the game."
+		"Juego activo cuenta el tiempo que avanza el claro, incluso en segundo plano. Tiempo observado incluye además menús y pausas en primer plano.",
+		"Active play counts time while the clearing runs, including in the background. Observed time also includes menus and pauses while the window is in focus."
 	), 17, MUTED)
 	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var table := GridContainer.new()
@@ -797,7 +809,6 @@ func _build_test_times(content: Control) -> void:
 		_label(table, milestones[id], 17, INK)
 		_label(table, _mark_time(session_marks, id), 16, ACCENT)
 		_label(table, _mark_time(active_marks, id), 16, INK)
-	_button(content, _t("Volver al resumen", "Back to results"), true, _open_submenu.bind("")).grab_focus()
 
 func _mark_time(marks: Dictionary, id: String) -> String:
 	if marks.has(id):
@@ -859,7 +870,7 @@ func _update_values() -> void:
 			button.disabled = equipped
 			button.text = _bow_name(id) + ("  ✓" if equipped else "")
 	elif current_view == "end" and is_instance_valid(end_stats):
-		var elapsed := int(values.get("elapsed", 0))
+		var elapsed := roundi(values.get("observations", {}).get("broke_%d" % int(values.stage), values.get("elapsed", 0.0)))
 		var gift: Array = GIFTS.get(str(values.get("chosen_gift", "")), ["—", "—", "", ""])
 		end_stats.text = _t("Tiempo activo     %d:%02d\nAciertos     %d / %d\nFlechas recogidas del taller     %d",
 			"Active time     %d:%02d\nHits     %d / %d\nArrows collected from the workshop     %d") % [
@@ -926,9 +937,17 @@ func _update_hud() -> void:
 		rain_status.text = _t("Lluvia · sin munición", "Arrow rain · out of arrows")
 	else:
 		rain_status.text = _t("Lluvia de flechas · lista", "Arrow rain · ready")
-	event_text.visible = str(values.get("event", "")) == "seed_rain"
-	if event_text.visible:
-		event_text.text = _t("Lluvia de semillas · %d s", "Seed rain · %d s") % ceili(values.get("event_remaining", 0.0))
+	var wave_active: bool = values.get("event", "") == "seed_rain"
+	var harvest: int = values.get("seed_bonus", 0)
+	event_text.visible = wave_active or harvest > 0
+	if wave_active:
+		var hit_seeds: int = values.seed_hits
+		var wave_label := _t("Semillas %d/%d · %d s", "Seeds %d/%d · %d s") % [hit_seeds, values.seed_count, ceili(values.event_remaining)]
+		if hit_seeds + values.seeds.size() == int(values.seed_count):
+			wave_label += _t(" · Cosecha ×%d", " · Harvest ×%d") % values.seed_multiplier
+		event_text.text = wave_label
+	elif harvest > 0:
+		event_text.text = _t("Cosecha ×%d · %d flechas", "Harvest ×%d · %d arrows") % [values.seed_multiplier, harvest]
 	var guide := _guide()
 	guide_panel.visible = not guide.is_empty()
 	guide_text.text = guide
@@ -1003,6 +1022,7 @@ func _effect_values(id: String, offer: Dictionary) -> String:
 			name_tag = _t("Producción", "Production")
 			suffix = _t(" flechas/s", " arrows/s")
 		"sentinel": name_tag = _t("Capacidad del depósito", "Crossbow capacity")
+		"seeds": name_tag = _t("Flechas por semilla", "Arrows per seed")
 		"rain": name_tag = _t("Flechas extra por flecha", "Extra arrows per arrow")
 		"capacity": name_tag = _t("Capacidad", "Capacity")
 		"weak":
@@ -1087,6 +1107,7 @@ func _build_settings(left: Control, right: Control) -> void:
 		_slider(column, "shake", _t("Balanceo y vibración", "Sway and shake"), 0, 1, 0.05, "%")
 		_slider(column, "flashes", _t("Intensidad de los destellos", "Flash intensity"), 0, 1, 0.05, "%")
 		_toggle(facing, "first_steps", _t("Guía de los primeros pasos", "First steps guide"))
+		_toggle(facing, "pause_on_focus_loss", _t("Pausar al cambiar de ventana", "Pause when switching windows"))
 		_slider(facing, "reticle_size", _t("Tamaño de la mira", "Crosshair size"), 0.5, 2, 0.1, "%")
 		_slider(facing, "damage_opacity", _t("Visibilidad de los números de daño", "Damage number opacity"), 0, 1, 0.05, "%")
 		_toggle(facing, "group_damage", _t("Agrupar el daño de impactos seguidos", "Group damage from successive hits"))
@@ -1225,8 +1246,8 @@ func _toggle(parent: Control, id: String, caption: String) -> void:
 func _change_options() -> void:
 	sight.radius_scale = float(options.reticle_size)
 	sight.queue_redraw()
-	if float(options.damage_opacity) <= 0.0:
-		damage_text.hide()
+	impact_numbers.opacity = float(options.damage_opacity)
+	impact_numbers.queue_redraw()
 	settings_changed.emit(options)
 	_save_options()
 
@@ -1318,23 +1339,10 @@ func show_sap_earned(amount: int) -> void:
 	sap_gain.text = "+%d" % grouped_sap
 	sap_gain.show()
 
-func show_damage(amount: int, source: String = "manual") -> void:
-	if amount <= 0 or float(options.damage_opacity) <= 0:
-		return
-	if not bool(options.group_damage) or damage_remaining <= 0 or source != last_source:
-		damage_total = 0
-	damage_total += amount
-	last_source = source
-	damage_remaining = 0.58
-	var kind := ""
-	match source:
-		"sentinel": kind = _t("Ballesta ", "Crossbow ")
-		"spark": kind = _t("Chispa ", "Spark ")
-		"critical": kind = _t("Crítico ", "Critical ")
-		"weak": kind = _t("Punto débil ", "Weak spot ")
-	damage_text.text = kind + "−" + str(damage_total)
-	damage_text.modulate.a = options.damage_opacity
-	damage_text.show()
+func show_damage(amount: int, point: Vector3, source := "manual") -> void:
+	impact_numbers.language = language
+	impact_numbers.opacity = float(options.damage_opacity)
+	impact_numbers.add_hit(point, amount, source, bool(options.group_damage))
 
 func _process(delta: float) -> void:
 	if current_view != "play" or not is_instance_valid(sight):
@@ -1351,7 +1359,3 @@ func _process(delta: float) -> void:
 		hit_remaining = maxf(0.0, hit_remaining - delta)
 		sight.flash = (hit_remaining / 0.16) * float(options.flashes)
 		sight.queue_redraw()
-	if damage_remaining > 0:
-		damage_remaining = maxf(0.0, damage_remaining - delta)
-		damage_text.modulate.a = minf(1.0, damage_remaining * 6.0) * float(options.damage_opacity)
-		damage_text.visible = damage_remaining > 0 and float(options.damage_opacity) > 0

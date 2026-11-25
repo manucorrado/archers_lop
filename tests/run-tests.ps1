@@ -16,7 +16,7 @@ try {
     if ($LASTEXITCODE -ne 0 -or (Select-String -LiteralPath $importLog -Pattern 'SCRIPT ERROR:|ERROR:' -Quiet)) {
         throw 'Falló la importación de los recursos del juego.'
     }
-    foreach ($suite in 'save_recovery', 'act_rules', 'upgrade_map', 'first_steps_and_records', 'sentinel', 'narrative', 'timber_geometry', 'ground_contact', 'telemetry_precision', 'audio_options', 'final_rain', 'prototype_smoke') {
+    foreach ($suite in 'save_recovery', 'act_rules', 'upgrade_map', 'first_steps_and_records', 'field_feedback', 'sentinel', 'narrative', 'timber_geometry', 'ground_contact', 'telemetry_precision', 'audio_options', 'final_rain', 'prototype_smoke') {
         $env:APPDATA = Join-Path $qaRoot $suite
         New-Item -ItemType Directory -Path $env:APPDATA | Out-Null
         $log = Join-Path $qaRoot ($suite + '.log')

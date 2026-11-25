@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 860" width="960" height="860" role="img" aria-labelledby="titulo desc">
+  <title id="titulo">Atlas completo · Estudio B</title>
+  <desc id="desc">Un arco de madera, una flecha en primer plano y un carcaj desplazado a la derecha. Tres flechas con emplumados independientes asoman de la boca del carcaj.</desc>
+  <defs>
+    <style>
+      .perfil {stroke:#302b25;stroke-width:4.2;stroke-linejoin:round;stroke-linecap:round}
+      .detalle {fill:none;stroke:#665441;stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
+    </style>
+    <path id="madera" d="M0-480 Q-10-464-33-445 L-70-416 Q-103-389-121-354 L-142-309 Q-162-264-174-201 L-194-125 Q-203-91-202-58 L-197-32 Q-192-14-192 0 Q-192 14-197 32 L-202 58 Q-203 91-194 125 L-174 201 Q-162 264-142 309 L-121 354 Q-103 389-70 416 L-33 445 Q-10 464 0 480 Q-4 457-23 435 L-57 402 Q-88 370-103 338 L-122 292 Q-139 245-149 195 L-165 121 Q-174 83-173 60 L-169 32 Q-165 13-165 0 Q-165-13-169-32 L-173-60 Q-174-83-165-121 L-149-195 Q-139-245-122-292 L-103-338 Q-88-370-57-402 L-23-435 Q-4-457 0-480Z"/>
+    <clipPath id="solo-madera"><use href="#madera"/></clipPath>
+    <g id="pluma-corta">
+      <path class="perfil" stroke-width="3.4" fill="#e4d5b7" d="M-2-8 L-18 2 L-18 29 L-13 27 L-13 40 L-2 53 Z M2-8 L16 2 L16 20 L13 18 L13 36 L2 51Z"/>
+      <path class="perfil" fill="#f7efdc" d="M-2 53 V-16 L0-13 L2-16 V53"/>
+    </g>
+  </defs>
+  <rect width="960" height="860" fill="#f8f1df"/>
+  <g id="arco" transform="translate(439 429) rotate(45)">
+    <path id="cuerda" d="M0-480V480" fill="none" stroke="#40382d" stroke-width="3.1"/>
+    <use href="#madera" class="perfil" fill="#e6d7b9"/>
+    <g clip-path="url(#solo-madera)">
+      <path class="detalle" d="M-150-247 Q-170-159-186-95 M-158-223 L-171-167 M-188 94 Q-179 153-158 227 M-121 335 Q-97 381-61 410 M-96-382 Q-77-407-50-425"/>
+      <path d="M-210-40 Q-182-46-158-40 V40 Q-186 44-208 39Z" class="perfil" fill="#73583f"/>
+      <path d="M-205-28 L-158-37 M-205-15 L-158-24 M-205-2 L-158-11 M-205 11 L-158 2 M-205 24 L-158 15 M-205 37 L-158 28" fill="none" stroke="#f2e4c7" stroke-width="2.4"/>
+    </g>
+  </g>
+  <g id="carcaj" transform="translate(772 375) rotate(43)">
+    <path class="perfil" fill="#5b4b3a" d="M-55 0 C-52-18 51-18 55 0 C52 18-52 18-55 0Z"/>
+    <g id="flechas-guardadas">
+      <g transform="translate(-27 -1) rotate(-8)">
+        <path class="perfil" fill="#e9dabe" d="M-2-119H2V14H-2Z"/>
+        <use href="#pluma-corta" transform="translate(0 -152)"/>
+      </g>
+      <g transform="translate(4 -2) rotate(2)">
+        <path class="perfil" fill="#e9dabe" d="M-2-156H2V15H-2Z"/>
+        <use href="#pluma-corta" transform="translate(0 -195)"/>
+      </g>
+      <g transform="translate(30 0) rotate(12)">
+        <path class="perfil" fill="#e9dabe" d="M-2-94H2V14H-2Z"/>
+        <use href="#pluma-corta" transform="translate(0 -127)"/>
+      </g>
+    </g>
+    <path id="cuero" class="perfil" fill="#e7d8bd" d="M-55 0 C-40 16 40 16 55 0 L39 188 Q36 207 17 218 Q2 227-15 221 Q-35 215-39 195Z"/>
+    <path id="ribete" class="perfil" fill="#c7ae89" d="M-55 0 C-40 16 40 16 55 0 L54 14 C42 28-41 28-54 14Z"/>
+    <path id="culote" class="perfil" fill="#d1bc98" d="M-40 189 Q-2 206 39 188 Q36 207 17 218 Q2 227-15 221 Q-35 215-39 195Z"/>
+    <path class="detalle" d="M-39 28 L-29 178 M37 29 L31 98"/>
+    <path d="M-33 36 L-24 173" fill="none" stroke="#816c51" stroke-width="1.8" stroke-dasharray="4 7" stroke-linecap="round"/>
+  </g>
+  <g id="flecha-principal" transform="translate(439 429) rotate(45)">
+    <path id="astil" class="perfil" fill="#f6ecd6" d="M-384-4.5 H469 L464 0 L469 4.5 H-384Z"/>
+    <path id="punta" class="perfil" fill="#cbbc9f" d="M-481 0 L-399-24 L-407-12 L-377-5 V5 L-407 12 L-399 24Z"/>
+    <path class="detalle" d="M-474 0 L-403-3 M-391-7 V7 M-385-5 V5"/>
+    <g id="emplumado-principal">
+      <path class="perfil" fill="#dfccaa" d="M325-4.5 L357-19 L386-24 L381-20 L427-27 L448-15 V-4.5Z M325 4.5 L357 19 L388 24 L384 20 L426 27 L448 15 V4.5Z"/>
+      <path class="detalle" d="M368-6 L388-19 M397-7 L421-21 M367 6 L388 19 M397 7 L421 21"/>
+    </g>
+  </g>
+</svg>

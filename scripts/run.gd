@@ -1,9 +1,10 @@
 extends RefCounted
 ## Reglas y estado de los cuatro actos del claro.
 
-## round(1.52^(n−1) × reference DPS × reference seconds), from mejoras-y-economia.md.
+## Baseline reference curve with the late-game health multipliers applied.
 const HEALTH := [160, 821, 2079, 5057, 19430, 20446, 41932, 74796, 144178, 357311,
-	343971, 682439, 1241118, 2224036, 5675221, 5405481, 10656062, 19868582, 35171092, 83825374]
+	34397100, 68243900, 124111800, 222403600, 567522100, 540548100, 1065606200, 1986858200, 3517109200, 83825374000]
+const PICKUP_NOTICE_LIMIT := 5
 const DAMAGE_PER_SAP := 8
 static var POWER := _stage_powers()
 const SHOT_INTERVAL := 1.0
@@ -12,6 +13,9 @@ const WORKSHOP_RATE := 1.25
 const WORKSHOP_BATCH := 3
 const WORKSHOP_FLIGHT := 0.8
 const LANDING_COUNT := 4
+const SEED_LIFETIMES := [8.0, 9.0, 10.0]
+const ARROWS_PER_SEED := 4
+const ALL_SEEDS_MULTIPLIER := 2
 const SENTINEL_CAPACITY := 12
 const SENTINEL_INTERVAL := 2.0
 const SENTINEL_RESERVE := 4
@@ -70,6 +74,7 @@ var elapsed := 0.0
 var shots := 0
 var hits := 0
 var collected := 0
+var pickup_notices := 0
 var fired_after_collect := false
 var split := false
 var left_hp := 0
@@ -90,6 +95,8 @@ var event_clock := 8.0
 var event_remaining := 0.0
 var event_serial := 0
 var seeds: Array = []
+var seed_hits := 0
+var last_seed_bonus := -10.0
 var seed_drops: Dictionary = {}
 var gift_offer: Array = []
 var chosen_gift := ""
@@ -142,6 +149,13 @@ func mark(event: String) -> void:
 
 func rank_of(id: String) -> int:
 	return int(ranks.get(id, 0))
+
+
+func take_pickup_notice() -> bool:
+	if pickup_notices >= PICKUP_NOTICE_LIMIT:
+		return false
+	pickup_notices += 1
+	return true
 
 
 func at_act_summary() -> bool:
@@ -219,7 +233,7 @@ func pickup_radius() -> float:
 
 
 func production_rate() -> float:
-	var gears := _family_ranks("wheel_step") + rank_of(Paths.SENTINEL_NODE)
+	var gears := _family_ranks("wheel_step") + rank_of(Paths.SENTINEL_NODE) + rank_of(Paths.SEED_NODE)
 	var base := WORKSHOP_RATE * (1.0 + 0.2 * rank_of("wheel")) + 0.025 * gears
 	return base * (1.3 if has_gift("D03") else 1.0)
 
@@ -249,6 +263,7 @@ func _rank_value(id: String, rank: int) -> float:
 		"rate_step": return 2 * rank
 		"wheel_step": return 0.025 * rank
 		"sentinel": return SENTINEL_CAPACITY * rank
+		"seeds": return ARROWS_PER_SEED * rank
 		"weak": return 1.5 + 0.5 * rank + (0.5 if has_gift("D05") else 0.0)
 		"recurve": return 1.0 if rank == 0 else 2.5
 		"workshop": return WORKSHOP_RATE * rank * (1.0 + 0.2 * rank_of("wheel"))
@@ -334,6 +349,9 @@ func refund(id: String) -> bool:
 	if id == "combo":
 		combo = 1.0
 		combo_grace = 0.0
+	if id == Paths.SEED_NODE and event_remaining > 0:
+		seeds.clear()
+		_finish_seed_wave()
 	if id == Paths.SENTINEL_NODE:
 		var carried := mini(sentinel_ammo, maxi(0, capacity() - arrows))
 		arrows += carried
@@ -501,7 +519,14 @@ func manual_impact(id: String, shot_damage: int, weak_damage: int, serial: int) 
 		for i in seeds.size():
 			if seeds[i].id == id:
 				seeds.remove_at(i)
-				seed_drops[id] = int(seed_drops.get(id, 0)) + 4
+				seed_hits += 1
+				var arrows_due := ARROWS_PER_SEED
+				if seed_hits == SEED_LIFETIMES.size():
+					arrows_due += SEED_LIFETIMES.size() * ARROWS_PER_SEED * (ALL_SEEDS_MULTIPLIER - 1)
+					last_seed_bonus = elapsed
+				seed_drops[id] = int(seed_drops.get(id, 0)) + arrows_due
+				if seeds.is_empty():
+					_finish_seed_wave()
 				seed_hit = true
 				break
 		if not seed_hit:
@@ -565,6 +590,7 @@ func next_knot() -> bool:
 		target_clock = 1.5 if not seen_target else _draw(15.0, 25.0)
 	if stage in [5, 10]:
 		seeds.clear()
+		seed_hits = 0
 		event_remaining = 0.0
 	return true
 
@@ -585,26 +611,36 @@ func _offer_target() -> void:
 	target_clock = 7.0
 
 
-func _start_rain() -> void:
+func _start_seed_wave() -> void:
 	event_serial += 1
-	event_remaining = 9.0
+	event_remaining = SEED_LIFETIMES.max()
+	seed_hits = 0
 	seeds.clear()
-	for i in 3:
-		seeds.append({"id": "seed_%d" % i, "remaining": event_remaining})
+	for i in SEED_LIFETIMES.size():
+		var duration: float = SEED_LIFETIMES[posmod(i + event_serial, SEED_LIFETIMES.size())]
+		seeds.append({"id": "seed_%d" % i, "duration": duration, "remaining": duration})
 	mark("first_seed_rain")
+
+
+func _finish_seed_wave() -> void:
+	event_remaining = 0.0
+	seed_hits = 0
+	event_clock = _draw(45.0, 75.0)
 
 
 func _opportunities(delta: float) -> void:
 	if stage < 2 or stage in [5, 10]:
 		return
 	if event_remaining > 0:
-		event_remaining = maxf(0.0, event_remaining - delta)
-		for seed_info: Dictionary in seeds:
-			seed_info.remaining = event_remaining
-		if event_remaining <= 0 or seeds.is_empty():
-			seeds.clear()
-			event_remaining = 0.0
-			event_clock = _draw(45.0, 75.0)
+		event_remaining = 0.0
+		for i in range(seeds.size() - 1, -1, -1):
+			seeds[i].remaining -= delta
+			if seeds[i].remaining <= 0:
+				seeds.remove_at(i)
+			else:
+				event_remaining = maxf(event_remaining, seeds[i].remaining)
+		if seeds.is_empty():
+			_finish_seed_wave()
 		return
 	if target_active:
 		target_clock -= delta
@@ -612,10 +648,10 @@ func _opportunities(delta: float) -> void:
 			target_active = false
 			target_clock = _draw(15.0, 25.0)
 		return
-	if seen_target and not ranks.is_empty():
+	if seen_target and rank_of(Paths.SEED_NODE) > 0:
 		event_clock -= delta
 		if event_clock <= 0:
-			_start_rain()
+			_start_seed_wave()
 			return
 	target_clock -= delta
 	if target_clock <= 0:
@@ -729,7 +765,9 @@ func choose_gift(id: String) -> bool:
 
 func save_state() -> Dictionary:
 	var data := {"session_elapsed_us": session_elapsed_us, "sap_remainder": sap_remainder,
+		"target_max_hp": max_hp(), "pickup_notices": pickup_notices,
 		"purchased_rain_rule": true, "last_volley_size": last_volley_size,
+		"seed_hits": seed_hits, "last_seed_bonus": last_seed_bonus,
 		"experience_us": experience_us, "damage_by_source": damage_by_source,
 		"damage_history_complete": damage_history_complete, "tenth_entry": tenth_entry,
 		"sentinel_ammo": sentinel_ammo, "sentinel_wait": sentinel_wait,
@@ -802,6 +840,28 @@ func _valid_holdings(owned: Dictionary, history: Dictionary) -> bool:
 	return true
 
 
+func _valid_seed_state(data: Dictionary) -> bool:
+	var hits_in_wave = data.get("seed_hits", 0)
+	if not hits_in_wave is int or hits_in_wave < 0 or hits_in_wave + data.seeds.size() > SEED_LIFETIMES.size():
+		return false
+	var last_bonus = data.get("last_seed_bonus", -10.0)
+	if not last_bonus is float or not is_finite(last_bonus) or last_bonus > data.elapsed:
+		return false
+	var visited := {}
+	for seed_state in data.seeds:
+		if not seed_state is Dictionary or not seed_state.has_all(["id", "remaining"]):
+			return false
+		var id = seed_state.id
+		if id not in ["seed_0", "seed_1", "seed_2"] or visited.has(id):
+			return false
+		visited[id] = true
+		var duration = seed_state.get("duration", 9.0)
+		var remaining = seed_state.remaining
+		if duration not in SEED_LIFETIMES or not remaining is float or not is_finite(remaining) or remaining <= 0 or remaining > duration:
+			return false
+	return true
+
+
 func _valid_observed_run(data: Dictionary) -> bool:
 	var duration = data.get("experience_us", -1)
 	var totals = data.get("damage_by_source", {})
@@ -830,7 +890,15 @@ func restore_state(data: Dictionary) -> bool:
 			return false
 	if data.stage < 1 or data.stage > HEALTH.size():
 		return false
-	if data.hp < 0 or data.hp > HEALTH[int(data.stage) - 1]:
+	var full_hp: int = HEALTH[int(data.stage) - 1]
+	var multiplier := 1000 if data.stage == 20 else 100 if data.stage >= 11 else 1
+	@warning_ignore("integer_division")
+	var old_full_hp: int = full_hp / multiplier
+	var saved_max: Variant = data.get("target_max_hp", old_full_hp)
+	if not saved_max is int or saved_max not in [old_full_hp, full_hp] or data.hp < 0 or data.hp > saved_max:
+		return false
+	var notices = data.get("pickup_notices", PICKUP_NOTICE_LIMIT if data.fired_after_collect or data.stage > 1 else 0)
+	if not notices is int or notices < 0 or notices > PICKUP_NOTICE_LIMIT:
 		return false
 	var kept = data.get("later_gifts", [])
 	if not kept is Array or kept.size() > 2 or not data.get("first_gift", "") is String or not data.get("session_observations", {}) is Dictionary:
@@ -861,7 +929,7 @@ func restore_state(data: Dictionary) -> bool:
 		return false
 	if not saved_last_volley is float or not is_finite(saved_last_volley):
 		return false
-	if not _valid_holdings(data.ranks, history) or not _valid_observed_run(data):
+	if not _valid_holdings(data.ranks, history) or not _valid_observed_run(data) or not _valid_seed_state(data):
 		return false
 	for field: String in SAVE_FIELDS:
 		if data[field] is Array or data[field] is Dictionary:
@@ -874,7 +942,14 @@ func restore_state(data: Dictionary) -> bool:
 	if rank_of("combo") == 0:
 		combo = 1.0
 		combo_grace = 0.0
+	pickup_notices = notices
+	if saved_max != full_hp:
+		hp *= multiplier
 	paid_prices = history.duplicate(true)
+	if not data.has("target_max_hp"):
+		for id: String in ["recurve", "longbow"]:
+			if rank_of(id) > 0 and not paid_prices.has(id):
+				paid_prices[id] = [37 if id == "recurve" else 1670]
 	if not data.has("purchased_rain_rule"):
 		# Earlier campaigns earned rain at target nine. Its original refund value was zero.
 		if stage >= 9 and rank_of("rain") == 0:
@@ -894,6 +969,12 @@ func restore_state(data: Dictionary) -> bool:
 		paid_prices.damage = damage_prices
 	last_volley = saved_last_volley
 	last_volley_size = saved_volley_size
+	# Old active waves only lost seeds when hit; they all shared a nine-second fall.
+	seed_hits = data.get("seed_hits", SEED_LIFETIMES.size() - seeds.size() if event_remaining > 0 else 0)
+	last_seed_bonus = data.get("last_seed_bonus", -10.0)
+	for seed_info: Dictionary in seeds:
+		if not seed_info.has("duration"):
+			seed_info.duration = 9.0
 	steady_count = saved_streak
 	volley_critical = false
 	workshop_piles = data.get("workshop_piles", [workshop_stock, 0, 0, 0]).duplicate()
@@ -937,6 +1018,8 @@ func snapshot() -> Dictionary:
 		"combo": combo, "max_combo": max_combo, "combo_grace": combo_grace,
 		"spark_hits": spark_hits, "target_active": target_active, "target_side": target_side,
 		"seeds": seeds, "seed_drops": seed_drops, "event": "seed_rain" if event_remaining > 0 else "",
+		"seed_hits": seed_hits, "seed_count": SEED_LIFETIMES.size(), "seed_multiplier": ALL_SEEDS_MULTIPLIER,
+		"seed_bonus": SEED_LIFETIMES.size() * ARROWS_PER_SEED * ALL_SEEDS_MULTIPLIER if elapsed - last_seed_bonus < 2.5 else 0,
 		"event_remaining": event_remaining, "gift_offer": gift_offer, "chosen_gift": chosen_gift,
 		"fired_after_collect": fired_after_collect, "observations": observations,
 		"session_observations": session_observations, "experience_us": experience_us,

@@ -11,8 +11,8 @@ var page := 0
 var heard := {}
 var line := Label.new()
 var _counter := Label.new()
-var _next := Button.new()
-var _leave := Button.new()
+var _next := Journal.Entry.new()
+var _leave := Journal.Entry.new()
 
 func _ready() -> void:
 	layer = 3
@@ -50,20 +50,10 @@ func _ready() -> void:
 	buttons.alignment = BoxContainer.ALIGNMENT_END
 	buttons.add_theme_constant_override("separation", 12)
 	content.add_child(buttons)
-	for button: Button in [_leave, _next]:
-		var primary := button == _next
-		button.add_theme_stylebox_override("normal", Journal.box(Journal.INK if primary else Journal.CANVAS, Journal.RULE, 14, 4))
-		button.add_theme_stylebox_override("hover", Journal.box(Journal.COVER, Journal.INK, 14, 4))
-		button.add_theme_stylebox_override("pressed", Journal.box(Journal.INK, Journal.INK, 14, 4))
-		var focus := Journal.box(Color.TRANSPARENT, Journal.ACCENT, 14, 4)
-		focus.set_border_width_all(2)
-		button.add_theme_stylebox_override("focus", focus)
-		button.add_theme_color_override("font_color", Journal.PAPER if primary else Journal.INK)
-		button.add_theme_color_override("font_hover_color", Journal.PAPER)
-		button.add_theme_color_override("font_pressed_color", Journal.PAPER)
-		button.add_theme_color_override("font_focus_color", Journal.PAPER if primary else Journal.INK)
-		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		buttons.add_child(button)
+	Journal.style_entry(_leave, Journal.sans(), "back")
+	Journal.style_entry(_next, Journal.serif(), "lead")
+	buttons.add_child(_leave)
+	buttons.add_child(_next)
 	_next.pressed.connect(func(): advance_requested.emit())
 	_leave.pressed.connect(func(): leave_requested.emit())
 

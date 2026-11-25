@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Arco y carcaj · Estudios del Atlas</title>
+  <style>
+    :root{color-scheme:light;color:#302b24;background:#f7f3eb;font:16px/1.4 "Segoe UI",sans-serif}
+    *{box-sizing:border-box}body{margin:0}main{max-width:1370px;margin:auto;padding:clamp(14px,2.5vw,32px) clamp(16px,4vw,56px)}
+    header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:14px}
+    h1,h2{font-family:Constantia,Georgia,serif;font-weight:400;margin:0}h1{font-size:clamp(28px,3.4vw,45px);line-height:1.12}
+    h2{font-size:clamp(20px,2.1vw,29px);line-height:1.2}header span,.state{font-size:13px;color:#675946}
+    .spread{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border:3px solid #695444;background:#f4ebd7;box-shadow:0 2px 5px #44382021}
+    article{min-width:0;padding:clamp(10px,1.6vw,20px);display:flex;flex-direction:column}
+    article:first-child{border-right:1px solid #bdac90;background:linear-gradient(to left,#b9aa8b26,transparent 15px)}
+    article:last-child{background:linear-gradient(to right,#b9aa8b26,transparent 15px)}
+    .top,.bottom{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+    .top{padding-bottom:7px;border-bottom:1px solid #cbbc9e}.state{white-space:nowrap}
+    .art{background:#f8f1df;height:clamp(240px,calc(100vh - 268px),540px);display:block;margin:8px 0}
+    img{width:100%;height:100%;object-fit:contain;display:block}
+    .bottom{padding-top:8px;border-top:1px solid #cbbc9e}.bottom p{margin:0;font-size:14px;color:#554a3c}.bottom a{white-space:nowrap;font-size:14px}
+    a{color:#744825;text-underline-offset:3px}a:focus-visible{outline:2px solid #a66429;outline-offset:2px}
+    @media(max-width:730px){.spread{grid-template-columns:1fr}article:first-child{border:0;border-bottom:1px solid #bdac90}
+      .art{height:auto;aspect-ratio:1.3}.top,.bottom{flex-wrap:wrap}header span{display:none}}
+  </style>
+</head>
+<body><main>
+  <header><h1>Arco y carcaj</h1><span>El arquero del claro · Atlas</span></header>
+  <div class="spread">
+    <article><div class="top"><h2>A · Flecha en primer plano</h2><span class="state">En el juego</span></div>
+      <a class="art" href="estudio-a.svg" aria-label="Ampliar el estudio A"><img src="estudio-a.svg" alt="La flecha principal pasa por delante de un carcaj ancho y tres flechas emplumadas."></a>
+      <div class="bottom"><p>El astil continuo pasa por delante del cuero.</p><a href="estudio-a.svg">Abrir SVG</a></div>
+    </article>
+    <article><div class="top"><h2>B · Carcaj desplazado</h2><span class="state">Alternativa</span></div>
+      <a class="art" href="estudio-b.svg" aria-label="Ampliar el estudio B"><img src="estudio-b.svg" alt="El carcaj estrecho queda a la derecha, a un lado de la flecha principal."></a>
+      <div class="bottom"><p>El carcaj deja libre el paso de la flecha.</p><a href="estudio-b.svg">Abrir SVG</a></div>
+    </article>
+  </div>
+</main></body></html>

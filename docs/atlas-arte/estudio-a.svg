@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1296" viewBox="30 40 1000 900">
+  <title>Arco, carcaj y flecha de la colección</title>
+  <g transform="matrix(.70710678 .70710678 .70710678 -.70710678 438 470)" fill="none" stroke="#302923" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round">
+    <!-- The bowstring meets the two limb tips. The grip belongs to both limbs. -->
+    <g id="arco">
+      <path d="M0 -496V500" stroke="#42392c" stroke-width="2.8"/>
+      <path fill="#ddc8a5" d="M0 -496 L-24 -426 -72 -359 -156 -288 -219 -202 -248 -113 -254 -54 V54 L-248 113 -219 202 -156 288 -72 359 -24 426 0 500 -11 421 -45 344 -127 264 -183 184 -200 102 -203 54 V-54 L-200 -102 -183 -184 -127 -264 -45 -344 -11 -421 Z"/>
+      <path fill="#897053" d="M-255 -46 Q-236 -54 -203 -46 V46 Q-228 52 -255 46Z"/>
+      <path stroke="#e2cba7" stroke-width="3" d="M-248 -32 L-211 -18 M-248 -14 L-211 0 M-248 4 L-211 18 M-248 22 L-211 36"/>
+    </g>
+    <g id="carcaj">
+      <path fill="#e3cead" d="M52 155 L62 0 76 -178 98 -332 103 -363 Q106 -378 121 -380 L163 -378 Q179 -377 183 -361 L204 -231 219 -89 238 155Z"/>
+      <path fill="#c7aa84" d="M99 -333 Q140 -347 187 -334 L183 -361 Q180 -377 163 -378 L121 -380 Q106 -378 103 -363Z"/>
+      <path stroke="#8d7456" stroke-width="2.5" d="M70 -26 L87 -178 104 -312 M111 -352 Q145 -363 176 -352"/>
+      <path fill="#534738" d="M52 155 Q144 187 238 155 Q151 119 52 155Z"/>
+      <!-- Each quill has a readable nock, two vanes and a shaft. -->
+      <g id="flecha-izquierda" transform="translate(86 151) rotate(5)">
+        <path d="M0 0V280" stroke="#38342a" stroke-width="6"/>
+        <path fill="#e9dfc9" d="M0 151 L-20 176 -20 249 -14 246 -20 258 -20 271 0 251Z"/>
+        <path fill="#c1a884" d="M0 151 L20 176 20 249 14 246 20 258 20 271 0 251Z"/>
+        <path d="M0 249V280" stroke-width="4"/>
+      </g>
+      <g id="flecha-central" transform="translate(142 149)">
+        <path d="M0 0V280" stroke="#38342a" stroke-width="6"/>
+        <path fill="#e9dfc9" d="M0 151 L-20 176 -20 249 -14 246 -20 258 -20 271 0 251Z"/>
+        <path fill="#c1a884" d="M0 151 L20 176 20 249 14 246 20 258 20 271 0 251Z"/>
+        <path d="M0 249V280" stroke-width="4"/>
+      </g>
+      <g id="flecha-derecha" transform="translate(194 151) rotate(-5)">
+        <path d="M0 0V280" stroke="#38342a" stroke-width="6"/>
+        <path fill="#e9dfc9" d="M0 151 L-20 176 -20 249 -14 246 -20 258 -20 271 0 251Z"/>
+        <path fill="#c1a884" d="M0 151 L20 176 20 249 14 246 20 258 20 271 0 251Z"/>
+        <path d="M0 249V280" stroke-width="4"/>
+      </g>
+      <path fill="#c6ab84" d="M52 155 Q150 126 238 155 L235 133 Q148 105 54 133Z"/>
+    </g>
+    <!-- One uninterrupted foreground shaft crosses both objects. -->
+    <g id="flecha-principal">
+      <path fill="#f2dfbb" d="M-353 -5 L424 -5 430 -2 430 2 424 5 -353 5Z"/>
+      <path fill="#b99e7c" d="M-477 0 L-335 -45 -352 -8 -352 8 -335 45Z"/>
+      <path d="M-467 0H-355" stroke="#695b48" stroke-width="2.5"/>
+      <path fill="#e6d7b9" d="M267 5 L304 32 386 32 379 25 393 32 408 32 380 5Z"/>
+      <path fill="#c1a884" d="M267 -5 L304 -32 386 -32 379 -25 393 -32 408 -32 380 -5Z"/>
+      <path d="M-352 -5H-335 M-352 5H-335" stroke-width="4"/>
+    </g>
+  </g>
+</svg>

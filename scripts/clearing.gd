@@ -575,21 +575,27 @@ func sync_encounter(state: Dictionary) -> void:
 		_set_interactive("root_%d" % i, exposed)
 	_first_pickup_help = state.get("early_pickup_glow", false)
 	_update_workshop_delivery(state)
-	var active := {}
-	for seed_state: Dictionary in state.get("seeds", []):
-		active[seed_state.id] = float(seed_state.remaining)
+	update_falling_seeds(state.get("seeds", []))
 	var drops: Dictionary = state.get("seed_drops", {})
 	for id: String in _seed_piles:
+		_show_pile(_seed_piles[id], int(drops.get(id, 0)))
+
+
+func update_falling_seeds(seeds: Array) -> void:
+	var active := {}
+	for seed_state: Dictionary in seeds:
+		active[seed_state.id] = clampf(float(seed_state.remaining) / float(seed_state.duration), 0.0, 1.0)
+	for id: String in _seed_piles:
 		var alive := active.has(id)
-		_set_interactive(id, alive)
+		var seed_body: StaticBody3D = _targets[id]
+		if seed_body.visible != alive:
+			_set_interactive(id, alive)
 		if alive:
-			var t := clampf(float(active[id]) / 9.0, 0, 1)
-			var seed_body: StaticBody3D = _targets[id]
+			var t: float = active[id]
 			var lane := int(id.right(1))
 			var wind := sin(t * TAU + lane) * sin(t * PI)
-			seed_body.position = seed_drop_position(id) + Vector3(wind * 0.38, 0.45 + t * (3.1 + lane * 0.32), 0)
+			seed_body.position = seed_drop_position(id) + Vector3(wind * 0.38, 0.45 + t * 3.6, 0)
 			seed_body.rotation.z = wind * 0.28
-		_show_pile(_seed_piles[id], int(drops.get(id, 0)))
 
 func apply_settings(options: Dictionary) -> void:
 	_flashes = clampf(options.get("flashes", 1.0), 0, 1)

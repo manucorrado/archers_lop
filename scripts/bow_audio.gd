@@ -20,7 +20,7 @@ var _impact_frame := -1
 func _ready() -> void:
 	for cue: String in LENGTHS:
 		var voice := AudioStreamPlayer.new()
-		voice.stream = _make_clip(cue, LENGTHS[cue])
+		voice.stream = preload("res://assets/audio/recoger_atado.wav") if cue == "pickup" else _make_clip(cue, LENGTHS[cue])
 		if cue == "buy" or cue == "win":
 			voice.process_mode = Node.PROCESS_MODE_ALWAYS
 		voice.max_polyphony = 2
@@ -146,8 +146,6 @@ func _make_clip(cue: String, duration: float) -> AudioStreamWAV:
 				sample = 0.38 * _note(t, 0, 659, 15) + 0.35 * _note(t, 0.12, 523, 13) + 0.29 * _note(t, 0.24, 392, 12)
 			"spark":
 				sample = 0.47 * noise * exp(-24 * t) + 0.28 * _note(t, 0.04, 1140, 25)
-			"pickup":
-				sample = 0.34 * _note(t, 0.0, 590.0, 29.0) + 0.29 * _note(t, 0.055, 815.0, 22.0)
 			"buy":
 				sample = 0.38 * _note(t, 0.0, 392.0, 17.0) + 0.35 * _note(t, 0.075, 493.9, 15.0) + 0.33 * _note(t, 0.15, 587.3, 12.0)
 			"break":

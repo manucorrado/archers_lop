@@ -26,7 +26,7 @@ Abrí [ElArqueroDelClaro.exe](build/windows/ElArqueroDelClaro.exe) y elegí **En
 
 El taller cuesta 17 de savia. Produce 1,25 flechas por segundo y lanza tandas de tres. Seguí el vuelo y acercate al atado para recogerlo. Si el carcaj se llena, el resto queda en el suelo.
 
-La mira te indica dónde está Pipo durante toda la partida. Durante los primeros diez minutos de juego activo también puede señalar un atado cuando te hacen falta flechas. Después, un atado que lleva al menos 90 segundos sin recoger puede recibir un aviso de ocho segundos. En Ajustes podés desactivar las pistas de primeros pasos y de munición.
+La huella te guía a Pipo hasta la primera compra o hasta los 90 segundos de juego activo. Después, al acercarte y mirarlo, sigue apareciendo la tecla de interacción. Durante los primeros diez minutos la mira también puede señalar un atado cuando te hacen falta flechas. Después, un atado que lleva al menos 90 segundos sin recoger puede recibir un aviso de ocho segundos. Las primeras cinco recogidas muestran la cantidad obtenida. Todas actualizan el carcaj y suenan a flechas acomodándose.
 
 A la derecha del sendero está **Brizno**, el mensajero alado. Al acercarte aparece la opción de hablar. Sus relatos cambian con lo que pasa en el claro y podés seguir una charla al reabrir el juego. Para escribirle más diálogos, editá [sus charlas bilingües](assets/charlas_de_brizno.tres) en el Inspector.
 
@@ -34,7 +34,9 @@ El Atlas de Pipo ocupa toda la pantalla. Pasá el mouse o enfocá un nodo con el
 
 La **Ballesta del claro** se compra siguiendo la Rueda de savia y cuatro engranajes del taller. Con munición en su depósito dispara sola mientras buscás flechas o apuntás con el arco. En cada resumen, **Registro de la vuelta** muestra cuánto duró cada blanco y compara tus tiempos por acto y de la demo completa con tus récords locales. El tiempo se mide hasta el golpe que rompe el blanco. Empezar de nuevo conserva los récords.
 
-En los blancos 6 a 9 y 11 a 20, acertar con el arco a la diana temporal devuelve hasta tres flechas al carcaj. Al terminar una vuelta nueva, el registro muestra cuánto tardaste desde que entraste hasta romper el blanco 20, incluso comprando o hablando con Brizno. También podés consultar qué tenías al entrar al blanco 10 y cuánto daño hizo cada fuente. El total se detiene mientras la ventana queda en segundo plano o el juego está cerrado.
+En los blancos 6 a 9 y 11 a 20, acertar con el arco a la diana temporal devuelve hasta tres flechas al carcaj. La mejora **Semillas aladas** habilita tandas de tres semillas. Cada acierto deja cuatro flechas y completar la tanda duplica el premio total a 24. Los números de daño siguen el lugar del impacto al girar la cámara.
+
+Al terminar una vuelta, el registro muestra el tiempo hasta romper el blanco 20, las compras al entrar al 10 y el daño por fuente. Al cambiar de ventana el claro sigue en marcha por defecto. Podés activar **Ajustes → Vista y lectura → Pausar al cambiar de ventana**. Durante el juego en segundo plano avanzan el taller y los dos relojes. Una pausa manual detiene la simulación y solo suma al total mientras la ventana está en primer plano.
 
 **Probar los sonidos del arco.** En **Ajustes → Sonido**, elegí por separado la suelta de cuerda y el impacto. En un perfil nuevo se escuchan **Cuerda y fibra** y **Dardo 1 · golpe sordo**. Probá también **Dardo 3 · golpe corto**. Usá **Escuchar** para aislar cada sonido o **Ráfaga** para oír el par a alta cadencia. Las seis grabaciones de Freesound se incluyen en el ejecutable. [Grabaciones y créditos](assets/audio/freesound/CREDITOS.md)
 
@@ -66,6 +68,6 @@ godot --headless --path . --import
 godot --headless --path . --export-release "Windows Desktop" build/windows/ElArqueroDelClaro.exe
 ```
 
-El diseño de campaña, el catálogo de mejoras y el plan de producción están enlazados desde el [PRD](docs/PRD.md).
+El diseño de campaña, el catálogo de mejoras y el plan de producción están enlazados desde el [PRD](docs/PRD.md). Las [próximas tareas](docs/proximas-tareas.md) incluyen las mejoras del taller y del salto, los efectos de combate y la prueba de duración.
 
 El [flujo de integración del repositorio](AGENTS.md) se aplica a todas las contribuciones.

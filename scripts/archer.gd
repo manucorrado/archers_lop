@@ -33,6 +33,7 @@ var _sound := BowAudio.new()
 var _rain := MultiMeshInstance3D.new()
 var _materials: Dictionary = {}
 var _active := false
+var _accepts_controls := false
 var _has_arrows := true
 var _await_release := false
 var _press_pending := false
@@ -90,15 +91,16 @@ func _ready() -> void:
 	_pose(0.0)
 
 
-func set_active(enabled: bool, bow_visible := true) -> void:
+func set_active(enabled: bool, bow_visible := true, focused := true) -> void:
 	_active = enabled
+	_accepts_controls = enabled and focused
 	_view.visible = bow_visible
 	_press_pending = false
 	_branch_pending = false
 	_jump_pending = false
 	_repeat_on = false
 	_await_release = enabled and Input.is_action_pressed("shoot")
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if enabled else Input.MOUSE_MODE_VISIBLE
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if _accepts_controls else Input.MOUSE_MODE_VISIBLE
 	if not enabled:
 		velocity.x = 0.0
 		velocity.z = 0.0
@@ -148,7 +150,7 @@ func set_has_arrows(has_arrows: bool) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not _active:
+	if not _accepts_controls:
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		var motion: Vector2 = event.screen_relative
@@ -172,7 +174,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	if not _active:
 		return
-	var move_input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var move_input := Input.get_vector("move_left", "move_right", "move_forward", "move_back") if _accepts_controls else Vector2.ZERO
 	var direction := basis * Vector3(move_input.x, 0.0, move_input.y)
 	var speed := WALK_SPEED * _speed_multiplier * lerpf(1.0, 0.70, _aim)
 	velocity.x = move_toward(velocity.x, direction.x * speed, 27.0 * delta)
@@ -203,7 +205,7 @@ func _physics_process(delta: float) -> void:
 		velocity.z = 0.0
 	_pace = minf(Vector2(velocity.x, velocity.z).length() / WALK_SPEED, 1.0)
 
-	var held := Input.is_action_pressed("shoot")
+	var held := _accepts_controls and Input.is_action_pressed("shoot")
 	if _press_pending or _repeat_on or (held and not _toggle_fire and not _await_release):
 		shot_requested.emit()
 	_press_pending = false
@@ -423,7 +425,7 @@ func _arrow_mesh() -> ArrayMesh:
 func _pose(delta: float) -> void:
 	_since_shot = minf(3.0, _since_shot + delta)
 	_since_branch = minf(3.0, _since_branch + delta)
-	_aim = move_toward(_aim, float(_active and Input.is_action_pressed("aim")), delta * 6.5)
+	_aim = move_toward(_aim, float(_accepts_controls and Input.is_action_pressed("aim")), delta * 6.5)
 	_sway = _sway.lerp(Vector2.ZERO, 1.0 - exp(-delta * 12.0))
 	_step += delta * _pace * 8.5
 	var step_sway := Vector2(sin(_step) * 0.012, cos(2.0 * _step) * 0.009) * _pace
