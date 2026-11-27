@@ -42,7 +42,7 @@ Al terminar una vuelta, el registro muestra el tiempo hasta romper el blanco 20,
 
 **Guardar y continuar.** Podés guardar desde pausa. También se guardan las compras, los cambios de blanco y de fase y las recompensas. En el menú de inicio, **Continuar** recupera la partida. Si cerraste mientras elegías la recompensa, vuelven las mismas tres cartas. Si terminaste la versión de diez blancos, desde su resumen podés continuar al 11. Durante la pausa y con el juego cerrado se detienen el reloj de juego activo y el taller.
 
-[Árbol, precios y opciones para la demo](docs/arbol-de-la-demo.md) · [Catálogo de mejoras potenciales](docs/catalogo-de-mejoras-potenciales.docx) · [Comparar los tres diseños de los estados de compra](docs/atlas-estados/index.html) · [Comparar 16 tipografías para el Atlas](docs/atlas-tipografias/index.html)
+[Árbol, precios y opciones para la demo](docs/arbol-de-la-demo.md) · [Catálogo de mejoras potenciales](docs/catalogo-de-mejoras-potenciales.md) · [Comparar los tres diseños de los estados de compra](docs/atlas-estados/index.html) · [Comparar 16 tipografías para el Atlas](docs/atlas-tipografias/index.html)
 
 ## Cambiar un asset desde el editor
 
@@ -68,6 +68,6 @@ godot --headless --path . --import
 godot --headless --path . --export-release "Windows Desktop" build/windows/ElArqueroDelClaro.exe
 ```
 
-El diseño de campaña, el catálogo de mejoras y el plan de producción están enlazados desde el [PRD](docs/PRD.md). Las [próximas tareas](docs/proximas-tareas.md) incluyen las mejoras del taller y del salto, los efectos de combate y la prueba de duración.
+El [diseño de campaña](docs/PRD.md) sitúa los créditos en torno a dos horas y el 100 % en dos a cuatro, con prestigio necesario para completarlo. Las [reglas de la build](docs/arbol-de-la-demo.md), el [modelo de costes e ingreso de savia](docs/curvas-de-costes-incrementales.md), la [tienda de prestigio propuesta](docs/prestigio.md) y el [registro de decisiones pendientes](docs/decisiones-pendientes.md) documentan qué se juega hoy y qué está en diseño. Las [próximas tareas](docs/proximas-tareas.md) reúnen el corte de la demo, la build de práctica y la preparación de itch.io y Steam.
 
 El [flujo de integración del repositorio](AGENTS.md) se aplica a todas las contribuciones.

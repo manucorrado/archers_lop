@@ -1,158 +1,79 @@
 # El arquero del claro
 
-**Diseño de campaña y alcance de la demo**
+## Producto y alcance
 
-Nombre de trabajo. Juego incremental activo de arquería, en primera persona, para una persona. La campaña transcurre en un claro de bosque construido con piezas voxel.
+Juego incremental activo de arquería en primera persona para Windows. Una persona, teclado y ratón, un claro continuo construido con piezas voxel y una campaña offline. Quien juega ya sabe apuntar. La primera compra, el movimiento de los atados y el tiro contra la madera enseñan el funcionamiento del claro. Si cuesta descubrir que golpear con la rama estando vacío desprende flechas, alcanza con una indicación breve en ese momento.
 
-La versión jugable llega al blanco 20. El registro conserva el tiempo hasta el décimo para comparar vueltas del corte anterior, y mide la duración completa hasta el golpe que rompe el vigésimo. La referencia original de unos 20 minutos correspondía al corte de diez blancos. La duración del recorrido ampliado queda por validar con jugadores nuevos. En el juego completo apuntamos a **2–4 horas para alcanzar el 100 %**, que incluye los encuentros y las mejoras únicas. Se puede llegar antes al desenlace. El prestigio y los récords se miden aparte. La cantidad de actos sigue abierta. Las reglas jugables vigentes están en el [árbol de la demo](arbol-de-la-demo.md).
+**Build de referencia.** La vuelta disponible llega al blanco 20. Hay elecciones de cartas al romper el 5, el 10 y el 15. El 5 se divide y el 10 tiene tres cavidades sucesivas. El Atlas de Pipo tiene 113 nodos y 141 niveles. El primer rango de daño es gratis. Los récords guardan por separado la llegada al décimo y el cierre del vigésimo. Sus reglas y precios se documentan tal como se pueden probar hoy. [Árbol de la demo](arbol-de-la-demo.md)
 
-| Para trabajar en… | Documento |
+**Objetivo de campaña (A01–A09).** Unas dos horas hasta los créditos y entre dos y cuatro hasta el 100 %, sujeto a medición. Completar el juego al 100 % y conseguir todas las mejoras requiere **prestigiar**. Habrá muchos más árboles que los veinte actuales. Cualquier ruta razonable debe poder experimentar el pico de poder. Los veinte actuales deben dejar mejoras del Atlas actualizado pendientes. La secuencia de compras normales depende de requisitos de compra y savia. Los hitos del recorrido pueden entregar cartas y medallas. Las cartas especializan; las compras abren mecánicas. Una buena prueba inicial para una compra importante es poder decir qué hiciste distinto en el siguiente árbol. Hay espacio para compras numéricas cuyo efecto se acumula.
+
+**Numeración.** N significa número de árbol desde el inicio de una vuelta. Un *acto* puede servir para comparar cuánto tarda, por ejemplo, N6–10 en dos versiones y para conservar los tiempos históricos del registro. Diseñar por número de árbol y por barrera evita atar contenido, historia y moneda a grupos de cinco. La cantidad de árboles, los hitos que pagan medallas y el primer árbol prácticamente infranqueable sin prestigio quedan abiertos.
+
+| Documento | Uso |
 |---|---|
-| Experiencia del jugador, alcance, reglas de los encuentros y criterios de producto | Este PRD |
-| Equivalencias con AmmoDump, 77 rangos, 24 dones, munición y precios | [Catálogo de mejoras y economía](mejoras-y-economia.md) |
-| Producción modular, recetas de variantes y validación en cámara | [Dirección de arte y assets voxel](arte-y-assets-voxel.md) |
-| Hitos, dependencias, estimación, tareas y pruebas de salida | [Plan de producción](plan-de-produccion.md) |
+| [Catálogo de propuestas](catalogo-de-mejoras-potenciales.md) | Las 65 fichas, sus antecedentes, el estado de las familias y las propuestas descartadas. |
+| [Sistemas y cartas](mejoras-y-economia.md) | Reglas de combo, puestos, sucesos, fenómenos y decisión individual sobre las 24 cartas. |
+| [Curvas de costes e ingresos](curvas-de-costes-incrementales.md) | Cómo calcular y medir precios, vida, daño efectivo, producción, transporte y savia por tiempo de vuelta. |
+| [Prestigio](prestigio.md) | Barreras, reinicio, medallas, extensiones del Atlas y tienda de Brizno. |
+| [Decisiones pendientes](decisiones-pendientes.md) | Explicaciones, pruebas propuestas y descarte con los IDs del grill. |
+| [Producción](plan-de-produccion.md) y [próximas tareas](proximas-tareas.md) | Corte de demo, herramientas de prueba, validación y publicación. |
+| [Dirección de arte](arte-y-assets-voxel.md) | Lectura de impactos, puntos débiles, interfaz, animación y presupuesto visual. |
 
-## 1. El juego que queremos hacer
+## La vuelta y el reinicio
 
-Un arquero llega a un claro tomado por un nudo de madera. Cada impacto descubre savia bajo la corteza. Con la primera savia compra potencia y levanta un taller que empieza a dejar haces de flechas en el suelo. Una hora después, el jugador circula entre montones de flechas, abastece una línea de centinelas y busca una veta en un tronco que le tapa el cielo. El arco que tiene en las manos sigue siendo la herramienta más rápida para aprovechar esa abertura.
+1. **Disparar.** La madera, la grieta, las cifras y el sonido responden al impacto. El jugador puede apuntar o mantener el tiro. Daño por flecha y cadencia iniciales conservan sus diez niveles. El daño plano anterior a los multiplicadores sigue teniendo valor. El tiempo exacto de soltar la cuerda queda descartado como mecánica a alta cadencia.
+2. **Abastecerse.** Se empieza con 24 flechas. El taller catapulta atados; al recoger parte de uno, el sobrante queda en el suelo. La rama permite recuperar flechas estando vacío. En el diseño objetivo la rama puede mejorar alcance y extracción; romper un blanco avanzado solo con ella sería técnicamente posible y muy lento. La máxima combinación de producción, cartas y prestigio debe acercarse a abastecer casi todo el consumo; primer ensayo de 70–80 flechas/s. También importa poder llevarlas.
+3. **Invertir.** E cerca de Pipo abre el Atlas. A medida que comprás se revelan los vértices que dibujan arco y carcaj. Los nodos pequeños de daño, velocidad y taller eran relleno provisional. Consolidarlos en menos nodos con niveles o en compras más significativas y volver a medir el costo de una ruta completa. Se considera un segundo dibujo de mejoras al terminar el primero y obtener el prestigio pertinente.
+4. **Elegir.** Entre apuntar, buscar el próximo atado y dejar flechas en un puesto se forma el recorrido. Los opcionales pueden ignorarse. Cartas y árboles específicos ofrecen oportunidades para especializar; apuntar al árbol principal sigue siendo viable. Se esperan pausas en el crecimiento y momentos en que algunos árboles se derriten.
+5. **Prestigiar.** Brizno explica la primera oportunidad con un salto y giro. Se ven medallas pendientes, cobro disponible, siguiente hito y consecuencias del reinicio. El jugador decide si espera otra medalla o empieza una vuelta con capacidades acumulables que le permiten cruzar una barrera antes prohibitiva. N20 es el primer banco de prueba interno. [Definición y dudas del prestigio](prestigio.md)
 
-La promesa es **pasar de disparar cada flecha a dirigir todo el claro, sin perder las ganas de apuntar**. El público principal disfruta comprar una mejora y enseguida sentir la diferencia. La segunda vuelta interesa a quien quiera optimizar la ruta de compras y batir su tiempo.
+## Encuentros y barreras
 
-**Definiciones de producto.** Una persona a tiempo completo desarrolla el juego en Godot para Windows, con teclado y ratón. El proyecto no tiene un límite presupuestario ni una fecha comprometida. La campaña es individual y offline, en primera persona y con una arena continua. El récord se conserva en el equipo del jugador.
+La altura del árbol comunica importancia e intimidación. La maqueta de escala conserva una piedra de referencia; el objetivo histórico para N10 era cerca del doble de ancho y cinco veces la altura del primero. Hay un solo árbol principal y habitualmente una sola parte golpeable. Un efecto que necesita tres blancos distintos requiere contenido que los presente.
 
-**Ediciones.** El prototipo N1–3 se prueba localmente. La hoja de ruta contempla una demo pública, acceso anticipado y la versión final en Steam e itch.io. El juego y sus materiales de tienda tendrán inglés y español. El rango de precio previsto para la versión final es de 1–2 €.
-
-### Qué tomamos de la referencia
-
-El punto de partida es el [análisis de AmmoDump facilitado para el proyecto](<C:/Users/Usuario/Downloads/ammo_dump_in_depth_analysis.html>), especialmente sus apartados sobre mecánicas, progresión, ritmo y límites de la evidencia.
-
-| Hallazgo en el análisis | Decisión para el juego |
+| Referencia | Build y decisión para la siguiente versión |
 |---|---|
-| Treinta blancos de tamaño creciente, un jefe y una elección cada cinco, final en una o dos horas | Probar bloques de cinco blancos en el mismo claro. Cada jefe cambia lo que conviene apuntar. El total de bloques se decidirá al desarrollar la campaña. |
-| Cuatro armas con cadencias distintas y una herramienta cuerpo a cuerpo | Cuatro arcos con patrones reconocibles y un golpe de rama que permite recuperar flechas incluso al principio. |
-| Munición en el suelo, seis máquinas y doce torretas que consumen munición | Los haces son inventario real. El arquero decide qué se lleva y qué entrega a los centinelas. Los puestos construidos permanecen visibles. |
-| Árbol anunciado de 77 mejoras. Los contadores por nodo sugieren que son rangos. Tres cartas entre 24, con pocos textos exactos documentados | Árbol propio de 77 compras y baraja propia de 24 dones. El catálogo indica qué equivalencias son directas, cuáles son interpretaciones y qué efectos diseñamos. |
-| Multiplicador, dianas, blancos dorados, suministros, seis sucesos y grandes efectos | Repartir la atención paga más savia. Los sucesos del claro interrumpen la rutina. Las compras de fenómenos dan poder duradero. |
-| En el tramo final se superponen números, impactos, salud y retícula | La salud vive en el borde superior. Se agrupan los números y se reserva espacio visual alrededor de la veta, incluso con todos los puestos activos. |
+| J01 · N5, árbol partido | Mantener las dos mitades con vida propia y quitar las dianas centrales dibujadas en ambas. Comparar apuntar a una sola mitad con alternar lados o acumular fuego en cada una. |
+| J02–J03 · N10, tres cavidades | Conservar el orden en la presentación inicial. Guardar el orden libre o el punto móvil como posibles variantes de desafío. Representar huecos reales; al agotar una cavidad se desprende ese trozo o queda inequívocamente agotado. El término «abanico» describe tres flechas que se separan desde el arco. El aumento de escala tiene prioridad estética. |
+| J04, J10 · vida y barreras | Los anteriores ×100 de N11–19 y ×1.000 de N20 fueron experimentos de daño. Diseñar una función de vida por número de árbol con factor adicional por jefe o barrera; ×10 en N10 es un ejemplo del autor, pendiente de calibrar. Usar corteza resistente si se puede reconocer y contrarrestar. Probar un blanco que se derrite tras una gran compra y otro que permita usarla varias veces. |
+| J05 · Semillero fugitivo, antiguo N15 | Propuesta histórica: brotes cruzan carriles y al acertarles transfieren daño al árbol central. Revisar si merece ese encuentro. Hoy N15 entrega carta. |
+| J06 · Corona acorazada, antiguo N20 | Prototipo por evaluar: placas que los puestos desgastan y broches que el arquero puede abrir. Hoy N20 cierra la vuelta. La idea debe funcionar con pocos puestos fijos. |
+| J07 · Dos cauces, antiguo N25 | Propuesta por testear: interrumpir un pulso de una raíz abriría una veta; si pasa, aparece una cubierta temporal con tope. Conserva el daño ya hecho. |
+| J08 · Sol hueco, antiguo N30 | Propuesta por testear: abrir dos mitades, elegir una carta a media vida y alternar veta y brotes al cerrar. Evaluar utilidad de las tres cartas durante el combate restante, incluida producción si quedan viajes. |
+| J09 · Recuperación | Cada fase necesita una forma de recuperar munición o acceder a madera alcanzable. La referencia de equilibrio es poder reabastecerse y volver a disparar. |
 
-Los nombres de los jefes finales, las fórmulas, el reparto de rangos y los textos de los dones de este proyecto son decisiones de diseño. Las tasas de logros que cita el análisis describen a los jugadores de la referencia en la muestra que consultó su autor. Nuestros criterios se medirán en pruebas propias.
+La cadencia de oportunidades individuales, semillas, rayos, posible rayo solar y sucesos simultáneos tardíos se decide por su utilidad frente a este único árbol. [Oportunidades y fenómenos](mejoras-y-economia.md)
 
-## 2. Una vuelta por el claro
+## Interacción, interfaz y persistencia
 
-1. **Apuntar y soltar.** El primer nudo está frente al jugador, a distancia de tiro. Al impactar, se abre una grieta, baja la integridad y sube la savia. Se entiende el resultado incluso con los números de daño desactivados.
-2. **Elegir una compra.** Acercarse al perro sentado y apretar la tecla de interacción abre el árbol. Cada icono detalla su requisito, precio, nivel y efecto al pasar el puntero o darle foco. El taller lanza atados que hay que ir a buscar.
-3. **Administrar flechas.** El arquero recoge por proximidad. Puede tirar a una Diana de veta, guardar flechas en el carcaj o desviarse hasta un centinela para cargarlo. Mientras apunta a una oportunidad lateral, oye si el centinela sigue trabajando.
-4. **Romper y seguir.** El nudo suelta un haz. En el mismo sitio crece otro más grande. El arco equipado, las compras, las existencias y los puestos continúan con el jugador.
-5. **Elegir un don y cerrar la campaña.** Las roturas 5, 10, 15, 20 y 25 dan a elegir una de tres cartas. En el nudo 30 la sexta elección ocurre al abrir el núcleo, a media integridad, para poder usarla en el desenlace. La rotura 30 muestra tiempo de juego, mejor combo, rangos adquiridos y contribución de arco, centinelas y fenómenos.
-
-**Una decisión en el segundo acto.** Te quedan doce flechas. El centinela junto al taller está vacío y acaba de aparecer un Nudo áureo al otro lado del tronco. Si la tolva tiene espacio, podés dejar ocho flechas en ella, quedarte con cuatro e intentar romper el áureo mientras el centinela trabaja sobre el blanco principal. También podés llevarte las doce, usar el recurvo para sostener el combo y volver cuando el taller haya producido otro haz. El sonido del centinela, el nivel de la tolva y el contador del carcaj tienen que permitir esa decisión de un vistazo.
-
-### Primeros minutos
-
-| Momento de la primera partida | Experiencia que debe ocurrir | Señal para el diseñador |
-|---|---|---|
-| Entrada | Se ven la veta, el arco de rama y 24 flechas. Un único aviso enseña disparo. | Se puede acertar desde donde aparece el personaje. |
-| Primera compra y primera rotura | Junto a Pipo, el jugador puede obtener el primer nivel de daño gratis. Cada ocho puntos de vida que le quita al blanco gana una savia. Cuando rompe el tronco caen flechas. | El probador explica qué consiguió y distingue savia de flechas. |
-| Nudos 2–3 | Aparece el plano del taller, se construye y se puede recoger su primera producción. | El probador sabe volver al taller cuando se vacía el carcaj. |
-| Nudos 3–5 | Entran la Chispa de copa y el recurvo. La primera horqueta divide el blanco. | El jugador reconoce una compra por el cambio que siente al disparar. |
-| Blancos 6–10 | El arco largo ofrece más daño por flecha. Tres puntos débiles del jefe cambian qué conviene apuntar. | El jugador distingue los arcos y encuentra el siguiente punto encendido. |
-
-### Interacción y cámara
-
-| Acción | Control propuesto en PC | Comportamiento |
+| Acción | Control en PC | Comportamiento |
 |---|---|---|
 | Mirar y desplazarse | Ratón y WASD | Movimiento libre por terreno continuo. Los puestos y los haces son accesibles a ras del suelo. |
-| Disparar | Botón principal | En v0.1, pulsar dispara y mantener repite al ritmo del arco. La animación y el sonido comunican cada suelta. Para la versión completa se prevé poder alternar la repetición con un clic. |
+| Disparar | Botón principal | Pulsar dispara y mantener repite al ritmo del arco. Un ajuste permite iniciar y detener la repetición con un clic. La animación y el sonido comunican cada suelta. |
 | Apuntar con precisión | Botón secundario | Acercamiento suave configurable. La misma veta puede acertarse desde la vista normal. |
-| Cambiar de arco | 1–4 o rueda | Entre los ya adquiridos. Se conserva el carcaj compartido. Un cambio de arma respeta el tiempo pendiente de la última suelta. |
+| Cambiar de arco | 1–3 o rueda | Entre los ya adquiridos. Se conserva el carcaj compartido. Un cambio de arma respeta el tiempo pendiente de la última suelta. |
 | Golpear con la rama | F | Acción de corto alcance disponible desde el inicio. Con el carcaj vacío permite recuperar flechas. |
 | Abastecer | E junto al centinela | Vista previa de la transferencia, entrega confirmada por sonido y cambio visible en la tolva. Se preserva una reserva para el jugador. |
 | Comprar, pausar y guardar | E junto al perro abre el árbol. Esc abre pausa. | Clic para comprar un nivel. Con la mejora de reembolso, clic derecho para devolverlo. La simulación se detiene en árbol, cartas y pausa. |
 
-El arco de rama premia elegir el punto de impacto. El recurvo sostiene una cadencia regular. El de abanico abre un frente de hasta tres flechas y admite una suelta parcial cuando queda poca munición. El de tejo repetidor convierte el suministro continuo en una ráfaga sostenida. La trayectoria del proyectil y el impacto deben ser visibles. En la prueba inicial se priorizan respuesta inmediata, leve arco visual y coincidencia entre la retícula y el impacto a la distancia habitual del claro. Ajustar el modelo de vuelo con el prototipo.
+La versión jugable permite equipar tres arcos. Probar el cuarto y revisar los arcos tardíos antes de fijar su cantidad. Contemplar una indicación de la transferencia efectiva al abastecer y la elección de habilidades que compitan por un botón. Mantener todas las opciones y señales en español e inglés. El arquero carece de barra de vida y un fallo cuesta tiempo o munición. En una pausa manual o con el juego cerrado se detienen la simulación y el taller. [Controles de la build](../README.md)
 
-**Prueba de tensado.** En N1–3 se mide cómo se siente el tiro con clic y con el botón mantenido, con idéntico daño por flecha. Después de esa prueba, comparar la base con una variante que premie soltar en el punto justo con un pequeño bono. Mantener el tiro sostenido accesible y registrar precisión, fatiga percibida y preferencia antes de decidir si incluir el bono.
-
-### Reglas que evitan bloqueos
-
-- La savia compra rangos. Las flechas alimentan tanto al arquero como a los centinelas. Tomar parte de un haz deja el resto en el suelo. Un puesto vacío muestra su tolva abierta y vuelve a disparar en cuanto recibe munición.
-- Se puede terminar con cualquier arco desbloqueado, sin acertar objetivos cronometrados. Cada fase deja una superficie de madera golpeable junto al suelo. Si hay dos lóbulos, cada uno conserva una raíz conectada a su propia reserva de vida. El jugador puede acercarse, usar la rama y reabastecerse aun con todos los puestos secos.
-- No hay vida del arquero, daño por enemigos ni pérdida de campaña por fallar. El coste de una mala secuencia de compras es tardar más. Una oportunidad expirada se retira sin quitar integridad ya dañada ni savia ya ganada.
-- En la demo, la compra Buena racha activa el combo. Llega a ×6 y el daño de los tiros manuales puede generar una prima de savia. Los aciertos a puntos débiles lo hacen subir más rápido.
-
-## 3. Campaña y encuentros
-
-Un **nudo** es un objetivo de madera formado por módulos. Probar con una altura inicial de 1,5 m y una final de 35–40 m, con la misma piedra de un metro como referencia en ambos extremos. Su huella se conserva dentro del área central y gana altura y volumen por etapas. Los puntos interactivos aparecen sobre caras visibles desde el corredor de tiro. La línea de tiro, el acceso a las pilas y la ubicación de los talleres siguen siendo reconocibles al final. El paso de nudo no recarga la escena ni borra las existencias.
-
-Medimos por separado la vuelta completa y los tiempos activos hasta romper cada blanco. En el corte jugable, los actos III y IV tienen troncos de madera oscura. El blanco 15 da a elegir una carta y romper el 20 cierra la vuelta. El Semillero fugitivo y la Corona acorazada de la tabla son diseños de jefes para una versión posterior. La duración hasta conseguir el 100 % se valida aparte. En la demo cada requisito de compra se cumple invirtiendo en el árbol. La posible actividad nueva al costado del claro queda abierta.
-
-| Acto | Tiempo de referencia | Cambio dominante | Jefe y regla propuesta |
-|---|---|---|---|
-| I · N1–5 | 0–10 min | Disparo manual, primera compra, taller, chispa y recurvo | **Horqueta gemela (5).** A media integridad se abren dos lóbulos con reservas visibles. Al romper uno, las flechas restantes deben dirigirse al otro. |
-| II · N6–10 | Referencia del corte anterior, por validar con jugadores nuevos | Ahorrar para un arco más potente o invertir en la cadencia y el suministro. | **Segundo jefe (10).** Tiene tres puntos débiles sucesivos. El tronco recibe daño ordinario y cada fase requiere acertar al punto activo o golpear la raíz correspondiente. |
-| III · N11–15 | 25–45 min | El abanico y las oportunidades laterales cambian qué blancos conviene agrupar. | **Semillero fugitivo (15).** Suelta brotes por carriles cortos. Acertarles transfiere daño al tronco. Los que salen del claro solo cierran esa oportunidad. |
-| IV · N16–20 | 45–65 min | Alimentar varios puestos aumenta el daño mientras el jugador se mueve. | **Corona acorazada (20).** Tres placas reciben el fuego sostenido de los puestos. El arquero puede quebrar a mano un broche lateral para exponer antes la veta de esa placa. |
-| V · N21–25 | 65–85 min | Repetidor, altas necesidades de flechas y efectos de área. | **Tronco de los dos cauces (25).** Dos raíces laterales envían pulsos que dan una cubierta temporal al nudo. Cortar el pulso a tiempo abre la veta. Las cubiertas caducan, tienen tope y jamás devuelven integridad perdida. |
-| VI · N26–30 | 85–120 min | El claro alcanza su mayor escala. El jugador sigue distinguiendo el origen de cada gran impacto. | **Árbol del sol hueco (30).** Primero abre los dos lóbulos. A mitad de la integridad total expone el núcleo y ofrece el sexto don. En el cierre alterna veta móvil y brotes, de a una regla por vez. La última suelta que agote la integridad, manual o automática, cierra la campaña. |
-
-Los tres primeros jefes retoman familias descritas en el informe. Los tres últimos son diseños propios. Cuando el cuerpo se divide, cada centinela toma como blanco el lóbulo vivo más cercano y cambia al otro cuando cae. El jugador puede concentrar fuego en el que prefiera. Cada transición se dispara una sola vez, incluso si se cruza el umbral con varios impactos simultáneos. En el jefe final, el umbral del 50 % detiene la resolución de daño, registra la elección pendiente y abre la oferta. La segunda mitad arranca después de elegir. Guardar en esa transición debe conservar las mismas tres cartas.
-
-### Oportunidades y sucesos
-
-La **Diana de veta** aparece sobre el nudo desde N2 y recompensa precisión. El **Nudo áureo** entra en N6 y paga savia con un acierto lateral. El **Alijo del guardabosque** entra en N8 y deja flechas físicas donde cae. En cada estreno se garantiza una aparición de muestra. Después, fuera de jefes y sucesos, probar una oportunidad elegible cada 15–25 s, una a la vez. Estos tres objetos se reutilizan en los siguientes sucesos. Los fenómenos que se compran en el árbol tienen disparadores y efectos propios.
-
-| Suceso del claro | Primera ventana propuesta | Acción y recompensa |
-|---|---|---|
-| Lluvia de semillas | Al comprar Semillas aladas en el Atlas | Tres semillas caen a ritmos distintos. Cada acierto deja cuatro flechas. Acertar las tres duplica la recompensa total a 24. |
-| Frente de tormenta | Acto II | Una nube anuncia una veta conductora. Acertarla deriva una descarga hacia el nudo. |
-| Ráfaga de polen | Acto III | El polen dibuja una secuencia de dianas. Cada acierto manual ya aporta una prima aunque se deje pasar el resto. |
-| Migración de brotes | Acto III, después del primer abanico disponible | Una hilera atraviesa un lateral. Una buena suelta puede alcanzar varios y convertirlos en daño al nudo. |
-| Floración dorada | Acto IV | Aparecen nudos áureos en dos lados del claro. El jugador decide si interrumpe su recorrido para romperlos. |
-| Caravana de alijos | Acto V | Llegan alijos por el borde del claro. Abrir uno deja un haz de flechas para abastecer a los próximos puestos. |
-
-**Programación de sucesos.** Probar una ventana cada 45–75 s de juego activo después de su introducción. Máximo un suceso activo, sin repetir inmediatamente si hay otra opción elegible. Si ya hay una oportunidad suelta, esperar a que se resuelva antes de iniciar el suceso. Guardar la semilla y el tiempo restante. Si llega un jefe, concluye el suceso en curso y se suspenden nuevas apariciones hasta la rotura. Las vetas y los brotes propios del jefe siguen sus reglas de fase. Una señal sonora direccional y un icono identifican cada oportunidad. Los tiempos y recompensas son parámetros de prueba.
-
-## 4. Interfaz, persistencia y accesibilidad
-
-| Pantalla o estado | Requisito de producto |
+| Área | Dirección acordada |
 |---|---|
-| HUD · Cuaderno de campo | La ficha del blanco y su vida se leen en el margen superior izquierdo. El cuaderno inferior reúne arco, carcaj y savia. La guía opcional del primer recorrido marca el destino en el claro y se retira tras disparar con las primeras flechas recogidas del taller. El depósito de la ballesta muestra su carga en el mundo y al acercarse. |
-| Árbol | Atlas al pasar ocupa el cuaderno completo. El mapa tiene 113 nodos y 141 niveles. La ficha junto al nodo aparece al señalarlo o enfocarlo con el teclado. La última compra revela el dibujo del arco y el carcaj. |
-| Charlas del claro | Brizno, un mensajero alado, tiene relatos cortos en español e inglés que se habilitan según el estado del claro. Se le habla de cerca, con la misma tecla de interacción que a Pipo. |
-| Dones | Tres opciones legibles con efecto, unidad y sistema beneficiado. Pausa sin cuenta atrás. Confirmar una opción aplica el efecto una vez. |
-| Lectura y confort | Retícula configurable, números de daño agrupables con opacidad hasta cero, temblor y destellos reducibles, sensibilidad, campo de visión, volumen por familia y control reasignable. Cada aviso importante tiene forma o sonido además de color. |
-| Guardado local | Una campaña activa y récords locales por separado. Guardado manual desde pausa, automático en compras, elecciones, cambios de nudo y al salir normalmente. Guardar también dentro de un jefe mediante pausa. Escritura atómica, copia anterior recuperable y versión de esquema. |
-| Reanudar | Recuperar nudo y etapa, integridad, cartera, carcaj, pilas, tolvas, arcos, rangos, dones, combo, sucesos y reloj. Las ofertas pendientes se reabren intactas. Tiempo cerrado y menús pausados no producen flechas ni avanzan la campaña. |
-| Final y repetición | Pantalla de resultados, mejor tiempo local y marcas por acto. Nueva vuelta con compras a cero tras confirmación si hay una campaña activa. La ruta sub-90 minutos es una meta opcional. |
+| Atlas y fichas (I01–I04) | Distinguir disponible, parcialmente comprado, completo y fuera de presupuesto en ambos aspectos del Atlas y con foco de teclado. Mostrar efecto actual y siguiente, precio y saldo posterior, sujeto a iteración. Probar resplandor y pequeño movimiento para compras que cambian mecánicas. |
+| Efectos de combate (I05–I09) | Diseñar señales distintas para racha, triple y lluvia. Triple muestra **un solo número con la suma de los tres impactos**. Cargas de fuego debajo de la vida, daño sobre la madera junto a su animación. La interfaz existente ya muestra el carcaj vacío; el crítico preparado no necesita indicador. Agregar pictograma de carcaj junto al contador. Probar sonido con varias cadencias y densidades de eventos. |
+| Atlas completo (I06) | La imagen de arco y carcaj aparece gradualmente, luego desaparece gradualmente y vuelve el árbol interactivo. Definir comportamiento tras reembolso. |
+| Ayudas, Pipo y Brizno (I10–I12) | Sin reactivar las pistas tutoriales al prestigiar. Conservar la caricia a Pipo como compra tardía, previsiblemente mucho más cara tras rebalancear. Brizno es tienda de prestigio y vehículo narrativo, con muy pocas reacciones al fuego o a hitos. El autor escribe y cura su texto; el material actual es provisional. |
+| Guardado | Conservar vida por fase, inventarios, cartera, compras y su costo pagado, arcos, ofertas y reloj. Hacer recuperables medallas y compras permanentes. Al confirmar un reinicio se muestran los bienes que se entregan y los que se conservan. |
+| Lectura y comodidad | Retícula, sensibilidad, campo de visión, números agrupables, cámara y destellos reducibles. Probar con audio apagado. El golpe, la acción disponible y el objetivo golpeable deben poder reconocerse aun sin números. |
 
-**Tiempo de partida.** El reloj empieza cuando el jugador recibe el control en N1 y termina en la rotura de N30. Cuenta movimiento, tiro, espera voluntaria y abastecimiento. Se congela mientras la simulación está en pausa. Guardar y reanudar conserva el acumulado. El resumen identifica la versión de reglas y la semilla para poder comparar dos rutas.
+## Narrativa, demo y edición final
 
-**Marcas locales de campaña.** En el resumen se pueden consultar el primer nudo roto con un golpe de rama, el primer combo ×6, una reserva de 500 flechas simultáneas en el suelo, los seis talleres y doce centinelas construidos, el árbol de 77 rangos completo y el final en menos de 90 minutos. La reserva reconoce una abundancia que también se ve en el mundo. Las marcas quedan en el perfil local al iniciar otra vuelta y su única recompensa es el registro.
+El número de árboles restantes puede vincular el progreso a la historia; «quedan 500 árboles en todo el mundo» es una **premisa por explorar**. Resolver qué cuenta el mundo y qué vuelve al prestigiar antes de escribir ese contador. Otro candidato es un desenlace verdadero en un espacio liminal totalmente blanco, con una conversación larga con Brizno. Definir acceso, relación con créditos y 100 %, y si existe desafío final. Al concluir quedan vueltas libres.
 
-## 5. Alcance y prueba de éxito
+La siguiente demo requiere principalmente **balance de mejoras, balance económico y algunas conversaciones de Brizno escritas por el autor**. La prueba privada precede a la distribución. Delimitar en una conversación específica qué alcanza para publicar y qué se posterga; el catálogo amplio y las ideas de prestigio alimentan la campaña. Se mantienen Windows, español e inglés y la intención de publicar en itch.io y Steam. El precio histórico previsto para la edición final era 1–2 €, a decidir al preparar el lanzamiento.
 
-| Entrega | Qué se juega | Qué decisión permite tomar |
-|---|---|---|
-| Prototipo local · N1–3 | Arco de rama, impactos, compra de daño, primer taller, pilas, recogida y recuperación con la rama. Menús en español e inglés y primer pino editable desde el Inspector de Godot. | ¿Qué se siente al disparar y cuánto tarda el jugador en encontrar su primera producción de flechas? |
-| Corte vertical · N1–5 | Primer acto completo, recurvo, primer fenómeno, un suceso, primer jefe y primera oferta. Un claro con calidad visual representativa. | ¿Se entienden el disparo, la compra, la transformación del claro y la elección sin un tutorial largo? |
-| Demo · blancos 1–20 | Cuatro actos, dos jefes con fases, cartas en los blancos 5, 10 y 15, tres arcos, taller, ballesta abastecible, Pipo, Brizno y Atlas con reembolsos. El registro guarda marcas por acto y por vuelta. | ¿Qué compras se priorizan al llegar al décimo? ¿Se reconoce cuándo se activan el combo, el disparo triple y la lluvia? |
-| Campaña completa · N1–30 | Seis jefes, seis elecciones, cuatro arcos y rama, 77 rangos, 24 dones, seis talleres, doce centinelas, seis sucesos y los seis fenómenos del catálogo | ¿El último acto paga la escalada, cierra la historia mecánica y admite una segunda vuelta más rápida? |
+Para validar, registrar **dos vueltas completas con cartas diferentes**, tanto con el autor experimentado como con jugadores nuevos. Que el autor llegue en cinco minutos a un final pensado para unas dos horas sería una alarma de balance. Comparar tiro continuo, abastecimiento y efectos con igual semilla y presupuesto. Medir tiempo total y activo, paso por árbol, segundos vacío, saldo y compras al entrar a N10, daño por fuente y tiempo de vuelta al superar una barrera. Más adelante, incluir dos rutas con iguales medallas y compras permanentes distintas. [Plan de producción y pruebas](plan-de-produccion.md)
 
-La entrega base es offline y finita. Quedan fuera multijugador, tabla pública, prestigio infinito, editor para jugadores, mundo abierto, móvil y destrucción voxel bloque por bloque. El panel visual de assets es una herramienta interna para que quien desarrolla el juego pueda generar y previsualizar variantes directamente. El primer caso es el pino. El bosque se construye una vez con zócalos fijos y se transforma delante del jugador.
-
-### Pruebas que decidirán el ajuste
-
-| Prueba | Criterio inicial para aceptar o iterar |
-|---|---|
-| Entrada en frío con cinco personas del público objetivo | Al menos cuatro aciertan en 15 s y compran un primer rango en 90 s sin indicaciones verbales. Registrar dónde se detuvo la quinta. |
-| Economía y decisiones en N7–10 | Anotar cuántos niveles se podrían comprar con la savia obtenida antes del jefe y qué priorizó cada jugador. Comprobar si se distingue cuándo conviene ahorrar para el arco largo o mejorar el que ya se tiene. |
-| Ritmo de la campaña | Registrar por separado la llegada al desenlace y al 100 %. Para el 100 % apuntamos a 2–4 horas. Si un acto se alarga, revisar los tiempos por blanco, la espera de munición, las compras y el daño por origen. |
-| Lectura tardía | En una captura jugable de N29–30 con doce centinelas y efecto global, al menos cuatro de cinco localizan la nueva veta en 2 s. Repetir con números y destellos desactivados. |
-| Persistencia y final | Reanudar antes y después de una compra, una rotura, una oferta y la mitad del jefe 30. El saldo, las cartas y el tiempo cuadran. Completar con arco, con centinela y con fenómeno da exactamente un resultado por vuelta. |
-| Rendimiento | Objetivo de 60 FPS a 1080p en el PC de referencia que se acuerde. Medir tiempo de cuadro p95 en la escena tardía cargada. Representar más flechas en un haz no debe crear una entidad por flecha almacenada. |
-| Producción de contenido | Una segunda persona puede generar una variante de árbol desde una receta, colocarla y verla a escala correcta sin corregir pivote, materiales ni colisión a mano. Repetir con una pieza funcional en el corte vertical. |
-
-Una muestra inicial de cinco participantes permite localizar problemas de usabilidad. Para balance, guardar un registro local de nivel, tiempo activo, daño por origen, flechas producidas/recogidas/consumidas, compras, huecos sin suministro y don elegido. El plan detalla cuándo levantar cada muestra y cuándo frenar la expansión.
-
-**Primera prueba de juego.** Construir hasta el primer taller y observar una partida desde cero. Ajustar la primera compra y la recogida con esa prueba antes de llevar la secuencia hasta el primer jefe. Los 77 rangos ya están especificados para que ese trabajo escale.
+La documentación original que tradujo la referencia *Ammo Dump* conserva los antecedentes sobre los seis actos, las máquinas, torretas y reglas históricas. [PRD anterior a esta revisión](https://github.com/manucorrado/archers_lop/blob/654bd1fc91f4c4d5e189df0ead6ed8831f91c9e7/docs/PRD.md)

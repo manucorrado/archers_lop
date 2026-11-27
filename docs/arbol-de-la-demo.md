@@ -1,5 +1,7 @@
 # Árbol de mejoras de la demo
 
+**Estado jugable de referencia: build `654bd1f`.** Esta guía da los precios que vas a encontrar al jugar. Más abajo están los cambios previstos y las compras que habilitaría el prestigio.
+
 La partida recorre veinte blancos. Elegís cartas en el 5, el 10 y el 15. El resumen final aparece cuando rompés el 20. La madera se oscurece desde el blanco 10. Para la prueba privada queda por medir cuánto agrega esta segunda mitad al tiempo de compras, diálogos y combate.
 
 ## Qué podés comprar
@@ -59,8 +61,22 @@ Al romper el blanco 15, elegís entre **Ojo de búho** (+0,5 al multiplicador de
 
 Para la prueba privada, observá el primer cambio de táctica después de la carta del quinto blanco y qué hace el jugador cuando se queda sin flechas. En el registro de una partida nueva podés cotejar la duración de la vuelta con el tiempo activo, los niveles comprados y el saldo al entrar al décimo, y el daño efectivo de arco y ballesta.
 
-## Qué queda para después
+## Cambios de balance previstos
 
-El [catálogo editable](catalogo-de-mejoras-potenciales.docx) conserva las 65 fichas de ideas y el orden de trabajo propuesto para las nuevas familias. Quedan para diseñar la frecuencia de blancos opcionales, los ecos de disparos, la quemadura con sus tres especializaciones, los tiros en el aire y los giros de 360°, las mejoras de la ballesta y el arco láser de fin de juego.
+El importe de 61.800 y el acceso a todas las compras durante N10 describen el Atlas actual. **Con el árbol actualizado, vencer los veinte blancos debe dejar mejoras por comprar.** Se van a reasignar vértices repetidos de daño, cadencia y taller, conservando el efecto del daño plano antes de aplicar multiplicadores. Revisar precio y potencia de +1 suelta/s, arcos y caricia a Pipo. La racha pasará a mejorar daño una vez por suelta y tendrá un techo mucho más alto en el tramo tardío. Reembolsar los hijos que dependan de un padre devuelto es la preferencia nueva por probar. [Modelo de precios y de ingreso de savia](curvas-de-costes-incrementales.md)
 
-En el quinto blanco se mantienen las cartas de daño, cadencia y capacidad. La astilla adicional al apuntar, las ráfagas y la recarga de emergencia quedan como ideas para una progresión posterior, posiblemente ligada al prestigio. La actividad al costado del claro sigue abierta. Brizno es opcional. Sus nuevos diálogos y su posible vínculo con el prestigio quedan para después del MVP.
+**Triple en Daño 10** significa llegar al décimo nivel de la compra, aunque estés en otro blanco. Si cada flecha hace 20 y aciertan tres sobre madera con vida suficiente, suman 60. La tarea visual es mostrar una sola cifra con la suma de los impactos. La futura compra de prestigio sobre el coste de los tiros múltiples también podría cambiar cuántas flechas se gastan. [Decisiones de combate y pendientes](decisiones-pendientes.md)
+
+## Mejoras de prestigio y Atlas extendido
+
+Son diseños para probar. La build de referencia permite empezar otra vuelta y conservar récords; todavía no entrega medallas ni tiene tienda de prestigio. Para la prueba interna se usará N20. La profundidad definitiva de acceso y la tabla de medallas siguen abiertas. Brizno presentará la primera oportunidad con un salto y giro. Sus compras permanentes son acumulables y compatibles.
+
+| Línea | Qué cambiaría para quien abre el Atlas en la vuelta siguiente |
+|---|---|
+| Acceso a nuevas ramas | Una inversión permanente puede habilitar compras de savia en un Atlas extendido. La quemadura acumulable es candidata principal. También se estudia un segundo árbol al completar el dibujo de arco y carcaj y disponer del prestigio necesario. |
+| Suministro y munición | Se probarían producción mayor o segundo taller, recarga de emergencia y una herencia de inicio intercambiable. Candidatas adicionales: abastecimiento automático de ballesta y triple con menor gasto, hasta una flecha por las tres. |
+| Daño y progresión | Propuestas de daño por metro, daño porcentual de vida, rayo solar y bonos permanentes de daño, cadencia o ingreso. El láser queda para el extremo tardío, por ubicar con pruebas. |
+| Gestión de la siguiente vuelta | Reservar una carta conocida, posible nuevo sorteo, acelerar el juego, comprar por precio ascendente y medallas adicionales por cada X de savia mantenida al reiniciar. Ese bono hipotético se evalúa aparte de la base por profundidad. |
+| Pipo y Brizno | La caricia a Pipo pertenece a la primera progresión. Hay interés en reacciones afectivas posteriores. Brizno funciona como tienda y vehículo para relatos escritos por el autor en el juego tardío. |
+
+El [catálogo editable](catalogo-de-mejoras-potenciales.md) conserva las 65 fichas y su estado. [Prestigio](prestigio.md) distingue qué se acumula, qué se reinicia y qué falta definir por familia. [Sistemas y cartas](mejoras-y-economia.md) detalla la baraja y [próximas tareas](proximas-tareas.md) identifica qué debe probarse para la demo.
